@@ -65,6 +65,18 @@ export async function extractDataFromPDF(file: File): Promise<OCRResult> {
       totalAmount: amounts.totalAmount,
     });
 
+    if (import.meta.env?.DEV && (!supplierCuit || !invoiceType || !invoiceNumber)) {
+      console.warn('[OCR] Campos faltantes detectados', {
+        supplierCuit,
+        invoiceType,
+        invoiceNumber,
+        pointOfSale,
+        issueDate,
+        totalAmount: amounts.totalAmount,
+      });
+      console.debug('[OCR] Texto bruto recibido:', text);
+    }
+
     return {
       supplierCuit,
       supplierName,
