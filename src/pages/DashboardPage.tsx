@@ -52,48 +52,81 @@ export function DashboardPage() {
       <div className="space-y-12">
         <section className="rounded-3xl bg-gradient-to-br from-green-600 via-emerald-500 to-green-700 text-white shadow-xl ring-1 ring-green-400/40 overflow-hidden">
           <div className="relative">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.35)_0%,_rgba(0,0,0,0)_60%)]" />
-            <div className="relative z-10 grid gap-8 px-8 py-10 lg:grid-cols-[auto,1fr] lg:items-center">
-              <div className="flex items-center gap-4">
-                <div className="bg-white rounded-2xl p-3 shadow-xl">
-                  <img
-                    src="/logo-header.png"
-                    alt="Grow Labs Logo"
-                    className="h-16 w-16 object-contain"
-                  />
+            <div className="absolute inset-0 opacity-60 mix-blend-luminosity bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.45),rgba(0,0,0,0)_55%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.4),rgba(0,0,0,0)_55%)]" />
+            <div className="absolute top-8 right-12 hidden h-48 w-48 rounded-full border border-white/30 bg-white/10 blur-3xl lg:block" />
+            <div className="relative z-10 grid gap-12 px-8 py-12 lg:grid-cols-[1.2fr,1fr]">
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 p-2 shadow-2xl shadow-green-900/20">
+                    <img
+                      src="/logo-header.png"
+                      alt="Grow Labs Logo"
+                      className="h-12 w-12 object-contain"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold tracking-[0.6em] text-white/70">Grow Labs</p>
+                    <h1 className="text-3xl font-bold leading-tight md:text-4xl">
+                      Automatiza la gestión de comprobantes para Tango
+                    </h1>
+                  </div>
                 </div>
-                <div>
-                  <p className="uppercase tracking-[0.4em] text-sm text-white/80 font-semibold">
-                    Grow Labs
-                  </p>
-                  <h1 className="text-3xl font-bold leading-tight">
-                    Automatiza la gestión de comprobantes para Tango
-                  </h1>
-                  <p className="mt-2 text-sm text-white/80 max-w-xl">
-                    Plataforma diseñada para digitalizar y optimizar la carga, revisión y exportación de
-                    comprobantes. Simplificamos el proceso completo, desde la importación con IA hasta la
-                    exportación final hacia Tango Gestión.
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-4 rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-white/70">Visión general</p>
-                  <h2 className="text-lg font-semibold">
-                    Tu laboratorio financiero para crecer con datos confiables.
-                  </h2>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-white/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-white/60">OCR inteligente</p>
-                    <p className="mt-1 text-sm font-semibold">
-                      Procesamiento automático con OpenAI y respaldo local.
+                <p className="max-w-2xl text-base text-white/80">
+                  Digitaliza la carga, control y exportación de comprobantes con la plataforma exclusiva
+                  de Grow Labs. Integramos OCR inteligente, validaciones automáticas y exportación directa
+                  a Tango Gestión para que tu equipo se enfoque en decisiones y no en tareas repetitivas.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                      Importación smart
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-white">
+                      PDFs e imágenes en un solo flujo.
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-white/60">Exportación directa</p>
-                    <p className="mt-1 text-sm font-semibold">
-                      Archivos listos para importar en Tango Gestión sin fricciones.
+                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                      Validaciones
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-white">
+                      CUIT, duplicados y totales verificados.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                      Exportación Tango
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-white">
+                      Listo para importar sin ediciones manuales.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.4em] text-white/70">Visión general</p>
+                <h2 className="mt-2 text-xl font-semibold">
+                  Tu laboratorio financiero para crecer con datos confiables.
+                </h2>
+                <div className="mt-6 space-y-4">
+                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+                    <p className="text-sm font-semibold text-white">Flujo completo automatizado</p>
+                    <p className="mt-2 text-sm text-white/80">
+                      Desde la importación guiada hasta la exportación final, cada comprobante mantiene un historial
+                      claro y trazable.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+                    <p className="text-sm font-semibold text-white">Colaboración transparente</p>
+                    <p className="mt-2 text-sm text-white/80">
+                      Equipos multidisciplinarios pueden revisar, editar y aprobar en un mismo lugar en tiempo real.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+                    <p className="text-sm font-semibold text-white">Integración Grow Labs</p>
+                    <p className="mt-2 text-sm text-white/80">
+                      Desarrollado a medida para Sanatorio Argentino, con tecnología Grow Labs y soporte especializado.
                     </p>
                   </div>
                 </div>
