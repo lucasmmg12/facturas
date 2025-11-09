@@ -4,6 +4,10 @@
 import type { OCRResult } from './ocr-service';
 import { validateCUIT } from '../utils/validators';
 import { getInvoiceTypeFromCode } from '../utils/invoice-types';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/build/pdf';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
+
+type PDFPageProxy = any;
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses';
 const OPENAI_MODEL = 'gpt-4.1-mini';
@@ -46,7 +50,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
         {
           role: 'user',
           content: [
-            { type: 'input_text', text: prompt },
+            { type: 'text', text: prompt },
             {
               type: 'input_image',
               image_url: {
@@ -67,6 +71,10 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
 
   const data = await response.json();
   const outputText = extractOutputText(data);
+
+  if (import.meta.env?.DEV) {
+    console.debug('[OpenAI OCR] Respuesta completa:', data);
+  }
 
   let parsed: any;
   try {
@@ -148,6 +156,13 @@ Usa null si no encuentras un dato. Usa números con punto decimal.
 }
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  if (file.type === 'application/pdf') {
+    return convertPdfToPngBase64(file).then((base64) => ({
+      base64,
+      mimeType: 'image/png',
+    }));
+  }
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -158,6 +173,38 @@ function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }>
     reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo'));
     reader.readAsDataURL(file);
   });
+}
+
+GlobalWorkerOptions.workerSrc = pdfWorker;
+
+async function convertPdfToPngBase64(file: File): Promise<string> {
+  if (typeof window === 'undefined') {
+    throw new Error('La conversión de PDF a imagen solo está disponible en el navegador');
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const page = await pdf.getPage(1);
+  const imageBase64 = await renderPageToBase64(page);
+  return imageBase64;
+}
+
+async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    throw new Error('No se pudo inicializar el canvas para renderizar el PDF');
+  }
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({ canvasContext: context, viewport }).promise;
+
+  const dataUrl = canvas.toDataURL('image/png');
+  return dataUrl.split(',')[1] ?? '';
 }
 
 function extractOutputText(data: any): string {
