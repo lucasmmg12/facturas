@@ -9,8 +9,8 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
 
 type PDFPageProxy = any;
 
-const OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses';
-const OPENAI_MODEL = 'gpt-4.1-mini';
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = 'gpt-4o';
 
 const CONFIDENCE_WEIGHTS = {
   supplierCuit: 0.25,
@@ -38,50 +38,72 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   const { base64, mimeType } = await fileToBase64(file);
   const prompt = buildPrompt();
 
+  const requestBody = {
+    model: OPENAI_MODEL,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`,
+            },
+          },
+        ],
+      },
+    ],
+    max_tokens: 1200,
+  };
+
+  if (import.meta.env?.DEV) {
+    console.debug('[OpenAI OCR] Enviando solicitud:', {
+      model: requestBody.model,
+      endpoint: OPENAI_ENDPOINT,
+      promptLength: prompt.length,
+      imageSize: base64.length,
+    });
+  }
+
   const response = await fetch(OPENAI_ENDPOINT, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      input: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'input_image',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`,
-              },
-            },
-          ],
-        },
-      ],
-      max_output_tokens: 1200,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('[OpenAI OCR] Error en la respuesta:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+    });
     throw new Error(`OpenAI OCR falló (${response.status}): ${errorText}`);
   }
 
   const data = await response.json();
-  const outputText = extractOutputText(data);
 
   if (import.meta.env?.DEV) {
     console.debug('[OpenAI OCR] Respuesta completa:', data);
   }
 
+  const outputText = extractOutputText(data);
+
   let parsed: any;
   try {
     parsed = JSON.parse(outputText);
+
+    if (import.meta.env?.DEV) {
+      console.debug('[OpenAI OCR] JSON parseado exitosamente:', parsed);
+    }
   } catch (error) {
-    console.error('La respuesta de OpenAI no es JSON válido:', outputText);
-    throw new Error('OpenAI devolvió un formato inesperado (no JSON)');
+    console.error('[OpenAI OCR] Error al parsear JSON:', error);
+    console.error('[OpenAI OCR] Texto recibido:', outputText);
+    throw new Error('OpenAI devolvió un formato inesperado (no JSON válido)');
   }
 
   const supplierCuit = sanitizeCUIT(parsed.supplierCuit);
@@ -208,25 +230,24 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
 }
 
 function extractOutputText(data: any): string {
-  if (typeof data?.output_text === 'string') {
-    return data.output_text.trim();
-  }
+  if (data?.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+    const messageContent = data.choices[0]?.message?.content;
 
-  if (Array.isArray(data?.output)) {
-    const pieces = data.output
-      .flatMap((item: any) =>
-        Array.isArray(item?.content)
-          ? item.content.map((part: any) => part?.text ?? '').join('')
-          : ''
-      )
-      .join('');
+    if (typeof messageContent === 'string' && messageContent.trim()) {
+      let cleaned = messageContent.trim();
 
-    if (pieces.trim()) {
-      return pieces.trim();
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+
+      return cleaned.trim();
     }
   }
 
-  throw new Error('OpenAI no devolvió contenido legible');
+  console.error('[OpenAI OCR] Estructura de respuesta inesperada:', data);
+  throw new Error('OpenAI no devolvió contenido legible en el formato esperado');
 }
 
 function sanitizeCUIT(value: any): string | null {

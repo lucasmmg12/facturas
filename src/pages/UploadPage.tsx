@@ -26,6 +26,8 @@ export function UploadPage() {
   const handleFilesSelected = async (files: File[]) => {
     if (!profile) return;
 
+    console.log('[Upload] Procesando archivos:', files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+
     setUploading(true);
     const newResults: UploadResult[] = files.map((file) => ({
       filename: file.name,
@@ -59,6 +61,7 @@ export function UploadPage() {
         setResults([...newResults]);
 
         let ocrResult;
+        let ocrMethod = 'OpenAI';
         try {
           newResults[i] = {
             ...newResults[i],
@@ -66,20 +69,41 @@ export function UploadPage() {
           };
           setResults([...newResults]);
 
+          console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
           ocrResult = await extractDataWithOpenAI(fileToProcess);
+          console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
+            supplierCuit: ocrResult.supplierCuit,
+            invoiceType: ocrResult.invoiceType,
+            invoiceNumber: ocrResult.invoiceNumber,
+            confidence: ocrResult.confidence,
+          });
         } catch (aiError) {
-          console.error('OpenAI OCR falló, usando OCR local como respaldo', aiError);
+          console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', aiError);
+          ocrMethod = 'Local (Tesseract)';
           newResults[i] = {
             ...newResults[i],
             message: 'OpenAI falló, usando OCR local...',
           };
           setResults([...newResults]);
 
+          console.log(`[Upload] Iniciando OCR local para: ${file.name}`);
           ocrResult = await extractDataFromPDF(fileToProcess);
+          console.log(`[Upload] OCR local exitoso para: ${file.name}`, {
+            supplierCuit: ocrResult.supplierCuit,
+            invoiceType: ocrResult.invoiceType,
+            invoiceNumber: ocrResult.invoiceNumber,
+            confidence: ocrResult.confidence,
+          });
         }
 
         if (!ocrResult.supplierCuit || !ocrResult.invoiceType || !ocrResult.invoiceNumber) {
-          throw new Error('No se pudo extraer información suficiente del comprobante');
+          console.error('[Upload] Datos insuficientes extraídos:', {
+            supplierCuit: ocrResult.supplierCuit,
+            invoiceType: ocrResult.invoiceType,
+            invoiceNumber: ocrResult.invoiceNumber,
+            ocrMethod,
+          });
+          throw new Error(`No se pudo extraer información suficiente del comprobante (método: ${ocrMethod})`);
         }
 
         const duplicate = await checkDuplicateInvoice(
@@ -145,11 +169,13 @@ export function UploadPage() {
         newResults[i] = {
           ...newResults[i],
           status: 'success',
-          message: 'Comprobante procesado exitosamente',
+          message: `Comprobante procesado exitosamente con ${ocrMethod}`,
           invoiceId: invoice.id,
         };
         setResults([...newResults]);
+        console.log(`[Upload] Archivo procesado completamente: ${file.name}`);
       } catch (error: any) {
+        console.error(`[Upload] Error procesando ${file.name}:`, error);
         newResults[i] = {
           ...newResults[i],
           status: 'error',
