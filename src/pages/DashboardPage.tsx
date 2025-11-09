@@ -59,7 +59,7 @@ export function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 p-2 shadow-2xl shadow-green-900/20">
                     <img
-                      src="/logo-header.png"
+                      src="/logogrow.png"
                       alt="Grow Labs Logo"
                       className="h-12 w-12 object-contain"
                     />
