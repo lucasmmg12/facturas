@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Check, X, Plus, Trash2, Building } from 'lucide-react';
-import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
+import { deleteInvoice, getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
@@ -31,6 +31,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [concepts, setConcepts] = useState<TangoConcept[]>([]);
@@ -135,6 +136,27 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       console.error('Error saving invoice:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!invoice) return;
+
+    const confirmed = window.confirm(
+      '¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      await deleteInvoice(invoice.id);
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -307,10 +329,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>{deleting ? 'Eliminando...' : 'Eliminar'}</span>
+          </button>
           {(invoice.status === 'PENDING_REVIEW' || invoice.status === 'PROCESSED') && (
             <button
               onClick={handleMarkAsReady}
-              disabled={saving}
+              disabled={saving || deleting}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
             >
               <Check className="h-4 w-4" />
@@ -319,7 +349,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           )}
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || deleting}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
