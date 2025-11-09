@@ -112,6 +112,10 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   const pointOfSale = normalizeString(parsed.pointOfSale);
   const invoiceNumber = normalizeString(parsed.invoiceNumber);
   const issueDate = normalizeString(parsed.issueDate);
+  const caiCae = normalizeString(parsed.caiCae ?? parsed.cae ?? parsed.cai);
+  const caiCaeExpiration = normalizeDateToISO(
+    parsed.caiCaeExpiration ?? parsed.caeExpiration ?? parsed.caiExpiration
+  );
 
   const amounts = {
     netTaxed: normalizeNumber(parsed.netTaxed),
@@ -145,6 +149,8 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     ...amounts,
     taxes,
     confidence,
+    caiCae,
+    caiCaeExpiration,
     rawText: outputText,
   };
 }
@@ -163,6 +169,8 @@ Estructura esperada:
   "pointOfSale": "string|null",
   "invoiceNumber": "string|null",
   "issueDate": "YYYY-MM-DD|null",
+  "caiCae": "string|null",
+  "caiCaeExpiration": "YYYY-MM-DD|null",
   "netTaxed": "number",
   "netUntaxed": "number",
   "netExempt": "number",
@@ -285,6 +293,19 @@ function normalizeString(value: any): string | null {
   if (!value) return null;
   const trimmed = String(value).trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeDateToISO(value: any): string | null {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  const match = trimmed.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/);
+  if (!match) return null;
+  let [, day, month, year] = match;
+  if (!day || !month || !year) return null;
+  if (year.length === 2) {
+    year = `20${year}`;
+  }
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 function normalizeNumber(value: any): number {
