@@ -53,11 +53,9 @@ interface HeaderRow {
 }
 
 interface TaxRow {
-  'ID Comprobante': string;
-  'Código Impuesto': string;
-  'Descripción': string;
-  'Base Imponible': number;
-  'Importe': number;
+  'ID Comprobante (*)': string;
+  'Código (*)': string;
+  'Importe (*)': number;
 }
 
 interface ConceptRow {
@@ -97,13 +95,7 @@ const HEADER_COLUMNS = [
   'Observaciones',
 ] as const;
 
-const TAX_COLUMNS = [
-  'ID Comprobante',
-  'Código Impuesto',
-  'Descripción',
-  'Base Imponible',
-  'Importe',
-] as const;
+const TAX_COLUMNS = ['ID Comprobante (*)', 'Código (*)', 'Importe (*)'] as const;
 
 const CONCEPT_COLUMNS = [
   'ID Comprobante',
@@ -193,11 +185,9 @@ export async function generateTangoExport(userId: string): Promise<{
     invoiceTaxes.forEach((tax) => {
       if (tax.tax_codes) {
         taxes.push({
-          'ID Comprobante': invoice.internal_invoice_id,
-          'Código Impuesto': tax.tax_codes.tango_code,
-          'Descripción': tax.tax_codes.description,
-          'Base Imponible': tax.tax_base,
-          'Importe': tax.tax_amount,
+          'ID Comprobante (*)': invoice.internal_invoice_id,
+          'Código (*)': tax.tax_codes.tango_code,
+          'Importe (*)': tax.tax_amount,
         });
       }
     });
