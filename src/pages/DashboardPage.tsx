@@ -176,7 +176,7 @@ export function DashboardPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src="/logo-header.png"
+                    src="/logogrow.png"
                     alt="Grow Labs Logo"
                     className="h-12 w-12 object-contain bg-white rounded-full p-1"
                   />
