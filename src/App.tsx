@@ -1,7 +1,8 @@
+import React from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { UploadPage } from './pages/UploadPage';
 
-function App() {
+const App: React.FC = () => {
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
@@ -9,6 +10,6 @@ function App() {
       </div>
     </AuthProvider>
   );
-}
+};
 
 export default App;
