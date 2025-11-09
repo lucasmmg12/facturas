@@ -4,6 +4,8 @@ import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
 import { getInvoices } from '../services/invoice-service';
+import { useAuth } from '../contexts/AuthContext';
+import { generateTangoExport, downloadExport } from '../services/tango-export-service';
 import type { Database } from '../lib/database.types';
 import {
   Instagram,
@@ -23,7 +25,8 @@ interface ReviewPanelProps {
 }
 
 export function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'review'>('upload');
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -31,6 +34,7 @@ export function DashboardPage() {
     () => [
       { id: 'upload' as const, label: 'Carga automática' },
       { id: 'review' as const, label: 'Revisión y edición' },
+      { id: 'export' as const, label: 'Exportar a Tango' },
     ],
     []
   );
@@ -59,7 +63,7 @@ export function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 p-2 shadow-2xl shadow-green-900/20">
                     <img
-                      src="/logogrow.png"
+                      src="/logo-header.png"
                       alt="Grow Labs Logo"
                       className="h-12 w-12 object-contain"
                     />
@@ -167,6 +171,21 @@ export function DashboardPage() {
                 onInvoiceUpdated={handleInvoiceUpdated}
               />
             )}
+
+            {activeTab === 'export' && profile && (
+              <ExportPanel
+                refreshKey={refreshKey}
+                profileId={profile.id}
+                onExportCompleted={handleInvoiceUpdated}
+              />
+            )}
+
+            {activeTab === 'export' && !profile && (
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-700">
+                Necesitamos tu perfil para generar el archivo de exportación. Vuelve a iniciar sesión e inténtalo
+                nuevamente.
+              </div>
+            )}
           </div>
         </section>
 
@@ -176,7 +195,7 @@ export function DashboardPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src="/logogrow.png"
+                    src="/logo-header.png"
                     alt="Grow Labs Logo"
                     className="h-12 w-12 object-contain bg-white rounded-full p-1"
                   />
@@ -403,6 +422,120 @@ function ReviewPanel({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+interface ExportPanelProps {
+  refreshKey: number;
+  profileId: string;
+  onExportCompleted: () => void;
+}
+
+function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelProps) {
+  const [readyInvoices, setReadyInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadReadyInvoices = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getInvoices({ status: 'READY_FOR_EXPORT' });
+      setReadyInvoices(data);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No pudimos cargar los comprobantes listos para exportar.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadReadyInvoices();
+  }, [loadReadyInvoices, refreshKey]);
+
+  const totalAmount = readyInvoices.reduce((sum, invoice) => sum + (invoice.total_amount ?? 0), 0);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+      setMessage(null);
+
+      const result = await generateTangoExport(profileId);
+      downloadExport(result.filename, result.data);
+
+      setMessage(`Exportamos ${result.invoiceIds.length} comprobantes correctamente.`);
+      onExportCompleted();
+      await loadReadyInvoices();
+    } catch (exportError) {
+      setError(
+        exportError instanceof Error
+          ? exportError.message
+          : 'No pudimos generar la exportación. Intenta nuevamente.'
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-green-500/30 bg-emerald-50 p-6 text-emerald-900">
+        <h3 className="text-xl font-semibold">Exportación a Tango Gestión</h3>
+        <p className="mt-2 text-sm text-emerald-700">
+          Genera un archivo compatible con Tango que incluye encabezados, impuestos y conceptos para cada comprobante.
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {message}
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-green-700">Comprobantes listos</p>
+          <p className="mt-2 text-4xl font-bold text-green-900">
+            {loading ? '...' : readyInvoices.length}
+          </p>
+        </div>
+        <div className="rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-green-700">Total acumulado</p>
+          <p className="mt-2 text-3xl font-bold text-green-900">
+            {loading
+              ? '...'
+              : totalAmount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={exporting || readyInvoices.length === 0}
+        className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {exporting ? 'Generando archivo...' : 'Exportar a Tango Gestión'}
+      </button>
+
+      <p className="text-sm text-slate-500">
+        El archivo se descargará en formato <span className="font-semibold">TXT</span> con las tres secciones
+        concatenadas siguiendo el formato oficial de importación masiva de Tango.
+      </p>
     </div>
   );
 }
