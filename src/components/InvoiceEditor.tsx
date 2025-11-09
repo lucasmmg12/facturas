@@ -37,6 +37,9 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [newConceptCode, setNewConceptCode] = useState('');
   const [newConceptDesc, setNewConceptDesc] = useState('');
   const [showNewConceptForm, setShowNewConceptForm] = useState(false);
+  const [selectedConceptId, setSelectedConceptId] = useState('');
+  const [selectedConceptAmount, setSelectedConceptAmount] = useState<number | ''>('');
+  const [addConceptError, setAddConceptError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('basic');
 
   useEffect(() => {
@@ -139,15 +142,21 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     if (!invoice) return;
 
     try {
+      setAddConceptError(null);
       await supabase.from('invoice_concepts').insert({
         invoice_id: invoice.id,
         tango_concept_id: conceptId,
         amount,
       });
 
+      setSelectedConceptId('');
+      setSelectedConceptAmount('');
       await loadData();
     } catch (error) {
       console.error('Error adding concept:', error);
+      setAddConceptError(
+        error instanceof Error ? error.message : 'No pudimos agregar el concepto.'
+      );
     }
   };
 
@@ -832,6 +841,61 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-sm space-y-4">
+              <h3 className="font-semibold text-gray-900">Agregar concepto</h3>
+              <div className="grid gap-3 sm:grid-cols-[2fr,1fr,auto]">
+                <select
+                  value={selectedConceptId}
+                  onChange={(e) => setSelectedConceptId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="">Seleccioná un concepto existente…</option>
+                  {concepts.map((concept) => (
+                    <option key={concept.id} value={concept.id}>
+                      {concept.tango_concept_code} · {concept.description}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Importe"
+                  value={selectedConceptAmount}
+                  onChange={(e) =>
+                    setSelectedConceptAmount(
+                      e.target.value === '' ? '' : parseFloat(e.target.value)
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedConceptId || selectedConceptAmount === '' || Number.isNaN(selectedConceptAmount)) {
+                      setAddConceptError('Selecciona un concepto y un importe válido.');
+                      return;
+                    }
+                    void handleAddConcept(selectedConceptId, Number(selectedConceptAmount));
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                  disabled={selectedConceptAmount === '' || Number.isNaN(selectedConceptAmount)}
+                >
+                  Asignar
+                </button>
+              </div>
+
+              {addConceptError && (
+                <p className="text-sm text-red-600">{addConceptError}</p>
+              )}
+
+              <p className="text-xs text-gray-500">
+                Crea nuevos conceptos con “Nuevo Concepto” y luego asígnalos al comprobante desde aquí.
+              </p>
             </div>
 
             <div className="bg-white rounded-lg p-6 shadow-sm">
