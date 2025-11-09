@@ -307,7 +307,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center space-x-2">
-          {invoice.status === 'PENDING_REVIEW' && (
+          {(invoice.status === 'PENDING_REVIEW' || invoice.status === 'PROCESSED') && (
             <button
               onClick={handleMarkAsReady}
               disabled={saving}
