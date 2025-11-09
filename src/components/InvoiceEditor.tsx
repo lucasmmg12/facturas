@@ -3,18 +3,21 @@
 // Permite agregar conceptos, impuestos y marcar como listo para exportar.
 
 import { useState, useEffect } from 'react';
-import { Save, Check, X, Plus, Trash2 } from 'lucide-react';
+import { Save, Check, X, Plus, Trash2, Building } from 'lucide-react';
 import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
 import { INVOICE_TYPES_OPTIONS } from '../utils/invoice-types';
 import { formatCUIT, validateCUIT } from '../utils/validators';
-import type { Database, InvoiceStatus } from '../lib/database.types';
+import type { Database } from '../lib/database.types';
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
-type TaxCode = Database['public']['Tables']['tax_codes']['Row'];
 type TangoConcept = Database['public']['Tables']['tango_concepts']['Row'];
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
+type SupplierInsert = Database['public']['Tables']['suppliers']['Insert'];
+type InvoiceConceptInsert = Database['public']['Tables']['invoice_concepts']['Insert'];
+type TangoConceptInsert = Database['public']['Tables']['tango_concepts']['Insert'];
 
 interface InvoiceEditorProps {
   invoiceId: string;
@@ -29,10 +32,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [concepts, setConcepts] = useState<TangoConcept[]>([]);
-  const [invoiceTaxes, setInvoiceTaxes] = useState<any[]>([]);
   const [invoiceConcepts, setInvoiceConcepts] = useState<any[]>([]);
   const [newConceptCode, setNewConceptCode] = useState('');
   const [newConceptDesc, setNewConceptDesc] = useState('');
@@ -40,31 +41,44 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [selectedConceptId, setSelectedConceptId] = useState('');
   const [selectedConceptAmount, setSelectedConceptAmount] = useState<number | ''>('');
   const [addConceptError, setAddConceptError] = useState<string | null>(null);
+  const [showNewSupplierForm, setShowNewSupplierForm] = useState(false);
+  const [newSupplierCuit, setNewSupplierCuit] = useState('');
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [newSupplierIvaCondition, setNewSupplierIvaCondition] = useState('');
+  const [newSupplierCode, setNewSupplierCode] = useState('');
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+  const [createSupplierError, setCreateSupplierError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('basic');
 
   useEffect(() => {
     loadData();
   }, [invoiceId]);
 
+  useEffect(() => {
+    if (invoice) {
+      setSelectedConceptAmount(invoice.total_amount ?? 0);
+    } else {
+      setSelectedConceptAmount('');
+    }
+  }, [invoice?.id, invoice?.total_amount]);
+
   const loadData = async () => {
     try {
       setLoading(true);
 
-      const [invoiceData, suppliersData, taxCodesData, conceptsData] = await Promise.all([
+      const [invoiceData, suppliersData, conceptsData] = await Promise.all([
         getInvoiceWithDetails(invoiceId),
         supabase.from('suppliers').select('*').order('razon_social'),
-        supabase.from('tax_codes').select('*').eq('active', true),
         supabase.from('tango_concepts').select('*').eq('active', true).order('description'),
       ]);
 
       if (invoiceData) {
         setInvoice(invoiceData.invoice);
-        setInvoiceTaxes(invoiceData.taxes);
         setInvoiceConcepts(invoiceData.concepts);
       }
 
       setSuppliers(suppliersData.data || []);
-      setTaxCodes(taxCodesData.data || []);
       setConcepts(conceptsData.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -140,14 +154,19 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
   const handleAddConcept = async (conceptId: string, amount: number) => {
     if (!invoice) return;
+    if (invoice.total_amount !== null && amount > invoice.total_amount) {
+      setAddConceptError('El importe no puede superar el total del comprobante.');
+      return;
+    }
 
     try {
       setAddConceptError(null);
-      await supabase.from('invoice_concepts').insert({
+      const newConcept: InvoiceConceptInsert = {
         invoice_id: invoice.id,
         tango_concept_id: conceptId,
         amount,
-      });
+      };
+      await supabase.from('invoice_concepts' as any).insert([newConcept] as any);
 
       setSelectedConceptId('');
       setSelectedConceptAmount('');
@@ -173,24 +192,85 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     if (!profile || !newConceptCode || !newConceptDesc) return;
 
     try {
+      const conceptPayload: TangoConceptInsert = {
+        tango_concept_code: newConceptCode,
+        description: newConceptDesc,
+        created_by: profile.id,
+      };
       const { data, error } = await supabase
-        .from('tango_concepts')
-        .insert({
-          tango_concept_code: newConceptCode,
-          description: newConceptDesc,
-          created_by: profile.id,
-        })
+        .from('tango_concepts' as any)
+        .insert([conceptPayload] as any)
         .select()
         .single();
 
       if (error) throw error;
 
-      setConcepts([...concepts, data]);
+      setConcepts([...concepts, (data as TangoConcept)]);
       setNewConceptCode('');
       setNewConceptDesc('');
       setShowNewConceptForm(false);
     } catch (error) {
       console.error('Error creating concept:', error);
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!profile || !invoice) return;
+    setCreateSupplierError(null);
+
+    const normalizedCuit = newSupplierCuit.replace(/\D/g, '');
+    if (!validateCUIT(normalizedCuit)) {
+      setCreateSupplierError('El CUIT ingresado no es válido.');
+      return;
+    }
+    if (!newSupplierName.trim()) {
+      setCreateSupplierError('La razón social es obligatoria.');
+      return;
+    }
+
+    try {
+      setCreatingSupplier(true);
+      const supplierPayload: SupplierInsert = {
+        cuit: normalizedCuit,
+        razon_social: newSupplierName.trim(),
+        email: newSupplierEmail.trim() || null,
+        iva_condition: newSupplierIvaCondition || null,
+        tango_supplier_code: newSupplierCode.trim() || null,
+        active: true,
+        created_by: profile.id,
+      };
+      const { data, error } = await supabase
+        .from('suppliers' as any)
+        .insert([supplierPayload] as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const createdSupplier = data as Supplier;
+      setSuppliers((prev) => [...prev, createdSupplier]);
+      setInvoice({
+        ...invoice!,
+        supplier_id: createdSupplier.id,
+        supplier_cuit: createdSupplier.cuit,
+        supplier_name: createdSupplier.razon_social,
+      });
+
+      setShowNewSupplierForm(false);
+      setNewSupplierCuit('');
+      setNewSupplierName('');
+      setNewSupplierEmail('');
+      setNewSupplierIvaCondition('');
+      setNewSupplierCode('');
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      setCreateSupplierError(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos crear el proveedor. Intenta nuevamente.'
+      );
+    } finally {
+      setCreatingSupplier(false);
     }
   };
 
@@ -205,6 +285,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   if (!invoice) {
     return <div className="p-8 text-center text-gray-500">Comprobante no encontrado</div>;
   }
+
+  const conceptAmountValue =
+    selectedConceptAmount === '' ? null : Number(selectedConceptAmount);
+  const conceptAmountInvalid =
+    conceptAmountValue === null || Number.isNaN(conceptAmountValue);
 
   const tabs = [
     { id: 'basic' as TabType, label: 'Datos Básicos' },
@@ -280,28 +365,124 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Proveedor <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={invoice.supplier_id || ''}
-                    onChange={(e) => {
-                      const supplier = suppliers.find((s) => s.id === e.target.value);
-                      if (supplier) {
-                        setInvoice({
-                          ...invoice,
-                          supplier_id: supplier.id,
-                          supplier_cuit: supplier.cuit,
-                          supplier_name: supplier.razon_social,
-                        });
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Seleccionar proveedor</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.razon_social} - {formatCUIT(supplier.cuit)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                    <select
+                      value={invoice.supplier_id || ''}
+                      onChange={(e) => {
+                        const supplier = suppliers.find((s) => s.id === e.target.value);
+                        if (supplier) {
+                          setInvoice({
+                            ...invoice,
+                            supplier_id: supplier.id,
+                            supplier_cuit: supplier.cuit,
+                            supplier_name: supplier.razon_social,
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar proveedor</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.razon_social} - {formatCUIT(supplier.cuit)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewSupplierForm((prev) => !prev)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-600 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 transition"
+                    >
+                      <Building className="h-4 w-4" />
+                      {showNewSupplierForm ? 'Cancelar' : 'Nuevo proveedor'}
+                    </button>
+                  </div>
+                  {showNewSupplierForm && (
+                    <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 space-y-3">
+                      <p className="text-sm font-semibold text-green-900">
+                        Crear proveedor en Grow Labs
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="md:col-span-1">
+                          <label className="block text-xs font-medium text-green-900 mb-1">
+                            CUIT <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Sin guiones ni puntos"
+                            value={newSupplierCuit}
+                            onChange={(e) => setNewSupplierCuit(e.target.value)}
+                            className="w-full rounded-lg border border-green-200 px-3 py-2 text-sm focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div className="md:col-span-1">
+                          <label className="block text-xs font-medium text-green-900 mb-1">
+                            Razón social <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newSupplierName}
+                            onChange={(e) => setNewSupplierName(e.target.value)}
+                            className="w-full rounded-lg border border-green-200 px-3 py-2 text-sm focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-900 mb-1">
+                            Código Tango (opcional)
+                          </label>
+                          <input
+                            type="text"
+                            value={newSupplierCode}
+                            onChange={(e) => setNewSupplierCode(e.target.value)}
+                            className="w-full rounded-lg border border-green-200 px-3 py-2 text-sm focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-green-900 mb-1">
+                            Email de contacto
+                          </label>
+                          <input
+                            type="email"
+                            value={newSupplierEmail}
+                            onChange={(e) => setNewSupplierEmail(e.target.value)}
+                            className="w-full rounded-lg border border-green-200 px-3 py-2 text-sm focus:ring-2 focus:ring-green-400"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-medium text-green-900 mb-1">
+                            Condición IVA
+                          </label>
+                          <input
+                            type="text"
+                            value={newSupplierIvaCondition}
+                            onChange={(e) => setNewSupplierIvaCondition(e.target.value)}
+                            className="w-full rounded-lg border border-green-200 px-3 py-2 text-sm focus:ring-2 focus:ring-green-400"
+                            placeholder="Ej: Responsable Inscripto"
+                          />
+                        </div>
+                      </div>
+
+                      {createSupplierError && (
+                        <div className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-xs text-red-700">
+                          {createSupplierError}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleCreateSupplier}
+                          disabled={creatingSupplier}
+                          className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
+                        >
+                          {creatingSupplier ? 'Creando…' : 'Crear y asignar'}
+                        </button>
+                        <p className="text-xs text-green-800">
+                          Se registrará el proveedor en Supabase y quedará asignado al comprobante.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -848,7 +1029,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <div className="grid gap-3 sm:grid-cols-[2fr,1fr,auto]">
                 <select
                   value={selectedConceptId}
-                  onChange={(e) => setSelectedConceptId(e.target.value)}
+                  onChange={(e) => {
+                    const conceptId = e.target.value;
+                    setSelectedConceptId(conceptId);
+                    if (invoice) {
+                      setSelectedConceptAmount(invoice.total_amount ?? 0);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 >
                   <option value="">Seleccioná un concepto existente…</option>
@@ -865,25 +1052,51 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   step="0.01"
                   placeholder="Importe"
                   value={selectedConceptAmount}
-                  onChange={(e) =>
-                    setSelectedConceptAmount(
-                      e.target.value === '' ? '' : parseFloat(e.target.value)
-                    )
-                  }
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      setSelectedConceptAmount('');
+                      setAddConceptError(null);
+                      return;
+                    }
+
+                    const parsed = parseFloat(e.target.value);
+                    if (!Number.isFinite(parsed)) {
+                      setSelectedConceptAmount('');
+                      return;
+                    }
+
+                    if (invoice && parsed > (invoice.total_amount ?? 0)) {
+                      setSelectedConceptAmount(invoice.total_amount ?? 0);
+                      setAddConceptError('El importe no puede superar el total del comprobante.');
+                    } else {
+                      setAddConceptError(null);
+                      setSelectedConceptAmount(Math.max(0, parsed));
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 />
 
                 <button
                   type="button"
                   onClick={() => {
-                    if (!selectedConceptId || selectedConceptAmount === '' || Number.isNaN(selectedConceptAmount)) {
+                    if (!selectedConceptId || conceptAmountInvalid) {
                       setAddConceptError('Selecciona un concepto y un importe válido.');
                       return;
                     }
-                    void handleAddConcept(selectedConceptId, Number(selectedConceptAmount));
+
+                    if (
+                      invoice &&
+                      conceptAmountValue !== null &&
+                      conceptAmountValue > (invoice.total_amount ?? 0)
+                    ) {
+                      setAddConceptError('El importe no puede superar el total del comprobante.');
+                      return;
+                    }
+
+                    void handleAddConcept(selectedConceptId, conceptAmountValue!);
                   }}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
-                  disabled={selectedConceptAmount === '' || Number.isNaN(selectedConceptAmount)}
+                  disabled={conceptAmountInvalid}
                 >
                   Asignar
                 </button>
