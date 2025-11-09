@@ -31,7 +31,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     throw new Error('Falta configurar la variable VITE_OPENAI_API_KEY en el archivo .env');
   }
 
-  const base64 = await fileToBase64(file);
+  const { base64, mimeType } = await fileToBase64(file);
   const prompt = buildPrompt();
 
   const response = await fetch(OPENAI_ENDPOINT, {
@@ -47,7 +47,12 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
           role: 'user',
           content: [
             { type: 'input_text', text: prompt },
-            { type: 'input_image', image_base64: base64 },
+            {
+              type: 'input_image',
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
+              },
+            },
           ],
         },
       ],
@@ -142,13 +147,13 @@ Usa null si no encuentras un dato. Usa números con punto decimal.
 `;
 }
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
       const base64 = result.split(',')[1] ?? '';
-      resolve(base64);
+      resolve({ base64, mimeType: file.type || 'application/octet-stream' });
     };
     reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo'));
     reader.readAsDataURL(file);
