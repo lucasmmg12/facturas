@@ -18,7 +18,11 @@ interface UploadResult {
   invoiceId?: string;
 }
 
-export function UploadPage() {
+interface UploadPageProps {
+  onInvoiceCreated?: (invoiceId: string) => void;
+}
+
+export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
   const { profile } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
@@ -174,6 +178,7 @@ export function UploadPage() {
         };
         setResults([...newResults]);
         console.log(`[Upload] Archivo procesado completamente: ${file.name}`);
+        onInvoiceCreated?.(invoice.id);
       } catch (error: any) {
         console.error(`[Upload] Error procesando ${file.name}:`, error);
         newResults[i] = {
