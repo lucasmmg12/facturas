@@ -74,8 +74,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         supabase.from('tango_concepts').select('*').eq('active', true).order('description'),
       ]);
 
-      if (invoiceData) {
-        setInvoice(invoiceData.invoice);
+      if (invoiceData?.invoice) {
+        const invoiceRecord = invoiceData.invoice as Invoice;
+        const normalizedInvoice: Invoice = {
+          ...invoiceRecord,
+          is_electronic: invoiceRecord.is_electronic || Boolean(invoiceRecord.cai_cae),
+        };
+        setInvoice(normalizedInvoice);
         setInvoiceConcepts(invoiceData.concepts);
       }
 
@@ -854,8 +859,19 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       </label>
                       <input
                         type="text"
-                        value={invoice.cai_cae || ''}
-                        onChange={(e) => setInvoice({ ...invoice, cai_cae: e.target.value })}
+                      value={invoice.cai_cae || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setInvoice((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                cai_cae: value,
+                                is_electronic: prev.is_electronic || Boolean(value),
+                              }
+                            : prev
+                        );
+                      }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         placeholder="Código de Autorización Electrónica"
                       />
