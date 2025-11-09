@@ -27,10 +27,12 @@ export function DashboardLayout({ title, children }: DashboardLayoutProps) {
           <div className="flex items-center gap-4">
             {profile && (
               <div className="text-right">
-                <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wide">
-                  {profile.role.toLowerCase()}
+                <p className="text-sm font-semibold text-slate-900">
+                  {profile.full_name || profile.email}
                 </p>
+                {profile.email && (
+                  <p className="text-xs text-slate-500">{profile.email}</p>
+                )}
               </div>
             )}
             <button
