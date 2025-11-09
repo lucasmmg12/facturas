@@ -1,7 +1,6 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { UploadPage } from './pages/UploadPage';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardLayout } from './components/DashboardLayout';
+import { DashboardPage } from './pages/DashboardPage';
 
 const AppContent = () => {
   const { user, loading, profile } = useAuth();
@@ -33,11 +32,7 @@ const AppContent = () => {
     );
   }
 
-  return (
-    <DashboardLayout title="Cargar comprobantes">
-      <UploadPage />
-    </DashboardLayout>
-  );
+  return <DashboardPage />;
 };
 
 const App = () => (
