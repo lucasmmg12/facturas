@@ -47,7 +47,7 @@ export function LoginPage() {
             <div className="flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-4 py-2 backdrop-blur-sm">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white">
                 <img
-                  src="/logo-header.png"
+                  src="/logogrow.png"
                   alt="Grow Labs Logo"
                   className="h-7 w-7 object-contain"
                 />
@@ -131,7 +131,7 @@ export function LoginPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src="/logo-header.png"
+                    src="/logogrow.png"
                     alt="Grow Labs Logo"
                     className="h-12 w-12 object-contain bg-white rounded-full p-1"
                   />
