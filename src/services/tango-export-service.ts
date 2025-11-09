@@ -4,14 +4,23 @@
 import { supabase } from '../lib/supabase';
 import { getInvoicesReadyForExport, markInvoicesAsExported } from './invoice-service';
 import type { Database } from '../lib/database.types';
-
-type Invoice = Database['public']['Tables']['invoices']['Row'];
+import * as XLSX from 'xlsx';
 
 interface TangoExportData {
   headers: HeaderRow[];
   taxes: TaxRow[];
   concepts: ConceptRow[];
 }
+
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
+type InvoiceTaxRow =
+  Database['public']['Tables']['invoice_taxes']['Row'] & {
+    tax_codes: Database['public']['Tables']['tax_codes']['Row'] | null;
+  };
+type InvoiceConceptRow =
+  Database['public']['Tables']['invoice_concepts']['Row'] & {
+    tango_concepts: Database['public']['Tables']['tango_concepts']['Row'] | null;
+  };
 
 interface HeaderRow {
   'ID Comprobante': string;
@@ -58,6 +67,50 @@ interface ConceptRow {
   'Importe': number;
 }
 
+const HEADER_COLUMNS = [
+  'ID Comprobante',
+  'Código de proveedor / CUIT',
+  'Tipo de comprobante',
+  'Nro. de comprobante',
+  'Fecha de emisión',
+  'Fecha contable',
+  'Moneda CTE',
+  'Cotización',
+  'Condición de compra',
+  'Subtotal gravado',
+  'Subtotal no gravado',
+  'Anticipo o seña',
+  'Bonificación',
+  'Flete',
+  'Intereses',
+  'Total',
+  'Es factura electrónica',
+  'CAI / CAE',
+  'Fecha de vencimiento del CAI / CAE',
+  'Crédito fiscal no computable',
+  'Código de gasto',
+  'Código de sector',
+  'Código de clasificador',
+  'Código de tipo de operación AFIP',
+  'Código de comprobante AFIP',
+  'Nro. de sucursal destino',
+  'Observaciones',
+] as const;
+
+const TAX_COLUMNS = [
+  'ID Comprobante',
+  'Código Impuesto',
+  'Descripción',
+  'Base Imponible',
+  'Importe',
+] as const;
+
+const CONCEPT_COLUMNS = [
+  'ID Comprobante',
+  'Código de concepto',
+  'Importe',
+] as const;
+
 export async function generateTangoExport(userId: string): Promise<{
   filename: string;
   data: TangoExportData;
@@ -91,7 +144,7 @@ export async function generateTangoExport(userId: string): Promise<{
     supabase.from('suppliers').select('*'),
   ]);
 
-  const suppliers = suppliersResult.data || [];
+  const suppliers = (suppliersResult.data || []) as Supplier[];
   const supplierMap = new Map(suppliers.map((s) => [s.id, s]));
 
   const headers: HeaderRow[] = [];
@@ -136,7 +189,7 @@ export async function generateTangoExport(userId: string): Promise<{
       'Observaciones': invoice.observations || '',
     });
 
-    const invoiceTaxes = taxesResults[index].data || [];
+    const invoiceTaxes = (taxesResults[index].data || []) as InvoiceTaxRow[];
     invoiceTaxes.forEach((tax) => {
       if (tax.tax_codes) {
         taxes.push({
@@ -149,7 +202,7 @@ export async function generateTangoExport(userId: string): Promise<{
       }
     });
 
-    const invoiceConcepts = conceptsResults[index].data || [];
+    const invoiceConcepts = (conceptsResults[index].data || []) as InvoiceConceptRow[];
     invoiceConcepts.forEach((concept) => {
       if (concept.tango_concepts) {
         concepts.push({
@@ -165,20 +218,26 @@ export async function generateTangoExport(userId: string): Promise<{
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
   const filename = `TANGO_ComprasConceptos_${timestamp}.xlsx`;
 
+  const batchPayload: Database['public']['Tables']['export_batches']['Insert'] = {
+    filename,
+    invoice_count: invoices.length,
+    total_amount: invoices.reduce((sum, inv) => sum + inv.total_amount, 0),
+    generated_by: userId,
+  };
+
   const { data: batch, error: batchError } = await supabase
-    .from('export_batches')
-    .insert({
-      filename,
-      invoice_count: invoices.length,
-      total_amount: invoices.reduce((sum, inv) => sum + inv.total_amount, 0),
-      generated_by: userId,
-    })
+    .from('export_batches' as any)
+    .insert([batchPayload] as any)
     .select()
     .single();
 
   if (batchError) throw batchError;
+  const exportBatch = batch as Database['public']['Tables']['export_batches']['Row'] | null;
+  if (!exportBatch?.id) {
+    throw new Error('No se pudo registrar el lote de exportación.');
+  }
 
-  await markInvoicesAsExported(invoiceIds, batch.id);
+  await markInvoicesAsExported(invoiceIds, exportBatch.id);
 
   return {
     filename,
@@ -217,35 +276,40 @@ function formatNumber(value: number | null): string {
   return value.toFixed(2);
 }
 
-export function convertToCSV(data: any[]): string {
-  if (data.length === 0) return '';
-
-  const headers = Object.keys(data[0]);
-  const rows = data.map((row) =>
-    headers.map((header) => {
-      const value = row[header];
-      if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    }).join(',')
-  );
-
-  return [headers.join(','), ...rows].join('\n');
-}
-
 export function downloadExport(filename: string, data: TangoExportData) {
-  const headersCSV = convertToCSV(data.headers);
-  const taxesCSV = convertToCSV(data.taxes);
-  const conceptsCSV = convertToCSV(data.concepts);
+  const workbook = XLSX.utils.book_new();
 
-  const fullContent = `=== HOJA 1: ENCABEZADOS ===\n${headersCSV}\n\n=== HOJA 2: IVA Y OTROS IMPUESTOS ===\n${taxesCSV}\n\n=== HOJA 3: CONCEPTOS ===\n${conceptsCSV}`;
+  const ensureRows = <T>(rows: T[], headers: readonly string[]) =>
+    rows.length > 0
+      ? rows
+      : [Object.fromEntries(headers.map((header) => [header, ''])) as unknown as T];
 
-  const blob = new Blob([fullContent], { type: 'text/plain;charset=utf-8' });
+  const headersSheet = XLSX.utils.json_to_sheet(
+    ensureRows(data.headers, HEADER_COLUMNS),
+    { header: HEADER_COLUMNS as unknown as string[] }
+  );
+  XLSX.utils.book_append_sheet(workbook, headersSheet, 'Encabezados');
+
+  const taxesSheet = XLSX.utils.json_to_sheet(
+    ensureRows(data.taxes, TAX_COLUMNS),
+    { header: TAX_COLUMNS as unknown as string[] }
+  );
+  XLSX.utils.book_append_sheet(workbook, taxesSheet, 'IVA e Impuestos');
+
+  const conceptsSheet = XLSX.utils.json_to_sheet(
+    ensureRows(data.concepts, CONCEPT_COLUMNS),
+    { header: CONCEPT_COLUMNS as unknown as string[] }
+  );
+  XLSX.utils.book_append_sheet(workbook, conceptsSheet, 'Conceptos');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename.replace('.xlsx', '.txt');
+  link.download = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
