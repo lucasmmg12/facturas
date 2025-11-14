@@ -55,7 +55,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       ]);
 
       if (invoiceData) {
-        setInvoice(invoiceData.invoice);
+        // Asegurar que is_electronic sea true por defecto
+        const invoiceWithDefaults = {
+          ...invoiceData.invoice,
+          is_electronic: invoiceData.invoice.is_electronic ?? true,
+        };
+        setInvoice(invoiceWithDefaults);
         setInvoiceTaxes(invoiceData.taxes);
         setInvoiceConcepts(invoiceData.concepts);
       }
@@ -98,7 +103,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         freight: invoice.freight,
         interest: invoice.interest,
         total_amount: invoice.total_amount,
-        is_electronic: invoice.is_electronic,
+        is_electronic: invoice.is_electronic ?? true,
         cai_cae: invoice.cai_cae,
         cai_cae_expiration: invoice.cai_cae_expiration,
         non_computable_tax_credit: invoice.non_computable_tax_credit,
@@ -614,7 +619,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      checked={invoice.is_electronic || false}
+                      checked={invoice.is_electronic ?? true}
                       onChange={(e) =>
                         setInvoice({ ...invoice, is_electronic: e.target.checked })
                       }
@@ -626,36 +631,32 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                 </div>
 
-                {invoice.is_electronic && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        CAI / CAE
-                      </label>
-                      <input
-                        type="text"
-                        value={invoice.cai_cae || ''}
-                        onChange={(e) => setInvoice({ ...invoice, cai_cae: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="Código de Autorización Electrónica"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CAI / CAE
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.cai_cae || ''}
+                    onChange={(e) => setInvoice({ ...invoice, cai_cae: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Código de Autorización Electrónica (se extrae automáticamente)"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fecha de Vencimiento del CAI / CAE
-                      </label>
-                      <input
-                        type="date"
-                        value={invoice.cai_cae_expiration || ''}
-                        onChange={(e) =>
-                          setInvoice({ ...invoice, cai_cae_expiration: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha de Vencimiento del CAI / CAE
+                  </label>
+                  <input
+                    type="date"
+                    value={invoice.cai_cae_expiration || ''}
+                    onChange={(e) =>
+                      setInvoice({ ...invoice, cai_cae_expiration: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
             </div>
           </div>
