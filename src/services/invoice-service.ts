@@ -1,3 +1,6 @@
+// Este archivo maneja toda la lógica de negocio relacionada con comprobantes.
+// Incluye creación, actualización, validación, cambio de estados y deduplicación.
+
 import { supabase } from '../lib/supabase';
 import type { Database, InvoiceStatus, InvoiceType } from '../lib/database.types';
 import { validateInvoiceTotals } from '../utils/validators';
@@ -41,20 +44,6 @@ export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<In
 
   if (error) throw error;
   return invoice;
-}
-
-export async function deleteInvoice(id: string): Promise<void> {
-  const { error: taxesError } = await supabase.from('invoice_taxes').delete().eq('invoice_id', id);
-  if (taxesError) throw taxesError;
-
-  const { error: conceptsError } = await supabase
-    .from('invoice_concepts')
-    .delete()
-    .eq('invoice_id', id);
-  if (conceptsError) throw conceptsError;
-
-  const { error: invoiceError } = await supabase.from('invoices').delete().eq('id', id);
-  if (invoiceError) throw invoiceError;
 }
 
 export async function getInvoiceById(id: string): Promise<Invoice | null> {

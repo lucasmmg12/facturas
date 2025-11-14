@@ -19,10 +19,10 @@ interface UploadResult {
 }
 
 interface UploadPageProps {
-  onInvoiceCreated?: (invoiceId: string) => void;
+  onInvoiceCreated?: (invoiceId?: string) => void;
 }
 
-export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
+export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
   const { profile } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
@@ -41,8 +41,8 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
     setResults(newResults);
 
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
       try {
+        const file = files[i];
         let fileToProcess = file;
 
         if (isImageFile(file)) {
@@ -140,8 +140,6 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
           point_of_sale: ocrResult.pointOfSale || '00000',
           invoice_number: ocrResult.invoiceNumber,
           issue_date: ocrResult.issueDate || new Date().toISOString().split('T')[0],
-          cai_cae: ocrResult.caiCae,
-          cai_cae_expiration: ocrResult.caiCaeExpiration,
           net_taxed: ocrResult.netTaxed,
           net_untaxed: ocrResult.netUntaxed,
           net_exempt: ocrResult.netExempt,
@@ -161,18 +159,13 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
               .eq('code', tax.taxType)
               .maybeSingle();
 
-            const taxCodeId = (taxCode as { id: string } | null)?.id;
-            if (taxCodeId) {
-              await supabase
-                .from('invoice_taxes' as any)
-                .insert([
-                  {
-                    invoice_id: invoice.id,
-                    tax_code_id: taxCodeId,
-                    tax_base: tax.taxBase,
-                    tax_amount: tax.taxAmount,
-                  },
-                ] as any);
+            if (taxCode) {
+              await supabase.from('invoice_taxes').insert({
+                invoice_id: invoice.id,
+                tax_code_id: taxCode.id,
+                tax_base: tax.taxBase,
+                tax_amount: tax.taxAmount,
+              });
             }
           }
         }
@@ -184,8 +177,10 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps = {}) {
           invoiceId: invoice.id,
         };
         setResults([...newResults]);
+        if (onInvoiceCreated) {
+          onInvoiceCreated(invoice.id);
+        }
         console.log(`[Upload] Archivo procesado completamente: ${file.name}`);
-        onInvoiceCreated?.(invoice.id);
       } catch (error: any) {
         console.error(`[Upload] Error procesando ${file.name}:`, error);
         newResults[i] = {

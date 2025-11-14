@@ -54,93 +54,8 @@ export function DashboardPage() {
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
       <div className="space-y-12">
-        <section className="rounded-3xl bg-gradient-to-br from-green-600 via-emerald-500 to-green-700 text-white shadow-xl ring-1 ring-green-400/40 overflow-hidden">
-          <div className="relative">
-            <div className="absolute inset-0 opacity-60 mix-blend-luminosity bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.45),rgba(0,0,0,0)_55%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.4),rgba(0,0,0,0)_55%)]" />
-            <div className="absolute top-8 right-12 hidden h-48 w-48 rounded-full border border-white/30 bg-white/10 blur-3xl lg:block" />
-            <div className="relative z-10 grid gap-12 px-8 py-12 lg:grid-cols-[1.2fr,1fr]">
-              <div className="space-y-8">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 p-2 shadow-2xl shadow-green-900/20">
-                    <img
-                      src="/logo-header.png"
-                      alt="Grow Labs Logo"
-                      className="h-12 w-12 object-contain"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold tracking-[0.6em] text-white/70">Grow Labs</p>
-                    <h1 className="text-3xl font-bold leading-tight md:text-4xl">
-                      Automatiza la gestión de comprobantes para Tango
-                    </h1>
-                  </div>
-                </div>
-                <p className="max-w-2xl text-base text-white/80">
-                  Digitaliza la carga, control y exportación de comprobantes con la plataforma exclusiva
-                  de Grow Labs. Integramos OCR inteligente, validaciones automáticas y exportación directa
-                  a Tango Gestión para que tu equipo se enfoque en decisiones y no en tareas repetitivas.
-                </p>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                      Importación smart
-                    </p>
-                    <p className="mt-1 text-base font-semibold text-white">
-                      PDFs e imágenes en un solo flujo.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                      Validaciones
-                    </p>
-                    <p className="mt-1 text-base font-semibold text-white">
-                      CUIT, duplicados y totales verificados.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white/15 p-4 shadow-lg shadow-green-900/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                      Exportación Tango
-                    </p>
-                    <p className="mt-1 text-base font-semibold text-white">
-                      Listo para importar sin ediciones manuales.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.4em] text-white/70">Visión general</p>
-                <h2 className="mt-2 text-xl font-semibold">
-                  Tu laboratorio financiero para crecer con datos confiables.
-                </h2>
-                <div className="mt-6 space-y-4">
-                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
-                    <p className="text-sm font-semibold text-white">Flujo completo automatizado</p>
-                    <p className="mt-2 text-sm text-white/80">
-                      Desde la importación guiada hasta la exportación final, cada comprobante mantiene un historial
-                      claro y trazable.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
-                    <p className="text-sm font-semibold text-white">Colaboración transparente</p>
-                    <p className="mt-2 text-sm text-white/80">
-                      Equipos multidisciplinarios pueden revisar, editar y aprobar en un mismo lugar en tiempo real.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
-                    <p className="text-sm font-semibold text-white">Integración Grow Labs</p>
-                    <p className="mt-2 text-sm text-white/80">
-                      Desarrollado a medida para Sanatorio Argentino, con tecnología Grow Labs y soporte especializado.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-green-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center gap-3 border-b border-green-100 px-6 py-5">
+        <section className="rounded-3xl border border-blue-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 px-6 py-5">
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
               return (
@@ -150,8 +65,8 @@ export function DashboardPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                     isActive
-                      ? 'bg-green-600 text-white shadow-lg shadow-green-500/30'
-                      : 'bg-white text-green-700 border border-green-200 hover:border-green-400 hover:text-green-900'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-white text-blue-700 border border-blue-200 hover:border-blue-400 hover:text-blue-900'
                   }`}
                 >
                   {tab.label}
@@ -189,7 +104,7 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-green-900 text-white py-12 mt-16 rounded-3xl shadow-xl">
+        <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 text-white py-12 mt-16 rounded-3xl shadow-xl">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div>
@@ -201,7 +116,7 @@ export function DashboardPage() {
                   />
                   <div>
                     <h3 className="text-2xl font-bold text-white">Grow Labs</h3>
-                    <p className="text-green-400 text-sm font-medium">Donde tus ideas crecen</p>
+                    <p className="text-blue-400 text-sm font-medium">Donde tus ideas crecen</p>
                   </div>
                 </div>
                 <p className="text-gray-300 mb-4 leading-relaxed">
@@ -250,16 +165,16 @@ export function DashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
                 <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                  <Stethoscope className="w-6 h-6 text-green-400" />
+                  <Stethoscope className="w-6 h-6 text-blue-400" />
                   Cliente Exclusivo
                 </h4>
                 <div className="space-y-2">
                   <p className="text-gray-300 text-sm">
                     Esta plataforma fue desarrollada a medida para automatizar la importación de comprobantes en:
                   </p>
-                  <p className="text-xl font-bold text-green-400">Sanatorio Argentino</p>
+                  <p className="text-xl font-bold text-blue-400">Sanatorio Argentino</p>
                   <p className="text-gray-400 text-sm">San Juan, Argentina</p>
                   <div className="mt-4 pt-4 border-t border-gray-600">
                     <p className="text-xs text-gray-400">
@@ -487,9 +402,9 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-green-500/30 bg-emerald-50 p-6 text-emerald-900">
+      <div className="rounded-3xl border border-blue-500/30 bg-blue-50 p-6 text-blue-900">
         <h3 className="text-xl font-semibold">Exportación a Tango Gestión</h3>
-        <p className="mt-2 text-sm text-emerald-700">
+        <p className="mt-2 text-sm text-blue-700">
           Genera un archivo compatible con Tango que incluye encabezados, impuestos y conceptos para cada comprobante.
         </p>
       </div>
@@ -501,21 +416,21 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       )}
 
       {message && (
-        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-700">
           {message}
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-green-700">Comprobantes listos</p>
-          <p className="mt-2 text-4xl font-bold text-green-900">
+        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-blue-700">Comprobantes listos</p>
+          <p className="mt-2 text-4xl font-bold text-blue-900">
             {loading ? '...' : readyInvoices.length}
           </p>
         </div>
-        <div className="rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-green-700">Total acumulado</p>
-          <p className="mt-2 text-3xl font-bold text-green-900">
+        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-blue-700">Total acumulado</p>
+          <p className="mt-2 text-3xl font-bold text-blue-900">
             {loading
               ? '...'
               : totalAmount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
@@ -527,7 +442,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
         type="button"
         onClick={handleExport}
         disabled={exporting || readyInvoices.length === 0}
-        className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {exporting ? 'Generando archivo...' : 'Exportar a Tango Gestión'}
       </button>
