@@ -1,7 +1,9 @@
+// Este servicio delega el OCR y parsing de comprobantes a OpenAI usando el modelo gpt-4.1-mini.
+// Convierte el archivo a base64, envía la solicitud y normaliza la respuesta al formato OCRResult.
+
 import type { OCRResult } from './ocr-service';
 import { validateCUIT } from '../utils/validators';
 import { getInvoiceTypeFromCode } from '../utils/invoice-types';
-import { isOpenAIEnabled, getOpenAIApiKey } from '../utils/config';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/build/pdf';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
 
@@ -9,8 +11,6 @@ type PDFPageProxy = any;
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = 'gpt-4o';
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 1000;
 
 const CONFIDENCE_WEIGHTS = {
   supplierCuit: 0.25,
@@ -28,59 +28,13 @@ type ParsedTaxes = Array<{
   rate: number | null;
 }>;
 
-class OpenAIError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public retryable: boolean = false
-  ) {
-    super(message);
-    this.name = 'OpenAIError';
-  }
-}
-
 export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
-  if (!isOpenAIEnabled()) {
-    throw new OpenAIError(
-      'OpenAI no está configurado. Agrega VITE_OPENAI_API_KEY al archivo .env',
-      undefined,
-      false
-    );
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Falta configurar la variable VITE_OPENAI_API_KEY en el archivo .env');
   }
 
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      if (attempt > 0) {
-        console.log(`[OpenAI OCR] Intento ${attempt + 1} de ${MAX_RETRIES + 1}`);
-        await delay(RETRY_DELAY_MS * attempt);
-      }
-
-      return await performOCRExtraction(file);
-    } catch (error: any) {
-      lastError = error;
-
-      if (error instanceof OpenAIError && !error.retryable) {
-        throw error;
-      }
-
-      if (attempt < MAX_RETRIES) {
-        console.warn(`[OpenAI OCR] Error en intento ${attempt + 1}, reintentando...`, error.message);
-        continue;
-      }
-    }
-  }
-
-  throw new OpenAIError(
-    `OpenAI OCR falló después de ${MAX_RETRIES + 1} intentos: ${lastError?.message}`,
-    undefined,
-    false
-  );
-}
-
-async function performOCRExtraction(file: File): Promise<OCRResult> {
-  const apiKey = getOpenAIApiKey();
   const { base64, mimeType } = await fileToBase64(file);
   const prompt = buildPrompt();
 
@@ -128,14 +82,7 @@ async function performOCRExtraction(file: File): Promise<OCRResult> {
       statusText: response.statusText,
       body: errorText,
     });
-
-    const retryable = response.status === 429 || response.status >= 500;
-
-    throw new OpenAIError(
-      `OpenAI OCR falló (${response.status}): ${errorText}`,
-      response.status,
-      retryable
-    );
+    throw new Error(`OpenAI OCR falló (${response.status}): ${errorText}`);
   }
 
   const data = await response.json();
@@ -156,7 +103,7 @@ async function performOCRExtraction(file: File): Promise<OCRResult> {
   } catch (error) {
     console.error('[OpenAI OCR] Error al parsear JSON:', error);
     console.error('[OpenAI OCR] Texto recibido:', outputText);
-    throw new OpenAIError('OpenAI devolvió un formato inesperado (no JSON válido)', undefined, false);
+    throw new Error('OpenAI devolvió un formato inesperado (no JSON válido)');
   }
 
   const supplierCuit = sanitizeCUIT(parsed.supplierCuit);
@@ -176,6 +123,8 @@ async function performOCRExtraction(file: File): Promise<OCRResult> {
   };
 
   const taxes = normalizeTaxes(parsed.taxes);
+  const caiCae = normalizeString(parsed.caiCae ?? parsed.cae ?? parsed.cai);
+  const caiCaeExpiration = normalizeString(parsed.caiCaeExpiration ?? parsed.caeExpiration ?? parsed.caiExpiration);
 
   const confidence = calculateConfidence({
     supplierCuit,
@@ -197,6 +146,8 @@ async function performOCRExtraction(file: File): Promise<OCRResult> {
     receiverName: parsed.receiverName ?? null,
     ...amounts,
     taxes,
+    caiCae,
+    caiCaeExpiration,
     confidence,
     rawText: outputText,
   };
@@ -222,16 +173,15 @@ Estructura esperada:
   "ivaAmount": "number",
   "otherTaxesAmount": "number",
   "totalAmount": "number",
+  "caiCae": "string|null",
+  "caiCaeExpiration": "YYYY-MM-DD|null",
   "taxes": [
     { "taxType": "string", "taxBase": "number", "taxAmount": "number", "rate": "number|null" }
   ]
 }
+IMPORTANTE: Busca el CAE (Código de Autorización Electrónica) que es un número de 14 dígitos. También busca la fecha de vencimiento del CAE.
 Usa null si no encuentras un dato. Usa números con punto decimal.
 `;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -304,7 +254,7 @@ function extractOutputText(data: any): string {
   }
 
   console.error('[OpenAI OCR] Estructura de respuesta inesperada:', data);
-  throw new OpenAIError('OpenAI no devolvió contenido legible en el formato esperado', undefined, false);
+  throw new Error('OpenAI no devolvió contenido legible en el formato esperado');
 }
 
 function sanitizeCUIT(value: any): string | null {
@@ -390,3 +340,4 @@ function calculateConfidence(data: {
 
   return Math.round(Math.min(score, 1) * 100) / 100;
 }
+
