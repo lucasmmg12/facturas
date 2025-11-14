@@ -21,8 +21,6 @@ export interface OCRResult {
   pointOfSale: string | null;
   invoiceNumber: string | null;
   issueDate: string | null;
-  caiCae: string | null;
-  caiCaeExpiration: string | null;
   receiverCuit: string | null;
   receiverName: string | null;
   netTaxed: number;
@@ -52,8 +50,6 @@ export async function extractDataFromPDF(file: File): Promise<OCRResult> {
     const pointOfSale = extractPointOfSale(text);
     const invoiceNumber = extractInvoiceNumber(text);
     const issueDate = extractDate(text);
-    const caiCae = extractCaiCae(text);
-    const caiCaeExpiration = extractCaiExpiration(text);
     const receiverCuit = extractCUIT(text, 'receptor');
     const receiverName = extractReceiverName(text);
 
@@ -88,8 +84,6 @@ export async function extractDataFromPDF(file: File): Promise<OCRResult> {
       pointOfSale,
       invoiceNumber,
       issueDate,
-      caiCae,
-      caiCaeExpiration,
       receiverCuit,
       receiverName,
       ...amounts,
@@ -341,35 +335,6 @@ function extractDate(text: string): string | null {
       const month = match[2];
       const year = match[3];
       return `${year}-${month}-${day}`;
-    }
-  }
-
-  return null;
-}
-
-function extractCaiCae(text: string): string | null {
-  const pattern = /(CAE|CAI)[^\d]*?(\d{8,14})/i;
-  const match = text.match(pattern);
-  if (match?.[2]) {
-    return match[2].replace(/\D/g, '');
-  }
-  return null;
-}
-
-function extractCaiExpiration(text: string): string | null {
-  const patterns = [
-    /(Venc(?:\.|imiento)?(?: del)?(?: CAE| CAI)?)[^\d]*?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i,
-    /(CAE|CAI)\s+Vence[^\d]*?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const [day, month, year] = match.slice(-3);
-      if (day && month && year) {
-        const normalizedYear = year.length === 2 ? `20${year}` : year;
-        return `${normalizedYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
     }
   }
 
