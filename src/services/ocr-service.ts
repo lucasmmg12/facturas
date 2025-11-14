@@ -1,189 +1,223 @@
-// Este archivo implementa el servicio de OCR y parsing de comprobantes.
-// Extrae datos estructurados de PDFs usando técnicas de reconocimiento de patrones.
-// Diseñado de forma modular para permitir mejoras sin afectar otros componentes.
+// Este servicio delega el OCR y parsing de comprobantes a OpenAI usando el modelo gpt-4.1-mini.
+// Convierte el archivo a base64, envía la solicitud y normaliza la respuesta al formato OCRResult.
 
-import type { InvoiceType } from '../lib/database.types';
+import type { OCRResult } from './ocr-service';
 import { validateCUIT } from '../utils/validators';
 import { getInvoiceTypeFromCode } from '../utils/invoice-types';
-import {
-  GlobalWorkerOptions,
-  getDocument,
-  type PDFDocumentProxy,
-  type PDFPageProxy,
-} from 'pdfjs-dist';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/build/pdf';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
-import { createWorker, type Worker } from 'tesseract.js';
 
-export interface OCRResult {
-  supplierCuit: string | null;
-  supplierName: string | null;
-  invoiceType: InvoiceType | null;
-  pointOfSale: string | null;
-  invoiceNumber: string | null;
-  issueDate: string | null;
-  caiCae: string | null;
-  caiCaeExpiration: string | null;
-  receiverCuit: string | null;
-  receiverName: string | null;
-  netTaxed: number;
-  netUntaxed: number;
-  netExempt: number;
-  ivaAmount: number;
-  otherTaxesAmount: number;
-  totalAmount: number;
-  taxes: Array<{
-    taxType: string;
-    taxBase: number;
-    taxAmount: number;
-    rate: number | null;
-  }>;
-  confidence: number;
-  rawText?: string;
+type PDFPageProxy = any;
+
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = 'gpt-4o';
+
+const CONFIDENCE_WEIGHTS = {
+  supplierCuit: 0.25,
+  invoiceType: 0.15,
+  pointOfSale: 0.1,
+  invoiceNumber: 0.15,
+  issueDate: 0.15,
+  totalAmount: 0.2,
+};
+
+type ParsedTaxes = Array<{
+  taxType: string;
+  taxBase: number;
+  taxAmount: number;
+  rate: number | null;
+}>;
+
+export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Falta configurar la variable VITE_OPENAI_API_KEY en el archivo .env');
+  }
+
+  const { base64, mimeType } = await fileToBase64(file);
+  const prompt = buildPrompt();
+
+  const requestBody = {
+    model: OPENAI_MODEL,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`,
+            },
+          },
+        ],
+      },
+    ],
+    max_tokens: 1200,
+  };
+
+  if (import.meta.env?.DEV) {
+    console.debug('[OpenAI OCR] Enviando solicitud:', {
+      model: requestBody.model,
+      endpoint: OPENAI_ENDPOINT,
+      promptLength: prompt.length,
+      imageSize: base64.length,
+    });
+  }
+
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[OpenAI OCR] Error en la respuesta:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+    });
+    throw new Error(`OpenAI OCR falló (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  if (import.meta.env?.DEV) {
+    console.debug('[OpenAI OCR] Respuesta completa:', data);
+  }
+
+  const outputText = extractOutputText(data);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(outputText);
+
+    if (import.meta.env?.DEV) {
+      console.debug('[OpenAI OCR] JSON parseado exitosamente:', parsed);
+    }
+  } catch (error) {
+    console.error('[OpenAI OCR] Error al parsear JSON:', error);
+    console.error('[OpenAI OCR] Texto recibido:', outputText);
+    throw new Error('OpenAI devolvió un formato inesperado (no JSON válido)');
+  }
+
+  const supplierCuit = sanitizeCUIT(parsed.supplierCuit);
+  const invoiceTypeCode = normalizeInvoiceTypeCode(parsed.invoiceTypeCode ?? parsed.invoiceType);
+  const invoiceType = invoiceTypeCode ? getInvoiceTypeFromCode(invoiceTypeCode) : null;
+  const pointOfSale = normalizeString(parsed.pointOfSale);
+  const invoiceNumber = normalizeString(parsed.invoiceNumber);
+  const issueDate = normalizeString(parsed.issueDate);
+
+  const amounts = {
+    netTaxed: normalizeNumber(parsed.netTaxed),
+    netUntaxed: normalizeNumber(parsed.netUntaxed),
+    netExempt: normalizeNumber(parsed.netExempt),
+    ivaAmount: normalizeNumber(parsed.ivaAmount),
+    otherTaxesAmount: normalizeNumber(parsed.otherTaxesAmount),
+    totalAmount: normalizeNumber(parsed.totalAmount),
+  };
+
+  const taxes = normalizeTaxes(parsed.taxes);
+
+  const confidence = calculateConfidence({
+    supplierCuit,
+    invoiceType,
+    pointOfSale,
+    invoiceNumber,
+    issueDate,
+    totalAmount: amounts.totalAmount,
+  });
+
+  return {
+    supplierCuit,
+    supplierName: parsed.supplierName ?? null,
+    invoiceType,
+    pointOfSale,
+    invoiceNumber,
+    issueDate,
+    receiverCuit: sanitizeCUIT(parsed.receiverCuit),
+    receiverName: parsed.receiverName ?? null,
+    ...amounts,
+    taxes,
+    confidence,
+    rawText: outputText,
+  };
 }
 
-export async function extractDataFromPDF(file: File): Promise<OCRResult> {
-  try {
-    const text = await extractTextFromFile(file);
+function buildPrompt(): string {
+  return `
+Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
+Estructura esperada:
+{
+  "supplierCuit": "string|null",
+  "supplierName": "string|null",
+  "receiverCuit": "string|null",
+  "receiverName": "string|null",
+  "invoiceTypeCode": "string|null",
+  "invoiceType": "string|null",
+  "pointOfSale": "string|null",
+  "invoiceNumber": "string|null",
+  "issueDate": "YYYY-MM-DD|null",
+  "netTaxed": "number",
+  "netUntaxed": "number",
+  "netExempt": "number",
+  "ivaAmount": "number",
+  "otherTaxesAmount": "number",
+  "totalAmount": "number",
+  "taxes": [
+    { "taxType": "string", "taxBase": "number", "taxAmount": "number", "rate": "number|null" }
+  ]
+}
+Usa null si no encuentras un dato. Usa números con punto decimal.
+`;
+}
 
-    const supplierCuit = extractCUIT(text, 'proveedor');
-    const supplierName = extractSupplierName(text);
-    const invoiceTypeCode = extractInvoiceType(text);
-    const invoiceType = invoiceTypeCode ? getInvoiceTypeFromCode(invoiceTypeCode) : null;
-    const pointOfSale = extractPointOfSale(text);
-    const invoiceNumber = extractInvoiceNumber(text);
-    const issueDate = extractDate(text);
-    const caiCae = extractCaiCae(text);
-    const caiCaeExpiration = extractCaiExpiration(text);
-    const receiverCuit = extractCUIT(text, 'receptor');
-    const receiverName = extractReceiverName(text);
-
-    const amounts = extractAmounts(text);
-    const taxes = extractTaxes(text);
-
-    const confidence = calculateConfidence({
-      supplierCuit,
-      invoiceType,
-      pointOfSale,
-      invoiceNumber,
-      issueDate,
-      totalAmount: amounts.totalAmount,
-    });
-
-    if (import.meta.env?.DEV && (!supplierCuit || !invoiceType || !invoiceNumber)) {
-      console.warn('[OCR] Campos faltantes detectados', {
-        supplierCuit,
-        invoiceType,
-        invoiceNumber,
-        pointOfSale,
-        issueDate,
-        totalAmount: amounts.totalAmount,
-      });
-      console.debug('[OCR] Texto bruto recibido:', text);
-    }
-
-    return {
-      supplierCuit,
-      supplierName,
-      invoiceType,
-      pointOfSale,
-      invoiceNumber,
-      issueDate,
-      caiCae,
-      caiCaeExpiration,
-      receiverCuit,
-      receiverName,
-      ...amounts,
-      taxes,
-      confidence,
-      rawText: text,
-    };
-  } catch (error) {
-    console.error('Error extracting data from PDF:', error);
-    throw error;
+function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  if (file.type === 'application/pdf') {
+    return convertPdfToPngBase64(file).then((base64) => ({
+      base64,
+      mimeType: 'image/png',
+    }));
   }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1] ?? '';
+      resolve({ base64, mimeType: file.type || 'application/octet-stream' });
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
 }
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
-let ocrWorkerInstance: Worker | null = null;
-let ocrWorkerPromise: Promise<Worker> | null = null;
-
-async function getTesseractWorker(): Promise<Worker> {
-  if (ocrWorkerInstance) {
-    return ocrWorkerInstance;
-  }
-
-  if (!ocrWorkerPromise) {
-    ocrWorkerPromise = (async () => {
-      const worker = await createWorker({
-        logger: () => undefined,
-      });
-      await worker.load();
-      await worker.loadLanguage('spa');
-      await worker.initialize('spa');
-      ocrWorkerInstance = worker;
-      return worker;
-    })();
-  }
-
-  return ocrWorkerPromise;
-}
-
-async function extractTextFromFile(file: File): Promise<string> {
+async function convertPdfToPngBase64(file: File): Promise<string> {
   if (typeof window === 'undefined') {
-    throw new Error('El OCR solo está disponible en el entorno del navegador');
+    throw new Error('La conversión de PDF a imagen solo está disponible en el navegador');
   }
 
-  if (file.type === 'application/pdf') {
-    return extractTextFromPDF(file);
-  }
-
-  return recognizeImageBlob(file);
-}
-
-async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-
-  let text = '';
-
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-    const page = await pdf.getPage(pageNumber);
-    const pageText = await extractTextFromPage(page);
-
-    if (pageText.trim()) {
-      text += `${pageText}\n`;
-      continue;
-    }
-
-    const ocrText = await recognizePageWithOCR(page);
-    text += `${ocrText}\n`;
-  }
-
-  return text;
+  const page = await pdf.getPage(1);
+  const imageBase64 = await renderPageToBase64(page);
+  return imageBase64;
 }
 
-async function extractTextFromPage(page: PDFPageProxy): Promise<string> {
-  const content = await page.getTextContent();
-  const strings = content.items
-    .map((item) => {
-      if (typeof (item as any).str === 'string') {
-        return (item as any).str;
-      }
-      return '';
-    })
-    .filter(Boolean);
-
-  return strings.join(' ');
-}
-
-async function recognizePageWithOCR(page: PDFPageProxy): Promise<string> {
+async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
   const viewport = page.getViewport({ scale: 2 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
   if (!context) {
-    throw new Error('No se pudo inicializar el canvas para OCR');
+    throw new Error('No se pudo inicializar el canvas para renderizar el PDF');
   }
 
   canvas.width = viewport.width;
@@ -191,299 +225,112 @@ async function recognizePageWithOCR(page: PDFPageProxy): Promise<string> {
 
   await page.render({ canvasContext: context, viewport }).promise;
 
-  const blob = await canvasToBlob(canvas);
-  return recognizeImageBlob(blob);
+  const dataUrl = canvas.toDataURL('image/png');
+  return dataUrl.split(',')[1] ?? '';
 }
 
-async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error('No se pudo generar un blob desde el canvas'));
+function extractOutputText(data: any): string {
+  if (data?.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+    const messageContent = data.choices[0]?.message?.content;
+
+    if (typeof messageContent === 'string' && messageContent.trim()) {
+      let cleaned = messageContent.trim();
+
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
-    }, 'image/png');
-  });
-}
 
-async function recognizeImageBlob(blob: Blob): Promise<string> {
-  const worker = await getTesseractWorker();
-  const dataUrl = await blobToDataURL(blob);
-  const { data } = await worker.recognize(dataUrl);
-  return data.text;
-}
-
-async function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('No se pudo leer el blob'));
-    reader.readAsDataURL(blob);
-  });
-}
-
-function extractCUIT(text: string, type: 'proveedor' | 'receptor'): string | null {
-  const cuitPatterns = [
-    /CUIT[:\s]*(\d{2}[-\s]?\d{8}[-\s]?\d{1})/gi,
-    /(\d{2}[-\s]?\d{8}[-\s]?\d{1})/g,
-  ];
-
-  for (const pattern of cuitPatterns) {
-    const matches = text.match(pattern);
-    if (matches && matches.length > 0) {
-      const cuit = matches[type === 'proveedor' ? 0 : 1]?.replace(/[^0-9]/g, '') || null;
-      if (cuit && validateCUIT(cuit)) {
-        return cuit;
-      }
+      return cleaned.trim();
     }
   }
 
-  return null;
+  console.error('[OpenAI OCR] Estructura de respuesta inesperada:', data);
+  throw new Error('OpenAI no devolvió contenido legible en el formato esperado');
 }
 
-function extractSupplierName(text: string): string | null {
-  const patterns = [
-    /Razón Social[:\s]+([A-Za-z0-9\s,.]+)/i,
-    /Denominación[:\s]+([A-Za-z0-9\s,.]+)/i,
-  ];
+function sanitizeCUIT(value: any): string | null {
+  if (!value) return null;
+  const digits = String(value).replace(/\D/g, '');
+  return validateCUIT(digits) ? digits : null;
+}
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
+function normalizeInvoiceTypeCode(value: any): string | null {
+  if (!value) return null;
+  const trimmed = String(value).trim().toUpperCase();
+
+  if (/^\d{1,3}$/.test(trimmed)) {
+    return trimmed.padStart(3, '0');
   }
 
-  return null;
-}
-
-function extractReceiverName(text: string): string | null {
-  const patterns = [
-    /Denominación del comprador[:\s]+([A-Za-z0-9\s,.]+)/i,
-    /Comprador[:\s]+([A-Za-z0-9\s,.]+)/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-
-  return null;
-}
-
-function extractInvoiceType(text: string): string | null {
-  const patterns = [
-    /Tipo de Comprobante[:\s]+(\d{3})/i,
-    /Comprobante[:\s]+(\d{3})/i,
-    /Factura\s+([ABC])/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      return match[1].padStart(3, '0');
-    }
-  }
-
-  return null;
-}
-
-function extractPointOfSale(text: string): string | null {
-  const patterns = [
-    /Punto de Venta[:\s]+(\d{4,5})/i,
-    /P\.?\s*V\.?[:\s]+(\d{4,5})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      return match[1].padStart(5, '0');
-    }
-  }
-
-  return null;
-}
-
-function extractInvoiceNumber(text: string): string | null {
-  const patterns = [
-    /Número[:\s]+(\d{8})/i,
-    /Nro[:\s]+(\d{8})/i,
-    /(\d{4,5})[-\s](\d{8})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const number = match[2] || match[1];
-      if (number) {
-        return number.padStart(8, '0');
-      }
-    }
-  }
-
-  return null;
-}
-
-function extractDate(text: string): string | null {
-  const patterns = [
-    /Fecha de Emisión[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /Fecha[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /(\d{2})[\/\-](\d{2})[\/\-](\d{4})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match && match[1] && match[2] && match[3]) {
-      const day = match[1];
-      const month = match[2];
-      const year = match[3];
-      return `${year}-${month}-${day}`;
-    }
-  }
-
-  return null;
-}
-
-function extractCaiCae(text: string): string | null {
-  const pattern = /(CAE|CAI)[^\d]*?(\d{8,14})/i;
-  const match = text.match(pattern);
-  if (match?.[2]) {
-    return match[2].replace(/\D/g, '');
-  }
-  return null;
-}
-
-function extractCaiExpiration(text: string): string | null {
-  const patterns = [
-    /(Venc(?:\.|imiento)?(?: del)?(?: CAE| CAI)?)[^\d]*?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i,
-    /(CAE|CAI)\s+Vence[^\d]*?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const [day, month, year] = match.slice(-3);
-      if (day && month && year) {
-        const normalizedYear = year.length === 2 ? `20${year}` : year;
-        return `${normalizedYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
-    }
-  }
-
-  return null;
-}
-
-function extractAmounts(text: string): {
-  netTaxed: number;
-  netUntaxed: number;
-  netExempt: number;
-  ivaAmount: number;
-  otherTaxesAmount: number;
-  totalAmount: number;
-} {
-  const amountPattern = /\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/;
-
-  const netTaxedMatch = text.match(/Neto Gravado[:\s]+\$?\s*([\d.,]+)/i);
-  const netUntaxedMatch = text.match(/No Gravado[:\s]+\$?\s*([\d.,]+)/i);
-  const netExemptMatch = text.match(/Exento[:\s]+\$?\s*([\d.,]+)/i);
-  const ivaMatch = text.match(/IVA[:\s]+\$?\s*([\d.,]+)/i);
-  const totalMatch = text.match(/Total[:\s]+\$?\s*([\d.,]+)/i);
-
-  const parseAmount = (match: RegExpMatchArray | null): number => {
-    if (!match || !match[1]) return 0;
-    return parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+  const mapping: Record<string, string> = {
+    'FACTURA A': '001',
+    'FACTURA B': '006',
+    'FACTURA C': '011',
+    'FACTURA M': '051',
+    'NOTA DE CREDITO A': '003',
+    'NOTA DE CREDITO B': '008',
+    'NOTA DE CREDITO C': '013',
+    'NOTA DE DEBITO A': '002',
+    'NOTA DE DEBITO B': '007',
+    'NOTA DE DEBITO C': '012',
   };
 
-  return {
-    netTaxed: parseAmount(netTaxedMatch),
-    netUntaxed: parseAmount(netUntaxedMatch),
-    netExempt: parseAmount(netExemptMatch),
-    ivaAmount: parseAmount(ivaMatch),
-    otherTaxesAmount: 0,
-    totalAmount: parseAmount(totalMatch),
-  };
+  const normalized = trimmed.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return mapping[normalized] ?? null;
 }
 
-function extractTaxes(text: string): Array<{
-  taxType: string;
-  taxBase: number;
-  taxAmount: number;
-  rate: number | null;
-}> {
-  const taxes: Array<{
-    taxType: string;
-    taxBase: number;
-    taxAmount: number;
-    rate: number | null;
-  }> = [];
+function normalizeString(value: any): string | null {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
-  const ivaPatterns = [
-    /IVA\s+(21|10\.5|27|5|2\.5)%[:\s]+Base[:\s]+\$?\s*([\d.,]+)[:\s]+Imp[:\s]+\$?\s*([\d.,]+)/gi,
-  ];
+function normalizeNumber(value: any): number {
+  if (value === null || value === undefined) return 0;
 
-  for (const pattern of ivaPatterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const rate = parseFloat(match[1]);
-      const base = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
-      const amount = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
-
-      taxes.push({
-        taxType: `IVA_${match[1].replace('.', '_')}`,
-        taxBase: base,
-        taxAmount: amount,
-        rate,
-      });
-    }
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
   }
 
-  return taxes;
+  const sanitized = String(value).replace(/\s+/g, '').replace(/\./g, '').replace(',', '.');
+  const parsed = parseFloat(sanitized);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function normalizeTaxes(taxes: any): ParsedTaxes {
+  if (!Array.isArray(taxes)) {
+    return [];
+  }
+
+  return taxes
+    .map((tax: any) => ({
+      taxType: typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO',
+      taxBase: normalizeNumber(tax?.taxBase),
+      taxAmount: normalizeNumber(tax?.taxAmount),
+      rate: typeof tax?.rate === 'number' ? tax.rate : null,
+    }))
+    .filter((tax) => tax.taxAmount !== 0 || tax.taxBase !== 0);
 }
 
 function calculateConfidence(data: {
   supplierCuit: string | null;
-  invoiceType: InvoiceType | null;
+  invoiceType: ReturnType<typeof getInvoiceTypeFromCode>;
   pointOfSale: string | null;
   invoiceNumber: string | null;
   issueDate: string | null;
   totalAmount: number;
 }): number {
   let score = 0;
-  const weights = {
-    supplierCuit: 0.25,
-    invoiceType: 0.15,
-    pointOfSale: 0.1,
-    invoiceNumber: 0.15,
-    issueDate: 0.15,
-    totalAmount: 0.2,
-  };
 
-  if (data.supplierCuit && validateCUIT(data.supplierCuit)) {
-    score += weights.supplierCuit;
-  }
+  if (data.supplierCuit) score += CONFIDENCE_WEIGHTS.supplierCuit;
+  if (data.invoiceType) score += CONFIDENCE_WEIGHTS.invoiceType;
+  if (data.pointOfSale) score += CONFIDENCE_WEIGHTS.pointOfSale;
+  if (data.invoiceNumber) score += CONFIDENCE_WEIGHTS.invoiceNumber;
+  if (data.issueDate) score += CONFIDENCE_WEIGHTS.issueDate;
+  if (data.totalAmount > 0) score += CONFIDENCE_WEIGHTS.totalAmount;
 
-  if (data.invoiceType) {
-    score += weights.invoiceType;
-  }
-
-  if (data.pointOfSale) {
-    score += weights.pointOfSale;
-  }
-
-  if (data.invoiceNumber) {
-    score += weights.invoiceNumber;
-  }
-
-  if (data.issueDate) {
-    score += weights.issueDate;
-  }
-
-  if (data.totalAmount > 0) {
-    score += weights.totalAmount;
-  }
-
-  return Math.round(score * 100) / 100;
+  return Math.round(Math.min(score, 1) * 100) / 100;
 }
+

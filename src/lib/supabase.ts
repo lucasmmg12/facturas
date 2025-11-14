@@ -1,3 +1,6 @@
+// Este archivo configura el cliente de Supabase para la conexión con la base de datos
+// y manejo de autenticación. Es el punto central de conexión con el backend.
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
