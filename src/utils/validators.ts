@@ -62,3 +62,51 @@ export function validateInvoiceTotals(data: {
     errors,
   };
 }
+
+export function validateFileType(file: File): { valid: boolean; error?: string } {
+  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+  const maxSize = 10 * 1024 * 1024;
+
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Tipo de archivo no permitido: ${file.type}. Solo se permiten PDF e imágenes (PNG, JPG).`,
+    };
+  }
+
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: `Archivo demasiado grande: ${(file.size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: 10MB.`,
+    };
+  }
+
+  return { valid: true };
+}
+
+export function validateInvoiceData(data: {
+  supplierCuit: string | null;
+  invoiceType: string | null;
+  invoiceNumber: string | null;
+}): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!data.supplierCuit) {
+    errors.push('CUIT del proveedor es requerido');
+  } else if (!validateCUIT(data.supplierCuit)) {
+    errors.push('CUIT del proveedor es inválido');
+  }
+
+  if (!data.invoiceType) {
+    errors.push('Tipo de comprobante es requerido');
+  }
+
+  if (!data.invoiceNumber) {
+    errors.push('Número de comprobante es requerido');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
