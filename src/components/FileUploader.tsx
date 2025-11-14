@@ -1,134 +1,95 @@
-import { useCallback, useState } from 'react';
-import { Upload, X } from 'lucide-react';
+// Este componente maneja la subida de archivos (PDFs e imágenes).
+// Soporta drag & drop, múltiples archivos y conversión automática de imágenes.
+
+import { useState, useRef } from 'react';
+import { Upload, File, Image } from 'lucide-react';
+import { isImageFile, isPDFFile } from '../utils/file-converter';
 
 interface FileUploaderProps {
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
-  accept?: string;
 }
 
-export function FileUploader({ onFilesSelected, disabled, accept = '.pdf,.jpg,.jpeg,.png' }: FileUploaderProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragActive(false);
-
-      if (disabled) return;
-
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        setSelectedFiles(files);
-      }
-    },
-    [disabled]
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (disabled) return;
-
-      const files = Array.from(e.target.files || []);
-      if (files.length > 0) {
-        setSelectedFiles(files);
-      }
-    },
-    [disabled]
-  );
-
-  const handleUpload = () => {
-    if (selectedFiles.length > 0) {
-      onFilesSelected(selectedFiles);
-      setSelectedFiles([]);
+    if (!disabled) {
+      setIsDragging(true);
     }
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (disabled) return;
+
+    const files = Array.from(e.dataTransfer.files).filter(
+      (file) => isImageFile(file) || isPDFFile(file)
+    );
+
+    if (files.length > 0) {
+      onFilesSelected(files);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length > 0) {
+      onFilesSelected(files);
+    }
+  };
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className="w-full">
-      <div
-        className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${
-          dragActive
-            ? 'border-blue-500 bg-blue-50'
-            : disabled
-            ? 'border-gray-200 bg-gray-50'
-            : 'border-gray-300 hover:border-gray-400'
-        }`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          multiple
-          accept={accept}
-          onChange={handleChange}
-          disabled={disabled}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={handleClick}
+      className={`
+        relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+        transition-all duration-200
+        ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+      `}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,application/pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={disabled}
+      />
 
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <Upload className="h-10 w-10 text-gray-400" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-700">
-              Arrastra archivos aquí o haz clic para seleccionar
-            </p>
-            <p className="text-xs text-gray-500 mt-1">PDF, JPG, JPEG o PNG</p>
-          </div>
+      <div className="flex flex-col items-center space-y-4">
+        <div className="flex space-x-2">
+          <Upload className="h-12 w-12 text-gray-400" />
+          <File className="h-12 w-12 text-gray-400" />
+          <Image className="h-12 w-12 text-gray-400" />
+        </div>
+
+        <div>
+          <p className="text-lg font-medium text-gray-900">
+            Arrastra archivos aquí o haz clic para seleccionar
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Archivos PDF o imágenes (JPG, PNG)
+          </p>
         </div>
       </div>
-
-      {selectedFiles.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">
-              Archivos seleccionados ({selectedFiles.length})
-            </p>
-            <button
-              onClick={handleUpload}
-              disabled={disabled}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Procesar Archivos
-            </button>
-          </div>
-
-          <div className="space-y-1">
-            {selectedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200"
-              >
-                <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                <button
-                  onClick={() => removeFile(index)}
-                  disabled={disabled}
-                  className="text-gray-400 hover:text-red-600 disabled:opacity-50"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
