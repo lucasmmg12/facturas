@@ -1,12 +1,13 @@
 import { AuthProvider } from './contexts/AuthContext';
-import { UploadPage } from './pages/UploadPage';
+import { AuthGuard } from './components/AuthGuard';
+import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        <UploadPage />
-      </div>
+      <AuthGuard>
+        <DashboardPage />
+      </AuthGuard>
     </AuthProvider>
   );
 }
