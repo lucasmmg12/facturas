@@ -174,6 +174,9 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           status: ocrResult.confidence >= 0.7 ? 'PROCESSED' : 'PENDING_REVIEW',
           ocr_confidence: ocrResult.confidence,
           created_by: profile.id,
+          is_electronic: true,
+          cai_cae: ocrResult.caiCae || null,
+          cai_cae_expiration: ocrResult.caiCaeExpiration || null,
         });
 
         if (ocrResult.taxes && ocrResult.taxes.length > 0) {
