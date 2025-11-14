@@ -2,6 +2,10 @@ export function isImageFile(file: File): boolean {
   return file.type.startsWith('image/');
 }
 
+export function isPDFFile(file: File): boolean {
+  return file.type === 'application/pdf';
+}
+
 export async function convertImageToPDF(imageFile: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
