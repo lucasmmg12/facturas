@@ -4,8 +4,6 @@ import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
   return (
-    <AuthProvider>
-      <AuthGuard>
         <DashboardPage />
       </AuthGuard>
     </AuthProvider>
