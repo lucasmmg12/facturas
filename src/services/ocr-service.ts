@@ -35,6 +35,8 @@ export interface OCRResult {
     taxAmount: number;
     rate: number | null;
   }>;
+  caiCae: string | null;
+  caiCaeExpiration: string | null;
   confidence: number;
   rawText?: string;
 }
@@ -55,6 +57,8 @@ export async function extractDataFromPDF(file: File): Promise<OCRResult> {
 
     const amounts = extractAmounts(text);
     const taxes = extractTaxes(text);
+    const caiCae = extractCAE(text);
+    const caiCaeExpiration = extractCAEExpiration(text);
 
     const confidence = calculateConfidence({
       supplierCuit,
@@ -88,6 +92,8 @@ export async function extractDataFromPDF(file: File): Promise<OCRResult> {
       receiverName,
       ...amounts,
       taxes,
+      caiCae,
+      caiCaeExpiration,
       confidence,
       rawText: text,
     };
@@ -406,6 +412,67 @@ function extractTaxes(text: string): Array<{
   }
 
   return taxes;
+}
+
+function extractCAE(text: string): string | null {
+  const patterns = [
+    /CAE[:\s]+(\d{14})/i,
+    /CAI[:\s]+(\d{14})/i,
+    /Código de Autorización[:\s]+(\d{14})/i,
+    /Autorización[:\s]+(\d{14})/i,
+    /(\d{14})/g,
+  ];
+
+  for (const pattern of patterns) {
+    const matches = text.match(pattern);
+    if (matches && matches.length > 0) {
+      // Buscar el número de 14 dígitos que esté cerca de palabras relacionadas con CAE/CAI
+      const contextPattern = /(?:CAE|CAI|Código de Autorización|Autorización)[:\s]*(\d{14})/i;
+      const contextMatch = text.match(contextPattern);
+      if (contextMatch && contextMatch[1]) {
+        return contextMatch[1];
+      }
+      // Si no hay contexto, buscar cualquier número de 14 dígitos
+      const allMatches = text.match(/(\d{14})/g);
+      if (allMatches && allMatches.length > 0) {
+        // Preferir el que esté más cerca de palabras clave
+        const lines = text.split('\n');
+        for (const line of lines) {
+          if (/CAE|CAI|Autorización/i.test(line)) {
+            const lineMatch = line.match(/(\d{14})/);
+            if (lineMatch) {
+              return lineMatch[1];
+            }
+          }
+        }
+        // Si no hay contexto, devolver el primero
+        return allMatches[0];
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractCAEExpiration(text: string): string | null {
+  const patterns = [
+    /Vencimiento[:\s]+CAE[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
+    /Vencimiento[:\s]+CAI[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
+    /Vto\.?\s+CAE[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
+    /Vto\.?\s+CAI[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[2] && match[3]) {
+      const day = match[1];
+      const month = match[2];
+      const year = match[3];
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return null;
 }
 
 function calculateConfidence(data: {
