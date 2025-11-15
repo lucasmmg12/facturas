@@ -1,9 +1,9 @@
 // Esta página maneja el inicio de sesión y registro de usuarios.
-// Permite autenticación mediante email y contraseña. Todos los usuarios tienen permisos completos.
+// Diseño futurista con colores de Grow Labs (verde y blanco)
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText } from 'lucide-react';
+import { Sparkles, Lock, Mail, User } from 'lucide-react';
 
 export function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,103 +34,234 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div 
+      className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden"
+      style={{
+        backgroundImage: 'url(/fondogrow.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Overlay oscuro para mejorar contraste */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      
+      {/* Efectos de luz verde */}
+      <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+      <div className="max-w-md w-full relative z-10">
+        {/* Logo y título */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <FileText className="h-8 w-8 text-white" />
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/logogrow.png" 
+              alt="Grow Labs" 
+              className="h-24 w-auto drop-shadow-2xl"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
+              }}
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Sistema de Comprobantes
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+            <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
+              Grow Labs
+            </span>
           </h1>
-          <p className="text-gray-600">
-            Automatización de carga para Tango Gestión
+          <p className="text-gray-300 text-lg flex items-center justify-center gap-2">
+            <Sparkles className="h-4 w-4 text-green-400" />
+            Sistema de Gestión Inteligente
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
-                isLogin
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
-                !isLogin
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Registrarse
-            </button>
-          </div>
+        {/* Card principal con efecto glassmorphism */}
+        <div 
+          className="relative rounded-2xl shadow-2xl overflow-hidden"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
+          }}
+        >
+          {/* Borde brillante animado */}
+          <div 
+            className="absolute inset-0 rounded-2xl"
+            style={{
+              background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
+              animation: 'borderGlow 3s ease-in-out infinite',
+            }}
+          ></div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
+          <div className="relative p-8">
+            {/* Toggle Login/Register */}
+            <div 
+              className="flex mb-6 p-1 rounded-xl"
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  isLogin
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                Iniciar Sesión
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  !isLogin
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                Registrarse
+              </button>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre Completo
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            {/* Error message */}
+            {error && (
+              <div 
+                className="mb-4 p-4 rounded-lg text-red-200 text-sm border border-red-400/50"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                {error}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            {/* Formulario */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {!isLogin && (
+                <div>
+                  <label className="block text-sm font-semibold text-green-300 mb-2 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                    }}
+                    placeholder="Tu nombre completo"
+                  />
+                </div>
+              )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-semibold text-green-300 mb-2 flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                  }}
+                  placeholder="tu@email.com"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Procesando...' : isLogin ? 'Iniciar Sesión' : 'Registrarse'}
-            </button>
-          </form>
+              <div>
+                <label className="block text-sm font-semibold text-green-300 mb-2 flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Contraseña
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                  }}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-bold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-green-500/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 relative overflow-hidden group"
+              >
+                {/* Efecto de brillo en hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                <span className="relative flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5" />
+                      {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
+                    </>
+                  )}
+                </span>
+              </button>
+            </form>
+
+            {/* Footer text */}
+            <div className="mt-6 text-center">
+              <p className="text-gray-400 text-sm">
+                Powered by{' '}
+                <span className="text-green-400 font-semibold">Grow Labs</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Decoración inferior */}
+        <div className="mt-8 flex justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse delay-150"></div>
+          <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse delay-300"></div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes borderGlow {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.8;
+          }
+        }
+        
+        .delay-150 {
+          animation-delay: 150ms;
+        }
+        
+        .delay-300 {
+          animation-delay: 300ms;
+        }
+        
+        .delay-1000 {
+          animation-delay: 1000ms;
+        }
+      `}</style>
     </div>
   );
 }
