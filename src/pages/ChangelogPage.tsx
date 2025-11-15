@@ -12,6 +12,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.5.0',
+    date: '15 de Noviembre, 2024 (noche)',
+    changes: [
+      {
+        type: 'improvement',
+        description: 'Nuevo diseño futurista para la página de login con los colores de Grow Labs (verde y blanco)',
+      },
+      {
+        type: 'improvement',
+        description: 'Efecto glassmorphism y animaciones modernas en la interfaz de autenticación',
+      },
+      {
+        type: 'improvement',
+        description: 'Integración del logo y fondo personalizado de Grow Labs',
+      },
+      {
+        type: 'improvement',
+        description: 'Efectos de luz y animaciones con temática verde para una experiencia visual mejorada',
+      },
+    ],
+  },
+  {
     version: '1.4.0',
     date: '15 de Noviembre, 2024 (noche)',
     changes: [
