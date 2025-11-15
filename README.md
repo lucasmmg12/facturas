@@ -1,154 +1,113 @@
-# Sistema de Automatización de Comprobantes para Tango Gestión
+# Supabase Edge Functions
 
-Sistema web completo para automatizar la carga, procesamiento, revisión y exportación de comprobantes de compra destinados a Tango Gestión.
+## Edge Function: openai-ocr
 
-## Características Principales
+Esta Edge Function actúa como proxy entre el frontend y la API de OpenAI para procesar OCR de comprobantes. Soluciona el problema de CORS que existe cuando se intenta llamar directamente a OpenAI desde bolt.new u otros entornos de sandbox.
 
-- 📤 **Carga automática** de PDFs e imágenes con conversión automática
-- 🔍 **OCR y extracción** inteligente de datos de comprobantes
-- ✅ **Validación automática** de CUIT, totales y detección de duplicados
-- 👥 **Gestión de proveedores** con mapeo a códigos Tango
-- 📊 **Conceptos dinámicos** creados por usuarios en tiempo real
-- 🔄 **Sistema de estados** (workflow) para control de procesamiento
-- 📥 **Generación de archivos** de importación compatibles con Tango (3 hojas)
-- 🔐 **Sistema multiusuario** con autenticación y auditoría completa
-- 📱 **Interfaz moderna** con React + TypeScript + Tailwind CSS
+### Configuración
 
-## Tecnologías
-
-- **Frontend**: React 18 + TypeScript + Vite
-- **Estilos**: Tailwind CSS
-- **Backend/DB**: Supabase (PostgreSQL + Auth + RLS)
-- **Iconos**: Lucide React
-
-## Inicio Rápido
-
-### Requisitos Previos
-
-- Node.js 18+
-- Cuenta de Supabase (gratuita)
-
-### Instalación
+#### 1. Instalar Supabase CLI
 
 ```bash
-# Clonar el repositorio
-git clone <tu-repo-url>
-cd <nombre-proyecto>
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus credenciales de Supabase
+npm install -g supabase
 ```
 
-### Configurar Supabase
-
-1. Crea un proyecto en [Supabase](https://supabase.com)
-2. Copia las credenciales a `.env`:
-   ```env
-   VITE_SUPABASE_URL=tu_supabase_url
-   VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
-   ```
-3. Ejecuta las migraciones en el SQL Editor de Supabase:
-   - `supabase/migrations/20251108222712_create_invoice_management_system.sql`
-   - `supabase/migrations/20251108224015_simplify_roles_all_users_full_access.sql`
-
-### Ejecutar en Desarrollo
+#### 2. Iniciar sesión en Supabase
 
 ```bash
-npm run dev
+supabase login
 ```
 
-La aplicación estará disponible en `http://localhost:5173`
-
-### Compilar para Producción
+#### 3. Link con tu proyecto
 
 ```bash
-npm run build
-npm run preview
+supabase link --project-ref TU_PROJECT_REF
 ```
 
-## Documentación
+Puedes obtener el `PROJECT_REF` desde la URL de tu proyecto de Supabase:
+`https://app.supabase.com/project/TU_PROJECT_REF`
 
-- **[INICIO_RAPIDO.md](INICIO_RAPIDO.md)** - Guía rápida para comenzar a usar el sistema
-- **[SISTEMA_TANGO_DOCS.md](SISTEMA_TANGO_DOCS.md)** - Documentación técnica completa
+#### 4. Configurar la API Key de OpenAI
 
-## Flujo de Trabajo
+La Edge Function necesita acceso a la API key de OpenAI. Configúrala como secreto:
 
-1. **Cargar** - Arrastra PDFs o imágenes de comprobantes
-2. **Revisar** - El sistema extrae datos automáticamente, revisa y corrige
-3. **Conceptos** - Asigna centros de costo (crea nuevos si es necesario)
-4. **Exportar** - Genera archivo de importación para Tango Gestión
-
-## Estructura del Proyecto
-
-```
-src/
-├── components/     # Componentes React reutilizables
-├── contexts/       # Contextos (Auth)
-├── lib/           # Configuración y tipos
-├── pages/         # Páginas principales
-├── services/      # Lógica de negocio
-├── utils/         # Utilidades y validadores
-└── App.tsx        # Componente raíz
-
-supabase/
-└── migrations/    # Migraciones de base de datos
+```bash
+supabase secrets set OPENAI_API_KEY=tu_api_key_de_openai
 ```
 
-## Formato de Exportación
+#### 5. Desplegar la Edge Function
 
-El sistema genera archivos con 3 secciones para importación en Tango:
+Desde la raíz del proyecto:
 
-1. **Encabezados** - Datos principales del comprobante
-2. **IVA y Otros Impuestos** - Detalle de impuestos
-3. **Conceptos** - Distribución por centros de costo
+```bash
+supabase functions deploy openai-ocr
+```
 
-## Seguridad
+O si estás en el directorio `project`:
 
-- Row Level Security (RLS) habilitado en todas las tablas
-- Autenticación requerida para todas las operaciones
-- Validaciones de CUIT y totales
-- Auditoría completa de todas las acciones
+```bash
+cd ..
+supabase functions deploy openai-ocr --project-ref TU_PROJECT_REF
+```
 
-## Usuario de Prueba
+### Verificar el despliegue
 
-Email: `lucasmmarinero@gmail.com`
+Una vez desplegada, puedes verificar que funciona:
 
-Todos los usuarios tienen permisos completos para:
-- Cargar comprobantes
-- Revisar y editar
-- Gestionar proveedores
-- Generar exportaciones
+```bash
+curl -i --location --request POST 'https://TU_PROJECT_REF.supabase.co/functions/v1/openai-ocr' \
+  --header 'Authorization: Bearer TU_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"base64":"test","mimeType":"image/png"}'
+```
 
-## Características Avanzadas
+### Monitorear logs
 
-- Conversión automática de imágenes a PDF
-- Detección de duplicados por CUIT + tipo + punto de venta + número
-- Sistema de estados del comprobante (UPLOADED → PROCESSED → PENDING_REVIEW → READY_FOR_EXPORT → EXPORTED)
-- OCR modular (fácil de reemplazar con servicios externos)
-- Conceptos dinámicos (usuarios pueden crear nuevos en tiempo real)
-- Trazabilidad completa de quién hizo qué y cuándo
+Para ver los logs de la función en tiempo real:
 
-## Próximas Mejoras
+```bash
+supabase functions logs openai-ocr
+```
 
-- [ ] Integración con servicios OCR profesionales (Google Vision, AWS Textract)
-- [ ] Integración directa con API de Tango
-- [ ] App móvil para captura de fotos
-- [ ] Notificaciones por email
-- [ ] Reportes y estadísticas avanzadas
-- [ ] Integración con Salus
+### Actualizar la función
 
-## Licencia
+Si haces cambios en el código, simplemente vuelve a desplegar:
 
-MIT
+```bash
+supabase functions deploy openai-ocr
+```
 
-## Autor
+### Variables de entorno necesarias
 
-Sistema desarrollado para automatización de carga de comprobantes en Tango Gestión.
+La Edge Function automáticamente tiene acceso a:
+- `SUPABASE_URL` - URL de tu proyecto
+- `SUPABASE_ANON_KEY` - API key anónima
+- `OPENAI_API_KEY` - Configurada manualmente (ver paso 4)
 
----
+### Troubleshooting
 
-**¿Necesitas ayuda?** Consulta la documentación completa en [SISTEMA_TANGO_DOCS.md](SISTEMA_TANGO_DOCS.md)
+#### Error: "No authorization header"
+- Verifica que el frontend esté enviando el token de autenticación
+- Verifica que el usuario esté logueado
+
+#### Error: "OPENAI_API_KEY no configurada"
+- Ejecuta: `supabase secrets set OPENAI_API_KEY=tu_api_key`
+- Vuelve a desplegar la función
+
+#### Error: "Usuario no autenticado"
+- El usuario debe estar logueado en la aplicación
+- Verifica que el token de sesión sea válido
+
+### Costos
+
+Esta Edge Function utiliza:
+- **Supabase Edge Functions**: Gratuitas hasta 500K invocaciones/mes
+- **OpenAI API**: Costo según el uso de la API (modelo gpt-4o)
+
+### Seguridad
+
+✅ La API key de OpenAI nunca se expone en el frontend
+✅ Solo usuarios autenticados pueden usar la función
+✅ CORS está configurado correctamente
+✅ Los logs no exponen información sensible
+
