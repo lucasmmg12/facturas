@@ -41,8 +41,8 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     setResults(newResults);
 
     for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
-        const file = files[i];
         let fileToProcess = file;
 
         if (isImageFile(file)) {
