@@ -12,6 +12,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.3.0',
+    date: '15 de Noviembre, 2024 (noche)',
+    changes: [
+      {
+        type: 'feature',
+        description: 'Auto-completado inteligente del importe al asignar conceptos (usa automáticamente el saldo disponible)',
+      },
+      {
+        type: 'feature',
+        description: 'Visualización en tiempo real del total de la factura, monto asignado y disponible',
+      },
+      {
+        type: 'improvement',
+        description: 'Validación automática que impide exceder el total de la factura al asignar conceptos',
+      },
+      {
+        type: 'improvement',
+        description: 'Campo de importe editable para dividir el total entre múltiples conceptos',
+      },
+    ],
+  },
+  {
     version: '1.2.0',
     date: '15 de Noviembre, 2024 (tarde)',
     changes: [
