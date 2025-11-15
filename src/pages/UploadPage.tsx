@@ -86,10 +86,14 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
               confidence: ocrResult.confidence,
             });
           } catch (aiError) {
-            console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', aiError);
+            const errorMessage = aiError instanceof Error ? aiError.message : 'Error desconocido';
+            console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', {
+              error: aiError,
+              message: errorMessage
+            });
             newResults[i] = {
               ...newResults[i],
-              message: 'OpenAI falló, usando OCR local...',
+              message: `OpenAI falló (${errorMessage}), usando OCR local...`,
             };
             setResults([...newResults]);
           }
