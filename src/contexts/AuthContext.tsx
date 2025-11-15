@@ -86,22 +86,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           full_name: fullName,
+          role: role,
         },
       },
     });
 
     if (error) throw error;
 
+    // El trigger de la base de datos creará automáticamente el perfil
+    // Esperar un momento para que el trigger se ejecute
     if (data.user) {
-      // Crear perfil de usuario
-      const { error: profileError } = await supabase.from('users').insert({
-        auth_user_id: data.user.id,
-        email: data.user.email!,
-        full_name: fullName,
-        role: role as any,
-      });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verificar que el perfil se creó
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', data.user.id)
+        .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError || !profile) {
+        console.error('Error verificando perfil:', profileError);
+        throw new Error('Error al crear el perfil de usuario. Por favor, intenta iniciar sesión.');
+      }
     }
   };
 
