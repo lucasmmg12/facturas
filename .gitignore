@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 *.local
+package-lock.json
 
 # Editor directories and files
 .vscode/*
@@ -35,4 +36,5 @@ build/
 
 # Supabase
 .supabase/
+supabase/functions/
 
