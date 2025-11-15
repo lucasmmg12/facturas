@@ -37,6 +37,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [newConceptCode, setNewConceptCode] = useState('');
   const [newConceptDesc, setNewConceptDesc] = useState('');
   const [showNewConceptForm, setShowNewConceptForm] = useState(false);
+  const [selectedConceptId, setSelectedConceptId] = useState('');
+  const [conceptAmount, setConceptAmount] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basic');
 
   useEffect(() => {
@@ -127,19 +129,27 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
-  const handleAddConcept = async (conceptId: string, amount: number) => {
-    if (!invoice) return;
+  const handleAddConcept = async () => {
+    if (!invoice || !selectedConceptId || !conceptAmount) {
+      alert('Por favor selecciona un concepto e ingresa un monto');
+      return;
+    }
 
     try {
-      await supabase.from('invoice_concepts').insert({
+      const { error } = await supabase.from('invoice_concepts').insert({
         invoice_id: invoice.id,
-        tango_concept_id: conceptId,
-        amount,
+        tango_concept_id: selectedConceptId,
+        amount: parseFloat(conceptAmount),
       });
 
+      if (error) throw error;
+
+      setSelectedConceptId('');
+      setConceptAmount('');
       await loadData();
     } catch (error) {
       console.error('Error adding concept:', error);
+      alert('Error al asignar el concepto');
     }
   };
 
@@ -758,6 +768,60 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
         {activeTab === 'concepts' && (
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* Asignar Concepto Existente */}
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4">Asignar Concepto</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Concepto Tango
+                  </label>
+                  <select
+                    value={selectedConceptId}
+                    onChange={(e) => setSelectedConceptId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar concepto...</option>
+                    {concepts.map((concept) => (
+                      <option key={concept.id} value={concept.id}>
+                        {concept.tango_concept_code} - {concept.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Importe
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={conceptAmount}
+                      onChange={(e) => setConceptAmount(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={handleAddConcept}
+                      disabled={!selectedConceptId || !conceptAmount}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  💡 Si no encuentras el concepto que necesitas, puedes crear uno nuevo más abajo.
+                </p>
+              </div>
+            </div>
+
+            {/* Conceptos Asignados */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900">Conceptos Asignados</h3>
@@ -766,32 +830,45 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Nuevo Concepto</span>
+                  <span>Crear Nuevo Concepto</span>
                 </button>
               </div>
 
               {showNewConceptForm && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                  <h4 className="text-sm font-medium text-gray-900">Crear Nuevo Concepto Tango</h4>
                   <input
                     type="text"
-                    placeholder="Código Tango"
+                    placeholder="Código Tango (ej: 010101)"
                     value={newConceptCode}
                     onChange={(e) => setNewConceptCode(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                   <input
                     type="text"
-                    placeholder="Descripción"
+                    placeholder="Descripción del concepto"
                     value={newConceptDesc}
                     onChange={(e) => setNewConceptDesc(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   />
-                  <button
-                    onClick={handleCreateConcept}
-                    className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                  >
-                    Crear Concepto
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleCreateConcept}
+                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      Crear y Agregar a la Lista
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowNewConceptForm(false);
+                        setNewConceptCode('');
+                        setNewConceptDesc('');
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               )}
 
