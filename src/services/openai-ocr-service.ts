@@ -6,11 +6,9 @@ import { validateCUIT } from '../utils/validators';
 import { getInvoiceTypeFromCode } from '../utils/invoice-types';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/build/pdf';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
+import { supabase } from '../lib/supabase';
 
 type PDFPageProxy = any;
-
-const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o';
 
 const CONFIDENCE_WEIGHTS = {
   supplierCuit: 0.25,
@@ -29,20 +27,13 @@ type ParsedTaxes = Array<{
 }>;
 
 export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-  console.log('[OpenAI OCR] Iniciando extracción', {
+  console.log('[OpenAI OCR] Iniciando extracción vía Supabase Edge Function', {
     fileName: file.name,
     fileSize: file.size,
     fileType: file.type,
-    hasApiKey: !!apiKey,
-    apiKeyLength: apiKey?.length || 0
   });
 
-  if (!apiKey) {
-    throw new Error('Falta configurar la variable VITE_OPENAI_API_KEY en el archivo .env');
-  }
-
+  // Convertir archivo a base64
   let base64: string;
   let mimeType: string;
   
@@ -59,93 +50,61 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     console.error('[OpenAI OCR] Error al convertir archivo:', error);
     throw new Error(`Error al procesar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
-  const prompt = buildPrompt();
 
-  const requestBody = {
-    model: OPENAI_MODEL,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          {
-            type: 'image_url',
-            image_url: {
-              url: `data:${mimeType};base64,${base64}`,
-            },
-          },
-        ],
-      },
-    ],
-    max_tokens: 1200,
-  };
+  // Obtener el token de sesión
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('No hay sesión activa. Por favor inicia sesión.');
+  }
 
-  console.log('[OpenAI OCR] Enviando solicitud a OpenAI:', {
-    model: requestBody.model,
-    endpoint: OPENAI_ENDPOINT,
-    promptLength: prompt.length,
+  // Obtener la URL de la Edge Function
+  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error('VITE_SUPABASE_URL no está configurada');
+  }
+
+  const edgeFunctionUrl = `${supabaseUrl}/functions/v1/openai-ocr`;
+
+  console.log('[OpenAI OCR] Llamando a Supabase Edge Function:', {
+    url: edgeFunctionUrl,
     imageSize: base64.length,
     mimeType: mimeType
   });
 
+  // Llamar a la Edge Function
   let response: Response;
   try {
-    response = await fetch(OPENAI_ENDPOINT, {
+    response = await fetch(edgeFunctionUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        base64,
+        mimeType,
+      }),
     });
   } catch (error) {
-    console.error('[OpenAI OCR] Error de red al conectar con OpenAI:', error);
-    throw new Error(`Error de conexión con OpenAI: ${error instanceof Error ? error.message : 'Error de red'}`);
+    console.error('[OpenAI OCR] Error de red al conectar con Edge Function:', error);
+    throw new Error(`Error de conexión: ${error instanceof Error ? error.message : 'Error de red'}`);
   }
 
-  if (!response.ok) {
-    let errorText = '';
-    let errorDetail = '';
-    
-    try {
-      errorText = await response.text();
-      const errorJson = JSON.parse(errorText);
-      errorDetail = errorJson.error?.message || errorJson.error?.code || errorText;
-    } catch {
-      errorDetail = errorText || response.statusText;
-    }
-    
-    console.error('[OpenAI OCR] Error en la respuesta:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText,
-      detail: errorDetail
-    });
-    
-    // Errores comunes más descriptivos
-    if (response.status === 401) {
-      throw new Error('API Key de OpenAI inválida o expirada');
-    } else if (response.status === 429) {
-      throw new Error('Límite de solicitudes excedido en OpenAI');
-    } else if (response.status === 413) {
-      throw new Error('Archivo muy grande para procesar con OpenAI');
-    } else {
-      throw new Error(`OpenAI falló (${response.status}): ${errorDetail}`);
-    }
-  }
-
-  console.log('[OpenAI OCR] Respuesta recibida con status 200, parseando...');
   const data = await response.json();
 
-  console.log('[OpenAI OCR] Respuesta JSON:', {
-    hasChoices: !!data.choices,
-    choicesLength: data.choices?.length || 0,
-    model: data.model,
-    usage: data.usage
-  });
+  if (!response.ok || !data.success) {
+    console.error('[OpenAI OCR] Error en Edge Function:', {
+      status: response.status,
+      data,
+    });
+    throw new Error(data.error || 'Error al procesar con OpenAI');
+  }
 
-  const outputText = extractOutputText(data);
-  console.log('[OpenAI OCR] Texto extraído de OpenAI (primeros 500 chars):', outputText.substring(0, 500));
+  console.log('[OpenAI OCR] Respuesta exitosa de Edge Function');
+
+  const outputText = data.data;
+  console.log('[OpenAI OCR] Texto extraído (primeros 500 chars):', outputText.substring(0, 500));
 
   let parsed: any;
   try {
@@ -209,37 +168,6 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   };
 }
 
-function buildPrompt(): string {
-  return `
-Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
-Estructura esperada:
-{
-  "supplierCuit": "string|null",
-  "supplierName": "string|null",
-  "receiverCuit": "string|null",
-  "receiverName": "string|null",
-  "invoiceTypeCode": "string|null",
-  "invoiceType": "string|null",
-  "pointOfSale": "string|null",
-  "invoiceNumber": "string|null",
-  "issueDate": "YYYY-MM-DD|null",
-  "netTaxed": "number",
-  "netUntaxed": "number",
-  "netExempt": "number",
-  "ivaAmount": "number",
-  "otherTaxesAmount": "number",
-  "totalAmount": "number",
-  "caiCae": "string|null",
-  "caiCaeExpiration": "YYYY-MM-DD|null",
-  "taxes": [
-    { "taxType": "string", "taxBase": "number", "taxAmount": "number", "rate": "number|null" }
-  ]
-}
-IMPORTANTE: Busca el CAE (Código de Autorización Electrónica) que es un número de 14 dígitos. También busca la fecha de vencimiento del CAE.
-Usa null si no encuentras un dato. Usa números con punto decimal.
-`;
-}
-
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   if (file.type === 'application/pdf') {
     return convertPdfToPngBase64(file).then((base64) => ({
@@ -290,27 +218,6 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
 
   const dataUrl = canvas.toDataURL('image/png');
   return dataUrl.split(',')[1] ?? '';
-}
-
-function extractOutputText(data: any): string {
-  if (data?.choices && Array.isArray(data.choices) && data.choices.length > 0) {
-    const messageContent = data.choices[0]?.message?.content;
-
-    if (typeof messageContent === 'string' && messageContent.trim()) {
-      let cleaned = messageContent.trim();
-
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-      } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
-      }
-
-      return cleaned.trim();
-    }
-  }
-
-  console.error('[OpenAI OCR] Estructura de respuesta inesperada:', data);
-  throw new Error('OpenAI no devolvió contenido legible en el formato esperado');
 }
 
 function sanitizeCUIT(value: any): string | null {
