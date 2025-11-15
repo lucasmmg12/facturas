@@ -31,11 +31,34 @@ type ParsedTaxes = Array<{
 export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
+  console.log('[OpenAI OCR] Iniciando extracción', {
+    fileName: file.name,
+    fileSize: file.size,
+    fileType: file.type,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length || 0
+  });
+
   if (!apiKey) {
     throw new Error('Falta configurar la variable VITE_OPENAI_API_KEY en el archivo .env');
   }
 
-  const { base64, mimeType } = await fileToBase64(file);
+  let base64: string;
+  let mimeType: string;
+  
+  try {
+    console.log('[OpenAI OCR] Convirtiendo archivo a base64...');
+    const result = await fileToBase64(file);
+    base64 = result.base64;
+    mimeType = result.mimeType;
+    console.log('[OpenAI OCR] Archivo convertido exitosamente', {
+      mimeType,
+      base64Length: base64.length
+    });
+  } catch (error) {
+    console.error('[OpenAI OCR] Error al convertir archivo:', error);
+    throw new Error(`Error al procesar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+  }
   const prompt = buildPrompt();
 
   const requestBody = {
@@ -57,52 +80,85 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     max_tokens: 1200,
   };
 
-  if (import.meta.env?.DEV) {
-    console.debug('[OpenAI OCR] Enviando solicitud:', {
-      model: requestBody.model,
-      endpoint: OPENAI_ENDPOINT,
-      promptLength: prompt.length,
-      imageSize: base64.length,
-    });
-  }
-
-  const response = await fetch(OPENAI_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
+  console.log('[OpenAI OCR] Enviando solicitud a OpenAI:', {
+    model: requestBody.model,
+    endpoint: OPENAI_ENDPOINT,
+    promptLength: prompt.length,
+    imageSize: base64.length,
+    mimeType: mimeType
   });
 
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    console.error('[OpenAI OCR] Error de red al conectar con OpenAI:', error);
+    throw new Error(`Error de conexión con OpenAI: ${error instanceof Error ? error.message : 'Error de red'}`);
+  }
+
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    let errorDetail = '';
+    
+    try {
+      errorText = await response.text();
+      const errorJson = JSON.parse(errorText);
+      errorDetail = errorJson.error?.message || errorJson.error?.code || errorText;
+    } catch {
+      errorDetail = errorText || response.statusText;
+    }
+    
     console.error('[OpenAI OCR] Error en la respuesta:', {
       status: response.status,
       statusText: response.statusText,
       body: errorText,
+      detail: errorDetail
     });
-    throw new Error(`OpenAI OCR falló (${response.status}): ${errorText}`);
+    
+    // Errores comunes más descriptivos
+    if (response.status === 401) {
+      throw new Error('API Key de OpenAI inválida o expirada');
+    } else if (response.status === 429) {
+      throw new Error('Límite de solicitudes excedido en OpenAI');
+    } else if (response.status === 413) {
+      throw new Error('Archivo muy grande para procesar con OpenAI');
+    } else {
+      throw new Error(`OpenAI falló (${response.status}): ${errorDetail}`);
+    }
   }
 
+  console.log('[OpenAI OCR] Respuesta recibida con status 200, parseando...');
   const data = await response.json();
 
-  if (import.meta.env?.DEV) {
-    console.debug('[OpenAI OCR] Respuesta completa:', data);
-  }
+  console.log('[OpenAI OCR] Respuesta JSON:', {
+    hasChoices: !!data.choices,
+    choicesLength: data.choices?.length || 0,
+    model: data.model,
+    usage: data.usage
+  });
 
   const outputText = extractOutputText(data);
+  console.log('[OpenAI OCR] Texto extraído de OpenAI (primeros 500 chars):', outputText.substring(0, 500));
 
   let parsed: any;
   try {
     parsed = JSON.parse(outputText);
-
-    if (import.meta.env?.DEV) {
-      console.debug('[OpenAI OCR] JSON parseado exitosamente:', parsed);
-    }
+    console.log('[OpenAI OCR] JSON parseado exitosamente:', {
+      hasSupplierCuit: !!parsed.supplierCuit,
+      hasInvoiceType: !!parsed.invoiceType,
+      hasInvoiceNumber: !!parsed.invoiceNumber,
+      totalAmount: parsed.totalAmount
+    });
   } catch (error) {
     console.error('[OpenAI OCR] Error al parsear JSON:', error);
-    console.error('[OpenAI OCR] Texto recibido:', outputText);
+    console.error('[OpenAI OCR] Texto recibido completo:', outputText);
     throw new Error('OpenAI devolvió un formato inesperado (no JSON válido)');
   }
 
