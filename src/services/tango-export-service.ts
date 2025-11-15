@@ -1,6 +1,7 @@
 // Este archivo genera archivos Excel para importación en Tango Gestión.
 // Crea 3 hojas: Encabezados, IVA/Impuestos y Conceptos, siguiendo la plantilla oficial de Tango.
 
+import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { getInvoicesReadyForExport, markInvoicesAsExported } from './invoice-service';
 import type { Database } from '../lib/database.types';
@@ -217,35 +218,118 @@ function formatNumber(value: number | null): string {
   return value.toFixed(2);
 }
 
-export function convertToCSV(data: any[]): string {
-  if (data.length === 0) return '';
-
-  const headers = Object.keys(data[0]);
-  const rows = data.map((row) =>
-    headers.map((header) => {
-      const value = row[header];
-      if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    }).join(',')
-  );
-
-  return [headers.join(','), ...rows].join('\n');
-}
-
+/**
+ * Genera y descarga un archivo XLSX con las 3 hojas requeridas por Tango:
+ * 1. Encabezados (datos principales de cada comprobante)
+ * 2. IVA y Otros Impuestos (detalle de impuestos por comprobante)
+ * 3. Conceptos (conceptos asignados por comprobante)
+ */
 export function downloadExport(filename: string, data: TangoExportData) {
-  const headersCSV = convertToCSV(data.headers);
-  const taxesCSV = convertToCSV(data.taxes);
-  const conceptsCSV = convertToCSV(data.concepts);
+  // Crear un nuevo libro de Excel
+  const workbook = XLSX.utils.book_new();
 
-  const fullContent = `=== HOJA 1: ENCABEZADOS ===\n${headersCSV}\n\n=== HOJA 2: IVA Y OTROS IMPUESTOS ===\n${taxesCSV}\n\n=== HOJA 3: CONCEPTOS ===\n${conceptsCSV}`;
+  // HOJA 1: Encabezados
+  const headersSheet = XLSX.utils.json_to_sheet(data.headers);
+  
+  // Configurar anchos de columna para mejor legibilidad
+  headersSheet['!cols'] = [
+    { wch: 15 }, // ID Comprobante
+    { wch: 20 }, // Código de proveedor / CUIT
+    { wch: 15 }, // Tipo de comprobante
+    { wch: 15 }, // Nro. de comprobante
+    { wch: 12 }, // Fecha de emisión
+    { wch: 12 }, // Fecha contable
+    { wch: 10 }, // Moneda CTE
+    { wch: 10 }, // Cotización
+    { wch: 20 }, // Condición de compra
+    { wch: 12 }, // Subtotal gravado
+    { wch: 12 }, // Subtotal no gravado
+    { wch: 12 }, // Anticipo o seña
+    { wch: 12 }, // Bonificación
+    { wch: 12 }, // Flete
+    { wch: 12 }, // Intereses
+    { wch: 12 }, // Total
+    { wch: 20 }, // Es factura electrónica
+    { wch: 25 }, // CAI / CAE
+    { wch: 25 }, // Fecha de vencimiento del CAI / CAE
+    { wch: 25 }, // Crédito fiscal no computable
+    { wch: 15 }, // Código de gasto
+    { wch: 15 }, // Código de sector
+    { wch: 20 }, // Código de clasificador
+    { wch: 25 }, // Código de tipo de operación AFIP
+    { wch: 25 }, // Código de comprobante AFIP
+    { wch: 20 }, // Nro. de sucursal destino
+    { wch: 30 }, // Observaciones
+  ];
+  
+  XLSX.utils.book_append_sheet(workbook, headersSheet, 'Encabezados');
 
-  const blob = new Blob([fullContent], { type: 'text/plain;charset=utf-8' });
+  // HOJA 2: IVA y Otros Impuestos
+  if (data.taxes.length > 0) {
+    const taxesSheet = XLSX.utils.json_to_sheet(data.taxes);
+    
+    // Configurar anchos de columna
+    taxesSheet['!cols'] = [
+      { wch: 15 }, // ID Comprobante
+      { wch: 15 }, // Código Impuesto
+      { wch: 30 }, // Descripción
+      { wch: 15 }, // Base Imponible
+      { wch: 15 }, // Importe
+    ];
+    
+    XLSX.utils.book_append_sheet(workbook, taxesSheet, 'IVA y Otros Impuestos');
+  } else {
+    // Si no hay impuestos, crear una hoja vacía con los encabezados
+    const emptyTaxesSheet = XLSX.utils.json_to_sheet([
+      {
+        'ID Comprobante': '',
+        'Código Impuesto': '',
+        'Descripción': '',
+        'Base Imponible': '',
+        'Importe': '',
+      },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, emptyTaxesSheet, 'IVA y Otros Impuestos');
+  }
+
+  // HOJA 3: Conceptos
+  if (data.concepts.length > 0) {
+    const conceptsSheet = XLSX.utils.json_to_sheet(data.concepts);
+    
+    // Configurar anchos de columna
+    conceptsSheet['!cols'] = [
+      { wch: 15 }, // ID Comprobante
+      { wch: 15 }, // Código Concepto
+      { wch: 40 }, // Descripción Concepto
+      { wch: 15 }, // Importe
+    ];
+    
+    XLSX.utils.book_append_sheet(workbook, conceptsSheet, 'Conceptos');
+  } else {
+    // Si no hay conceptos, crear una hoja vacía con los encabezados
+    const emptyConceptsSheet = XLSX.utils.json_to_sheet([
+      {
+        'ID Comprobante': '',
+        'Código Concepto': '',
+        'Descripción Concepto': '',
+        'Importe': '',
+      },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, emptyConceptsSheet, 'Conceptos');
+  }
+
+  // Generar el archivo XLSX como un array buffer
+  const xlsxBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+  // Crear un Blob y descargarlo
+  const blob = new Blob([xlsxBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename.replace('.xlsx', '.txt');
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
