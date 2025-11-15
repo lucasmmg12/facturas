@@ -12,6 +12,32 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.2.0',
+    date: '15 de Noviembre, 2024 (tarde)',
+    changes: [
+      {
+        type: 'feature',
+        description: 'Selector de estado en el editor de comprobantes - ahora puedes cambiar el estado directamente',
+      },
+      {
+        type: 'feature',
+        description: 'Interfaz para asignar conceptos existentes a comprobantes',
+      },
+      {
+        type: 'improvement',
+        description: 'Reorganizada la pestaña de Conceptos con secciones claras',
+      },
+      {
+        type: 'fix',
+        description: 'Corregido problema que impedía cambiar el estado de facturas para exportar',
+      },
+      {
+        type: 'fix',
+        description: 'Solucionado problema de asignación de conceptos a comprobantes',
+      },
+    ],
+  },
+  {
     version: '1.1.0',
     date: '15 de Noviembre, 2024',
     changes: [
