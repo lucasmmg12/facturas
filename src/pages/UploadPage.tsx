@@ -66,46 +66,38 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
         let ocrResult;
         let ocrMethod = 'Local (Tesseract)';
-        const hasOpenAIKey = !!import.meta.env.VITE_OPENAI_API_KEY;
 
-        if (hasOpenAIKey) {
-          try {
-            newResults[i] = {
-              ...newResults[i],
-              message: 'Analizando comprobante con OpenAI...',
-            };
-            setResults([...newResults]);
-
-            console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
-            ocrResult = await extractDataWithOpenAI(fileToProcess);
-            ocrMethod = 'OpenAI';
-            console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
-              supplierCuit: ocrResult.supplierCuit,
-              invoiceType: ocrResult.invoiceType,
-              invoiceNumber: ocrResult.invoiceNumber,
-              confidence: ocrResult.confidence,
-            });
-          } catch (aiError) {
-            const errorMessage = aiError instanceof Error ? aiError.message : 'Error desconocido';
-            console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', {
-              error: aiError,
-              message: errorMessage
-            });
-            newResults[i] = {
-              ...newResults[i],
-              message: `OpenAI falló (${errorMessage}), usando OCR local...`,
-            };
-            setResults([...newResults]);
-          }
-        } else {
+        // Intentar usar OpenAI primero (vía Supabase Edge Function)
+        try {
           newResults[i] = {
             ...newResults[i],
-            message: 'Usando OCR local (OpenAI no configurado)...',
+            message: 'Analizando comprobante con OpenAI...',
+          };
+          setResults([...newResults]);
+
+          console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
+          ocrResult = await extractDataWithOpenAI(fileToProcess);
+          ocrMethod = 'OpenAI';
+          console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
+            supplierCuit: ocrResult.supplierCuit,
+            invoiceType: ocrResult.invoiceType,
+            invoiceNumber: ocrResult.invoiceNumber,
+            confidence: ocrResult.confidence,
+          });
+        } catch (aiError) {
+          const errorMessage = aiError instanceof Error ? aiError.message : 'Error desconocido';
+          console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', {
+            error: aiError,
+            message: errorMessage
+          });
+          newResults[i] = {
+            ...newResults[i],
+            message: `OpenAI falló (${errorMessage}), usando OCR local...`,
           };
           setResults([...newResults]);
         }
 
-        // Si OpenAI no se usó o falló, usar OCR local
+        // Si OpenAI falló, usar OCR local
         if (!ocrResult) {
           try {
             console.log(`[Upload] Iniciando OCR local para: ${file.name}`);
