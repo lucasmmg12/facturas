@@ -12,6 +12,28 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.4.0',
+    date: '15 de Noviembre, 2024 (noche)',
+    changes: [
+      {
+        type: 'feature',
+        description: 'Exportación en formato XLSX real - archivos Excel nativos compatibles con la plantilla de Tango',
+      },
+      {
+        type: 'improvement',
+        description: 'Archivo Excel con 3 hojas: Encabezados, IVA y Otros Impuestos, y Conceptos',
+      },
+      {
+        type: 'improvement',
+        description: 'Anchos de columna optimizados para mejor visualización en Excel',
+      },
+      {
+        type: 'improvement',
+        description: 'Formato de archivo compatible directamente con la importación de Tango Gestión',
+      },
+    ],
+  },
+  {
     version: '1.3.0',
     date: '15 de Noviembre, 2024 (noche)',
     changes: [
