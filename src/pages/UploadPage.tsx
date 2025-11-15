@@ -1,5 +1,6 @@
 // Esta página maneja la subida de comprobantes y su procesamiento automático.
 // Convierte imágenes a PDF, ejecuta OCR y crea registros iniciales en la base de datos.
+// VERSIÓN ANTERIOR: Llama directamente a OpenAI desde el frontend (tiene problemas de CORS en bolt.new)
 
 import { useState } from 'react';
 import { FileUploader } from '../components/FileUploader';
@@ -22,7 +23,7 @@ interface UploadPageProps {
   onInvoiceCreated?: (invoiceId?: string) => void;
 }
 
-export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
+export function UploadPageOld({ onInvoiceCreated }: UploadPageProps) {
   const { profile } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
@@ -66,38 +67,44 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
         let ocrResult;
         let ocrMethod = 'Local (Tesseract)';
+        const hasOpenAIKey = !!(import.meta as any).env?.VITE_OPENAI_API_KEY;
 
-        // Intentar usar OpenAI primero (vía Supabase Edge Function)
-        try {
+        // VERSIÓN ANTIGUA: Verifica si hay API key en el frontend
+        if (hasOpenAIKey) {
+          try {
+            newResults[i] = {
+              ...newResults[i],
+              message: 'Analizando comprobante con OpenAI...',
+            };
+            setResults([...newResults]);
+
+            console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
+            ocrResult = await extractDataWithOpenAI(fileToProcess);
+            ocrMethod = 'OpenAI';
+            console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
+              supplierCuit: ocrResult.supplierCuit,
+              invoiceType: ocrResult.invoiceType,
+              invoiceNumber: ocrResult.invoiceNumber,
+              confidence: ocrResult.confidence,
+            });
+          } catch (aiError) {
+            console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', aiError);
+            newResults[i] = {
+              ...newResults[i],
+              message: 'OpenAI falló, usando OCR local...',
+            };
+            setResults([...newResults]);
+          }
+        } else {
+          console.log('[Upload] OpenAI no configurado, usando OCR local');
           newResults[i] = {
             ...newResults[i],
-            message: 'Analizando comprobante con OpenAI...',
-          };
-          setResults([...newResults]);
-
-          console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
-          ocrResult = await extractDataWithOpenAI(fileToProcess);
-          ocrMethod = 'OpenAI';
-          console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
-            supplierCuit: ocrResult.supplierCuit,
-            invoiceType: ocrResult.invoiceType,
-            invoiceNumber: ocrResult.invoiceNumber,
-            confidence: ocrResult.confidence,
-          });
-        } catch (aiError) {
-          const errorMessage = aiError instanceof Error ? aiError.message : 'Error desconocido';
-          console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', {
-            error: aiError,
-            message: errorMessage
-          });
-          newResults[i] = {
-            ...newResults[i],
-            message: `OpenAI falló (${errorMessage}), usando OCR local...`,
+            message: 'Usando OCR local (OpenAI no configurado)...',
           };
           setResults([...newResults]);
         }
 
-        // Si OpenAI falló, usar OCR local
+        // Si OpenAI no se usó o falló, usar OCR local
         if (!ocrResult) {
           try {
             console.log(`[Upload] Iniciando OCR local para: ${file.name}`);
@@ -222,10 +229,18 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Cargar Comprobantes probando la demo a ver si se borra</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Cargar Comprobantes (Versión Antigua - Llamada Directa a OpenAI)
+        </h1>
         <p className="text-gray-600">
           Arrastra archivos PDF o imágenes para procesar automáticamente
         </p>
+        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            ⚠️ Esta es la versión antigua que llama directamente a OpenAI desde el frontend.
+            Tendrá problemas de CORS en bolt.new. Usar solo para pruebas locales.
+          </p>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -278,3 +293,4 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     </div>
   );
 }
+
