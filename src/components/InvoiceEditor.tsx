@@ -115,26 +115,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         destination_branch_number: invoice.destination_branch_number,
         observations: invoice.observations,
         notes: invoice.notes,
+        status: invoice.status, // ← IMPORTANTE: Ahora también actualiza el estado
         updated_by: profile.id,
       });
 
       onSave();
     } catch (error) {
       console.error('Error saving invoice:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleMarkAsReady = async () => {
-    if (!invoice) return;
-
-    try {
-      setSaving(true);
-      await updateInvoice(invoice.id, { status: 'READY_FOR_EXPORT' });
-      onSave();
-    } catch (error) {
-      console.error('Error marking as ready:', error);
     } finally {
       setSaving(false);
     }
@@ -218,23 +205,30 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center space-x-2">
-          {invoice.status === 'PENDING_REVIEW' && (
-            <button
-              onClick={handleMarkAsReady}
-              disabled={saving}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
+          {/* Cambiar estado */}
+          <div className="flex items-center space-x-2 border-r pr-3">
+            <label className="text-sm font-medium text-gray-700">Estado:</label>
+            <select
+              value={invoice.status}
+              onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
-              <Check className="h-4 w-4" />
-              <span>Marcar como Listo</span>
-            </button>
-          )}
+              <option value="UPLOADED">Subido</option>
+              <option value="PROCESSED">Procesado</option>
+              <option value="PENDING_REVIEW">Pendiente de Revisión</option>
+              <option value="READY_FOR_EXPORT">Listo para Exportar</option>
+              <option value="EXPORTED">Exportado</option>
+              <option value="ERROR">Error</option>
+            </select>
+          </div>
+
           <button
             onClick={handleSave}
             disabled={saving}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            <span>Guardar</span>
+            <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
           </button>
           <button
             onClick={onClose}
