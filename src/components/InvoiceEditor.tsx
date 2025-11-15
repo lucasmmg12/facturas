@@ -40,6 +40,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [selectedConceptId, setSelectedConceptId] = useState('');
   const [conceptAmount, setConceptAmount] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basic');
+  const [conceptError, setConceptError] = useState('');
 
   useEffect(() => {
     loadData();
@@ -129,9 +130,65 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
+  // Calcular total ya asignado en conceptos
+  const getTotalAssignedConcepts = () => {
+    return invoiceConcepts.reduce((sum, ic) => sum + ic.amount, 0);
+  };
+
+  // Calcular disponible
+  const getAvailableAmount = () => {
+    const totalAssigned = getTotalAssignedConcepts();
+    return invoice?.total_amount ? invoice.total_amount - totalAssigned : 0;
+  };
+
+  const handleConceptAmountChange = (value: string) => {
+    setConceptAmount(value);
+    setConceptError('');
+
+    if (!value || !invoice) return;
+
+    const amount = parseFloat(value);
+    if (isNaN(amount)) return;
+
+    const totalAssigned = getTotalAssignedConcepts();
+    const newTotal = totalAssigned + amount;
+
+    if (newTotal > invoice.total_amount) {
+      const available = invoice.total_amount - totalAssigned;
+      setConceptError(`Excede el total de la factura. Disponible: $${available.toFixed(2)}`);
+    }
+  };
+
+  const handleConceptSelected = (conceptId: string) => {
+    setSelectedConceptId(conceptId);
+    
+    // Auto-completar con el importe disponible
+    if (conceptId && invoice) {
+      const available = getAvailableAmount();
+      setConceptAmount(available.toString());
+      setConceptError('');
+    }
+  };
+
   const handleAddConcept = async () => {
     if (!invoice || !selectedConceptId || !conceptAmount) {
       alert('Por favor selecciona un concepto e ingresa un monto');
+      return;
+    }
+
+    const amount = parseFloat(conceptAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Por favor ingresa un monto válido');
+      return;
+    }
+
+    // Validar que no supere el total
+    const totalAssigned = getTotalAssignedConcepts();
+    const newTotal = totalAssigned + amount;
+
+    if (newTotal > invoice.total_amount) {
+      const available = invoice.total_amount - totalAssigned;
+      alert(`El monto excede el total de la factura. Disponible: $${available.toFixed(2)}`);
       return;
     }
 
@@ -139,13 +196,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       const { error } = await supabase.from('invoice_concepts').insert({
         invoice_id: invoice.id,
         tango_concept_id: selectedConceptId,
-        amount: parseFloat(conceptAmount),
+        amount: amount,
       });
 
       if (error) throw error;
 
       setSelectedConceptId('');
       setConceptAmount('');
+      setConceptError('');
       await loadData();
     } catch (error) {
       console.error('Error adding concept:', error);
@@ -770,7 +828,32 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Asignar Concepto Existente */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-semibold text-gray-900 mb-4">Asignar Concepto</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Asignar Concepto</h3>
+                {invoice && (
+                  <div className="text-sm">
+                    <span className="text-gray-600">Total Factura: </span>
+                    <span className="font-bold text-gray-900">
+                      ${invoice.total_amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                    {invoiceConcepts.length > 0 && (
+                      <>
+                        <span className="mx-2 text-gray-400">|</span>
+                        <span className="text-gray-600">Asignado: </span>
+                        <span className="font-medium text-blue-600">
+                          ${getTotalAssignedConcepts().toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="mx-2 text-gray-400">|</span>
+                        <span className="text-gray-600">Disponible: </span>
+                        <span className={`font-medium ${getAvailableAmount() > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${getAvailableAmount().toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -778,7 +861,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <select
                     value={selectedConceptId}
-                    onChange={(e) => setSelectedConceptId(e.target.value)}
+                    onChange={(e) => handleConceptSelected(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Seleccionar concepto...</option>
@@ -795,17 +878,24 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Importe
                   </label>
                   <div className="flex space-x-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={conceptAmount}
-                      onChange={(e) => setConceptAmount(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="flex-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={conceptAmount}
+                        onChange={(e) => handleConceptAmountChange(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          conceptError ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {conceptError && (
+                        <p className="text-xs text-red-600 mt-1">{conceptError}</p>
+                      )}
+                    </div>
                     <button
                       onClick={handleAddConcept}
-                      disabled={!selectedConceptId || !conceptAmount}
+                      disabled={!selectedConceptId || !conceptAmount || !!conceptError}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     >
                       <Plus className="h-4 w-4" />
@@ -816,7 +906,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-800">
-                  💡 Si no encuentras el concepto que necesitas, puedes crear uno nuevo más abajo.
+                  💡 El importe se completa automáticamente con el saldo disponible. Puedes editarlo según tus necesidades.
                 </p>
               </div>
             </div>
