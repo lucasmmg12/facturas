@@ -48,8 +48,11 @@ export function ExportPage() {
         `Exportación completada:\n\n` +
           `Archivo: ${result.filename}\n` +
           `Comprobantes: ${result.invoiceIds.length}\n\n` +
-          `El archivo se ha descargado en formato texto.\n` +
-          `Puede importarlo en Tango Gestión.`
+          `El archivo Excel se ha descargado con 3 hojas:\n` +
+          `• Encabezados\n` +
+          `• IVA y Otros Impuestos\n` +
+          `• Conceptos\n\n` +
+          `Puede importarlo directamente en Tango Gestión.`
       );
 
       await loadInvoices();
