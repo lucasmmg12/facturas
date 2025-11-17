@@ -371,31 +371,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <h2 className="text-2xl font-bold text-white">Editar Comprobante</h2>
             <StatusBadge status={invoice.status} />
           </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-              }}
-            >
-              <Save className="h-4 w-4" />
-              <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-              }}
-            >
-              <X className="h-4 w-4 text-white" />
-              <span className="text-white">Cerrar</span>
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <X className="h-4 w-4 text-white" />
+            <span className="text-white">Cerrar</span>
+          </button>
         </div>
         
         {/* Sección de Estado */}
@@ -429,7 +415,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             }}
           >
             <Save className="h-4 w-4 text-white" />
-            <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar Estado'}</span>
+            <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
           </button>
         </div>
       </div>
