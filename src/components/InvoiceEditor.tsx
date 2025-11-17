@@ -360,19 +360,47 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   return (
     <div className="h-full flex flex-col">
       <div 
-        className="px-8 py-6 flex items-center justify-between"
+        className="px-8 py-6"
         style={{
           background: 'rgba(0, 0, 0, 0.2)',
           borderBottom: '1px solid rgba(34, 197, 94, 0.3)',
         }}
       >
-        <div className="flex items-center space-x-6">
-          <h2 className="text-2xl font-bold text-white">Editar Comprobante</h2>
-          <StatusBadge status={invoice.status} />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-6">
+            <h2 className="text-2xl font-bold text-white">Editar Comprobante</h2>
+            <StatusBadge status={invoice.status} />
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+              }}
+            >
+              <Save className="h-4 w-4" />
+              <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
+              <X className="h-4 w-4 text-white" />
+              <span className="text-white">Cerrar</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          {/* Cambiar estado */}
-          <div className="flex items-center space-x-3 border-r pr-4" style={{ borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+        
+        {/* Sección de Estado */}
+        <div className="flex flex-col items-center space-y-3">
+          <div className="flex items-center space-x-3">
             <label className="text-sm font-medium text-green-300">Estado:</label>
             <select
               value={invoice.status}
@@ -390,42 +418,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <option value="EXPORTED" style={{ background: '#1a1a1a' }}>Exportado</option>
               <option value="ERROR" style={{ background: '#1a1a1a' }}>Error</option>
             </select>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-3 py-2 rounded-lg flex items-center space-x-1 disabled:opacity-50 transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-              }}
-              title="Guardar estado"
-            >
-              <Save className="h-4 w-4 text-white" />
-            </button>
           </div>
-
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
+            className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
             style={{
               background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
               boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
             }}
           >
-            <Save className="h-4 w-4" />
-            <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
-          </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
-            style={{
-              background: 'rgba(0, 0, 0, 0.3)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-            }}
-          >
-            <X className="h-4 w-4 text-white" />
-            <span className="text-white">Cerrar</span>
+            <Save className="h-4 w-4 text-white" />
+            <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar Estado'}</span>
           </button>
         </div>
       </div>
