@@ -20,7 +20,8 @@ const CONFIDENCE_WEIGHTS = {
 };
 
 type ParsedTaxes = Array<{
-  taxType: string;
+  taxCode: string;
+  description: string;
   taxBase: number;
   taxAmount: number;
   rate: number | null;
@@ -276,7 +277,8 @@ function normalizeTaxes(taxes: any): ParsedTaxes {
 
   return taxes
     .map((tax: any) => ({
-      taxType: typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO',
+      taxCode: typeof tax?.taxCode === 'string' ? tax.taxCode : (typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO'),
+      description: typeof tax?.description === 'string' ? tax.description : '',
       taxBase: normalizeNumber(tax?.taxBase),
       taxAmount: normalizeNumber(tax?.taxAmount),
       rate: typeof tax?.rate === 'number' ? tax.rate : null,
