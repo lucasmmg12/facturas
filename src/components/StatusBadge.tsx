@@ -10,7 +10,14 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+    <span 
+      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+      style={{
+        background: 'rgba(34, 197, 94, 0.2)',
+        color: '#86efac',
+        border: '1px solid rgba(34, 197, 94, 0.4)',
+      }}
+    >
       {getStatusLabel(status)}
     </span>
   );
