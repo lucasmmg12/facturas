@@ -7,7 +7,6 @@ import { extractDataFromPDF } from '../services/ocr-service';
 import { extractDataWithOpenAI } from '../services/openai-ocr-service';
 import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { convertImageToPDF, isImageFile } from '../utils/file-converter';
 
