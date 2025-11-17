@@ -174,3 +174,74 @@ export async function getInvoiceWithDetails(id: string) {
     supplier,
   };
 }
+
+/**
+ * Mapea un taxCode del OCR al ID de tax_codes en la base de datos
+ */
+export async function mapTaxCodeToId(taxCode: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('tax_codes')
+    .select('id')
+    .eq('code', taxCode)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error mapping tax code:', error);
+    return null;
+  }
+
+  return data?.id || null;
+}
+
+/**
+ * Crea automáticamente los registros de invoice_taxes desde los impuestos detectados por OCR
+ */
+export async function createInvoiceTaxesFromOCR(
+  invoiceId: string,
+  taxes: Array<{
+    taxCode: string;
+    description: string;
+    taxBase: number;
+    taxAmount: number;
+    rate: number | null;
+  }>
+): Promise<void> {
+  if (!taxes || taxes.length === 0) {
+    console.log('[Invoice Service] No hay impuestos para crear');
+    return;
+  }
+
+  console.log('[Invoice Service] Creando impuestos automáticamente:', taxes);
+
+  // Mapear cada taxCode a su ID en la base de datos
+  const taxRecords = [];
+  for (const tax of taxes) {
+    const taxCodeId = await mapTaxCodeToId(tax.taxCode);
+    
+    if (taxCodeId) {
+      taxRecords.push({
+        invoice_id: invoiceId,
+        tax_code_id: taxCodeId,
+        tax_base: tax.taxBase,
+        tax_amount: tax.taxAmount,
+      });
+      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}`);
+    } else {
+      console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode}`);
+    }
+  }
+
+  if (taxRecords.length > 0) {
+    const { error } = await supabase
+      .from('invoice_taxes')
+      .insert(taxRecords);
+
+    if (error) {
+      console.error('[Invoice Service] Error al crear invoice_taxes:', error);
+      throw error;
+    }
+
+    console.log(`[Invoice Service] ${taxRecords.length} impuestos creados exitosamente`);
+  }
+}
