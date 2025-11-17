@@ -6,7 +6,7 @@ import { SuppliersPage } from './SuppliersPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
-import { getInvoices } from '../services/invoice-service';
+import { getInvoices, getInvoicesReadyForExport } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
 import { generateTangoExport, downloadExport } from '../services/tango-export-service';
 import type { Database } from '../lib/database.types';
@@ -370,7 +370,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
     try {
       setLoading(true);
       setError(null);
-      const data = await getInvoices({ status: 'READY_FOR_EXPORT' });
+      const data = await getInvoicesReadyForExport();
       setReadyInvoices(data);
     } catch (loadError) {
       setError(
@@ -460,8 +460,8 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       </button>
 
       <p className="text-sm text-slate-500">
-        El archivo se descargará en formato <span className="font-semibold">TXT</span> con las tres secciones
-        concatenadas siguiendo el formato oficial de importación masiva de Tango.
+        El archivo se descargará en formato <span className="font-semibold">Excel (.xlsx)</span> con tres hojas:
+        Encabezados, IVA y Otros Impuestos, y Conceptos, siguiendo el formato oficial de importación de Tango Gestión.
       </p>
     </div>
   );
