@@ -108,11 +108,13 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus): Pr
 }
 
 export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
+  // Buscar facturas con status READY_FOR_EXPORT
+  // donde exported sea false, null, o no esté definido
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
     .eq('status', 'READY_FOR_EXPORT')
-    .eq('exported', false)
+    .or('exported.is.null,exported.eq.false')
     .order('issue_date', { ascending: true });
 
   if (error) throw error;
