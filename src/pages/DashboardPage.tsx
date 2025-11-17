@@ -393,6 +393,10 @@ function ReviewPanel({
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(34, 197, 94, 0.3)',
+          minHeight: '600px',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {selectedInvoiceId ? (
