@@ -158,6 +158,7 @@ serve(async (req) => {
 function buildPrompt(): string {
   return `
 Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
+
 Estructura esperada:
 {
   "supplierCuit": "string|null",
@@ -178,11 +179,46 @@ Estructura esperada:
   "caiCae": "string|null",
   "caiCaeExpiration": "YYYY-MM-DD|null",
   "taxes": [
-    { "taxType": "string", "taxBase": "number", "taxAmount": "number", "rate": "number|null" }
+    { 
+      "taxCode": "IVA_21|IVA_10_5|IVA_27|IVA_5|IVA_2_5|PERC_IIBB|PERC_IVA|PERC_GANANCIAS|EXENTO|NO_GRAVADO|OTRO",
+      "description": "string",
+      "taxBase": "number",
+      "taxAmount": "number",
+      "rate": "number|null"
+    }
   ]
 }
-IMPORTANTE: Busca el CAE (Código de Autorización Electrónica) que es un número de 14 dígitos. También busca la fecha de vencimiento del CAE.
-Usa null si no encuentras un dato. Usa números con punto decimal.
+
+IMPORTANTE PARA CAE: Busca el CAE (Código de Autorización Electrónica) que es un número de 14 dígitos. También busca la fecha de vencimiento del CAE.
+
+INSTRUCCIONES CRÍTICAS PARA IMPUESTOS:
+1. Identifica CADA línea de impuesto por separado en la factura
+2. Para IVA, especifica la alícuota EXACTA usando el taxCode correcto:
+   - Si dice "IVA 21%" o "21.00%" → taxCode: "IVA_21", rate: 21
+   - Si dice "IVA 10.5%" o "10.50%" → taxCode: "IVA_10_5", rate: 10.5
+   - Si dice "IVA 27%" → taxCode: "IVA_27", rate: 27
+   - Si dice "IVA 5%" → taxCode: "IVA_5", rate: 5
+   - Si dice "IVA 2.5%" → taxCode: "IVA_2_5", rate: 2.5
+3. Para percepciones y retenciones:
+   - Percepción IIBB o Ingresos Brutos → taxCode: "PERC_IIBB"
+   - Percepción IVA → taxCode: "PERC_IVA"
+   - Percepción Ganancias → taxCode: "PERC_GANANCIAS"
+4. Para otros impuestos:
+   - Exento → taxCode: "EXENTO"
+   - No Gravado → taxCode: "NO_GRAVADO"
+   - Cualquier otro impuesto no identificado → taxCode: "OTRO"
+5. Si hay múltiples alícuotas de IVA en la misma factura (ej: productos con 21% y 10.5%), crea un registro separado para cada uno
+6. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
+7. El taxAmount es el monto del impuesto calculado
+
+EJEMPLO de factura con IVA mixto:
+"taxes": [
+  { "taxCode": "IVA_21", "description": "IVA 21%", "taxBase": 10000, "taxAmount": 2100, "rate": 21 },
+  { "taxCode": "IVA_10_5", "description": "IVA 10.5%", "taxBase": 5000, "taxAmount": 525, "rate": 10.5 },
+  { "taxCode": "PERC_IIBB", "description": "Percepción IIBB", "taxBase": 0, "taxAmount": 150, "rate": null }
+]
+
+Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 `;
 }
 
