@@ -1,7 +1,7 @@
 // Este archivo genera archivos Excel para importación en Tango Gestión.
 // Crea 3 hojas: Encabezados, IVA/Impuestos y Conceptos, siguiendo la plantilla oficial de Tango.
 
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { supabase } from '../lib/supabase';
 import { getInvoicesReadyForExport, markInvoicesAsExported } from './invoice-service';
 import type { Database } from '../lib/database.types';
@@ -47,15 +47,12 @@ interface HeaderRow {
 interface TaxRow {
   'ID Comprobante': string;
   'Código Impuesto': string;
-  'Descripción': string;
-  'Base Imponible': number;
   'Importe': number;
 }
 
 interface ConceptRow {
   'ID Comprobante': string;
   'Código Concepto': string;
-  'Descripción Concepto': string;
   'Importe': number;
 }
 
@@ -143,8 +140,6 @@ export async function generateTangoExport(userId: string): Promise<{
         taxes.push({
           'ID Comprobante': invoice.internal_invoice_id,
           'Código Impuesto': tax.tax_codes.tango_code,
-          'Descripción': tax.tax_codes.description,
-          'Base Imponible': tax.tax_base,
           'Importe': tax.tax_amount,
         });
       }
@@ -156,7 +151,6 @@ export async function generateTangoExport(userId: string): Promise<{
         concepts.push({
           'ID Comprobante': invoice.internal_invoice_id,
           'Código Concepto': concept.tango_concepts.tango_concept_code,
-          'Descripción Concepto': concept.tango_concepts.description,
           'Importe': concept.amount,
         });
       }
@@ -219,6 +213,32 @@ function formatNumber(value: number | null): string {
 }
 
 /**
+ * Aplica estilo a la fila de encabezados (fondo azul, letras blancas)
+ */
+function applyHeaderStyle(sheet: XLSX.WorkSheet, columnCount: number) {
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+  
+  for (let col = 0; col < columnCount; col++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+    if (!sheet[cellAddress]) continue;
+    
+    sheet[cellAddress].s = {
+      fill: {
+        fgColor: { rgb: '0070C0' }, // Azul
+      },
+      font: {
+        color: { rgb: 'FFFFFF' }, // Blanco
+        bold: true,
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'center',
+      },
+    };
+  }
+}
+
+/**
  * Genera y descarga un archivo XLSX con las 3 hojas requeridas por Tango:
  * 1. Encabezados (datos principales de cada comprobante)
  * 2. IVA y Otros Impuestos (detalle de impuestos por comprobante)
@@ -262,6 +282,7 @@ export function downloadExport(filename: string, data: TangoExportData) {
     { wch: 30 }, // Observaciones
   ];
   
+  applyHeaderStyle(headersSheet, 27);
   XLSX.utils.book_append_sheet(workbook, headersSheet, 'Encabezados');
 
   // HOJA 2: IVA y Otros Impuestos
@@ -272,11 +293,10 @@ export function downloadExport(filename: string, data: TangoExportData) {
     taxesSheet['!cols'] = [
       { wch: 15 }, // ID Comprobante
       { wch: 15 }, // Código Impuesto
-      { wch: 30 }, // Descripción
-      { wch: 15 }, // Base Imponible
       { wch: 15 }, // Importe
     ];
     
+    applyHeaderStyle(taxesSheet, 3);
     XLSX.utils.book_append_sheet(workbook, taxesSheet, 'IVA y Otros Impuestos');
   } else {
     // Si no hay impuestos, crear una hoja vacía con los encabezados
@@ -284,11 +304,10 @@ export function downloadExport(filename: string, data: TangoExportData) {
       {
         'ID Comprobante': '',
         'Código Impuesto': '',
-        'Descripción': '',
-        'Base Imponible': '',
         'Importe': '',
       },
     ]);
+    applyHeaderStyle(emptyTaxesSheet, 3);
     XLSX.utils.book_append_sheet(workbook, emptyTaxesSheet, 'IVA y Otros Impuestos');
   }
 
@@ -300,10 +319,10 @@ export function downloadExport(filename: string, data: TangoExportData) {
     conceptsSheet['!cols'] = [
       { wch: 15 }, // ID Comprobante
       { wch: 15 }, // Código Concepto
-      { wch: 40 }, // Descripción Concepto
       { wch: 15 }, // Importe
     ];
     
+    applyHeaderStyle(conceptsSheet, 3);
     XLSX.utils.book_append_sheet(workbook, conceptsSheet, 'Conceptos');
   } else {
     // Si no hay conceptos, crear una hoja vacía con los encabezados
@@ -311,15 +330,15 @@ export function downloadExport(filename: string, data: TangoExportData) {
       {
         'ID Comprobante': '',
         'Código Concepto': '',
-        'Descripción Concepto': '',
         'Importe': '',
       },
     ]);
+    applyHeaderStyle(emptyConceptsSheet, 3);
     XLSX.utils.book_append_sheet(workbook, emptyConceptsSheet, 'Conceptos');
   }
 
   // Generar el archivo XLSX como un array buffer
-  const xlsxBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const xlsxBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true });
 
   // Crear un Blob y descargarlo
   const blob = new Blob([xlsxBuffer], {
