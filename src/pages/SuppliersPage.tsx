@@ -155,64 +155,95 @@ export function SuppliersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div 
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{
+            borderTopColor: 'rgba(34, 197, 94, 0.8)',
+            borderRightColor: 'rgba(34, 197, 94, 0.8)',
+            borderBottomColor: 'transparent',
+            borderLeftColor: 'transparent',
+          }}
+        ></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Proveedores</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
+              Proveedores
+            </span>
+          </h1>
+          <p className="text-green-200">
             Gestiona el catálogo de proveedores y mapeo a códigos Tango
           </p>
         </div>
 
         <button
           onClick={() => setShowNewForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          className="px-5 py-2.5 text-white rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+            boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+          }}
         >
           <Plus className="h-5 w-5" />
-          <span>Nuevo Proveedor</span>
+          <span className="font-semibold">Nuevo Proveedor</span>
         </button>
       </div>
 
       {showNewForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div 
+          className="rounded-xl shadow-2xl p-8"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+          }}
+        >
+          <h3 className="text-xl font-semibold text-white mb-6">
             {editingId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-green-300 mb-2">
                 CUIT <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.cuit}
                 onChange={(e) => setFormData({ ...formData, cuit: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
                 placeholder="20-12345678-9"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-green-300 mb-2">
                 Razón Social <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.razon_social}
                 onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-green-300 mb-2">
                 Código Proveedor Tango
               </label>
               <input
@@ -221,18 +252,26 @@ export function SuppliersPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, tango_supplier_code: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-green-300 mb-2">
                 Condición IVA
               </label>
               <select
                 value={formData.iva_condition}
                 onChange={(e) => setFormData({ ...formData, iva_condition: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               >
                 <option value="">Seleccionar</option>
                 <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
@@ -242,124 +281,171 @@ export function SuppliersPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+              <label className="block text-sm font-medium text-green-300 mb-2">Dirección</label>
               <input
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+              <label className="block text-sm font-medium text-green-300 mb-2">Ciudad</label>
               <input
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+              <label className="block text-sm font-medium text-green-300 mb-2">Provincia</label>
               <input
                 type="text"
                 value={formData.province}
                 onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-green-300 mb-2">
                 Código Postal
               </label>
               <input
                 type="text"
                 value={formData.postal_code}
                 onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <label className="block text-sm font-medium text-green-300 mb-2">Teléfono</label>
               <input
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
               />
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end space-x-2">
+          <div className="mt-6 flex justify-end space-x-3">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
             >
-              <X className="h-4 w-4" />
-              <span>Cancelar</span>
+              <X className="h-4 w-4 text-white" />
+              <span className="text-white">Cancelar</span>
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+              }}
             >
               <Save className="h-4 w-4" />
-              <span>Guardar</span>
+              <span className="text-white font-semibold">Guardar</span>
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div 
+        className="rounded-xl shadow-2xl overflow-hidden"
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+        }}
+      >
+        <table className="min-w-full">
+          <thead style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-green-300 uppercase tracking-wider">
                 CUIT
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-green-300 uppercase tracking-wider">
                 Razón Social
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-green-300 uppercase tracking-wider">
                 Código Tango
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-green-300 uppercase tracking-wider">
                 Condición IVA
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-right text-xs font-semibold text-green-300 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {suppliers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-green-200">
                   No hay proveedores registrados
                 </td>
               </tr>
             ) : (
               suppliers.map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr 
+                  key={supplier.id} 
+                  className="transition-all duration-200"
+                  style={{
+                    borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                     {formatCUIT(supplier.cuit)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {supplier.razon_social}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {supplier.tango_supplier_code || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {supplier.iva_condition || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(supplier)}
-                      className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1"
+                      className="text-green-400 hover:text-green-300 inline-flex items-center space-x-1 transition-colors"
                     >
                       <Edit className="h-4 w-4" />
                       <span>Editar</span>
