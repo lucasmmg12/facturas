@@ -84,7 +84,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     try {
       setSaving(true);
 
-      await updateInvoice(invoice.id, {
+      // Si el estado se cambia a READY_FOR_EXPORT, asegurarse de que exported sea false
+      const updateData: any = {
         supplier_id: invoice.supplier_id,
         supplier_cuit: invoice.supplier_cuit,
         supplier_name: invoice.supplier_name,
@@ -118,9 +119,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         destination_branch_number: invoice.destination_branch_number,
         observations: invoice.observations,
         notes: invoice.notes,
-        status: invoice.status, // ← IMPORTANTE: Ahora también actualiza el estado
+        status: invoice.status,
         updated_by: profile.id,
-      });
+      };
+
+      // Si el estado es READY_FOR_EXPORT, asegurarse de que exported sea false
+      if (invoice.status === 'READY_FOR_EXPORT') {
+        updateData.exported = false;
+      }
+
+      await updateInvoice(invoice.id, updateData);
 
       onSave();
     } catch (error) {
