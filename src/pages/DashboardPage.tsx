@@ -61,9 +61,22 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
-      <div className="space-y-12">
-        <section className="rounded-3xl border border-blue-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center gap-3 border-b border-blue-100 px-6 py-5">
+      <div className="space-y-8">
+        <section 
+          className="rounded-3xl overflow-hidden shadow-2xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
+          }}
+        >
+          <div 
+            className="flex flex-wrap items-center gap-3 px-6 py-5"
+            style={{
+              borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
+            }}
+          >
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
               return (
@@ -71,11 +84,22 @@ export function DashboardPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-white text-blue-700 border border-blue-200 hover:border-blue-400 hover:text-blue-900'
+                      ? 'text-white shadow-lg'
+                      : 'text-green-300 hover:text-white'
                   }`}
+                  style={
+                    isActive
+                      ? {
+                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                        }
+                      : {
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(34, 197, 94, 0.3)',
+                        }
+                  }
                 >
                   {tab.label}
                 </button>
@@ -256,45 +280,57 @@ function ReviewPanel({
   }));
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-slate-900">Comprobantes recientes</h2>
-          <p className="text-sm text-slate-500">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div 
+        className="rounded-2xl overflow-hidden shadow-2xl"
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+        }}
+      >
+        <div 
+          className="px-6 py-5"
+          style={{
+            borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
+          }}
+        >
+          <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
+          <p className="text-sm text-green-200">
             Selecciona un comprobante para revisarlo y editar sus datos.
           </p>
         </div>
         {loading ? (
-          <div className="p-6 text-sm text-slate-500">Cargando comprobantes...</div>
+          <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
         ) : error ? (
-          <div className="p-6 text-sm text-red-600">{error}</div>
+          <div className="p-6 text-sm text-red-300">{error}</div>
         ) : formattedInvoices.length === 0 ? (
-          <div className="p-6 text-sm text-slate-500">
+          <div className="p-6 text-sm text-green-200">
             Todavía no hay comprobantes en el sistema.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <table className="min-w-full">
+              <thead>
+                <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
                     Fecha
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
                     Proveedor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
                     Comprobante
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
                     Total
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
                     Estado
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {formattedInvoices.map((invoice) => {
                   const isActive = invoice.id === selectedInvoiceId;
                   return (
@@ -302,9 +338,23 @@ function ReviewPanel({
                       key={invoice.id}
                       role="button"
                       tabIndex={0}
-                      className={`cursor-pointer transition ${
-                        isActive ? 'bg-slate-50' : 'hover:bg-slate-50'
-                      }`}
+                      className="cursor-pointer transition-all duration-200"
+                      style={{
+                        background: isActive 
+                          ? 'rgba(34, 197, 94, 0.2)' 
+                          : 'transparent',
+                        borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
                       onClick={() => onSelectInvoice(invoice.id)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -313,19 +363,19 @@ function ReviewPanel({
                         }
                       }}
                     >
-                      <td className="px-6 py-3 text-sm text-slate-700">
+                      <td className="px-6 py-4 text-sm text-white">
                         {invoice.formattedDate}
                       </td>
-                      <td className="px-6 py-3 text-sm font-medium text-slate-900">
+                      <td className="px-6 py-4 text-sm font-medium text-white">
                         {invoice.supplier_name}
                       </td>
-                      <td className="px-6 py-3 text-sm text-slate-600">
+                      <td className="px-6 py-4 text-sm text-green-200">
                         {invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}
                       </td>
-                      <td className="px-6 py-3 text-sm text-right font-semibold text-slate-900">
+                      <td className="px-6 py-4 text-sm text-right font-semibold text-white">
                         {invoice.formattedTotal}
                       </td>
-                      <td className="px-6 py-3 text-center">
+                      <td className="px-6 py-4 text-center">
                         <StatusBadge status={invoice.status} />
                       </td>
                     </tr>
@@ -337,7 +387,14 @@ function ReviewPanel({
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+      <div 
+        className="rounded-2xl overflow-hidden shadow-2xl"
+        style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+        }}
+      >
         {selectedInvoiceId ? (
           <InvoiceEditor
             invoiceId={selectedInvoiceId}
@@ -348,7 +405,7 @@ function ReviewPanel({
             }}
           />
         ) : (
-          <div className="flex h-full items-center justify-center p-12 text-center text-slate-500">
+          <div className="flex h-full items-center justify-center p-12 text-center text-green-200">
             Selecciona un comprobante de la lista para abrir el editor.
           </div>
         )}
@@ -417,36 +474,70 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-blue-500/30 bg-blue-50 p-6 text-blue-900">
-        <h3 className="text-xl font-semibold">Exportación a Tango Gestión</h3>
-        <p className="mt-2 text-sm text-blue-700">
+    <div className="space-y-8">
+      <div 
+        className="rounded-xl p-6"
+        style={{
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+        }}
+      >
+        <h3 className="text-xl font-semibold text-white">Exportación a Tango Gestión</h3>
+        <p className="mt-2 text-sm text-green-200">
           Genera un archivo compatible con Tango que incluye encabezados, impuestos y conceptos para cada comprobante.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div 
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#fca5a5',
+          }}
+        >
           {error}
         </div>
       )}
 
       {message && (
-        <div className="rounded-2xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+        <div 
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(34, 197, 94, 0.2)',
+            border: '1px solid rgba(34, 197, 94, 0.4)',
+            color: '#86efac',
+          }}
+        >
           {message}
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-blue-700">Comprobantes listos</p>
-          <p className="mt-2 text-4xl font-bold text-blue-900">
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div 
+          className="rounded-xl p-6 shadow-2xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+          }}
+        >
+          <p className="text-sm font-medium text-green-300">Comprobantes listos</p>
+          <p className="mt-2 text-4xl font-bold text-white">
             {loading ? '...' : readyInvoices.length}
           </p>
         </div>
-        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-blue-700">Total acumulado</p>
-          <p className="mt-2 text-3xl font-bold text-blue-900">
+        <div 
+          className="rounded-xl p-6 shadow-2xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+          }}
+        >
+          <p className="text-sm font-medium text-green-300">Total acumulado</p>
+          <p className="mt-2 text-3xl font-bold text-white">
             {loading
               ? '...'
               : totalAmount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
@@ -458,13 +549,17 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
         type="button"
         onClick={handleExport}
         disabled={exporting || readyInvoices.length === 0}
-        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+        style={{
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+        }}
       >
         {exporting ? 'Generando archivo...' : 'Exportar a Tango Gestión'}
       </button>
 
-      <p className="text-sm text-slate-500">
-        El archivo se descargará en formato <span className="font-semibold">Excel (.xlsx)</span> con tres hojas:
+      <p className="text-sm text-green-200">
+        El archivo se descargará en formato <span className="font-semibold text-white">Excel (.xlsx)</span> con tres hojas:
         Encabezados, IVA y Otros Impuestos, y Conceptos, siguiendo el formato oficial de importación de Tango Gestión.
       </p>
     </div>
