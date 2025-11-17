@@ -12,6 +12,40 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.6.0',
+    date: '16 de Noviembre, 2024',
+    changes: [
+      {
+        type: 'improvement',
+        description: 'Rediseño estético completo: glassmorphism, tema verde y mejor espaciado en toda la aplicación',
+      },
+      {
+        type: 'feature',
+        description: 'Nueva página de gestión de códigos de impuestos con CRUD completo',
+      },
+      {
+        type: 'feature',
+        description: 'Auto-cálculo inteligente de impuestos al seleccionar código con alícuota conocida',
+      },
+      {
+        type: 'improvement',
+        description: 'OCR mejorado: distingue entre IVA 21%, 10.5%, 27% y otros impuestos automáticamente',
+      },
+      {
+        type: 'improvement',
+        description: 'Layout optimizado: comprobantes arriba y editor abajo para mejor experiencia de usuario',
+      },
+      {
+        type: 'improvement',
+        description: 'Exportación Excel mejorada: columnas optimizadas y headers con estilo azul y texto blanco',
+      },
+      {
+        type: 'fix',
+        description: 'Corregido problema de visualización de campos en el editor de comprobantes',
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '15 de Noviembre, 2024 (noche)',
     changes: [
