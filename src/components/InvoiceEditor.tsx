@@ -22,7 +22,7 @@ interface InvoiceEditorProps {
   onSave: () => void;
 }
 
-type TabType = 'basic' | 'amounts' | 'electronic' | 'classification' | 'concepts';
+type TabType = 'basic' | 'amounts' | 'taxes' | 'electronic' | 'classification' | 'concepts';
 
 export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps) {
   const { profile } = useAuth();
@@ -41,6 +41,9 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [conceptAmount, setConceptAmount] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [conceptError, setConceptError] = useState('');
+  const [selectedTaxCodeId, setSelectedTaxCodeId] = useState('');
+  const [taxBase, setTaxBase] = useState('');
+  const [taxAmount, setTaxAmount] = useState('');
 
   useEffect(() => {
     loadData();
@@ -253,6 +256,49 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
+  const handleAddTax = async () => {
+    if (!invoice || !selectedTaxCodeId || !taxAmount) {
+      alert('Por favor selecciona un código de impuesto e ingresa el monto');
+      return;
+    }
+
+    const amount = parseFloat(taxAmount);
+    const base = taxBase ? parseFloat(taxBase) : 0;
+
+    if (isNaN(amount) || amount <= 0) {
+      alert('Por favor ingresa un monto válido');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('invoice_taxes').insert({
+        invoice_id: invoice.id,
+        tax_code_id: selectedTaxCodeId,
+        tax_base: base,
+        tax_amount: amount,
+      });
+
+      if (error) throw error;
+
+      setSelectedTaxCodeId('');
+      setTaxBase('');
+      setTaxAmount('');
+      await loadData();
+    } catch (error) {
+      console.error('Error adding tax:', error);
+      alert('Error al asignar el impuesto');
+    }
+  };
+
+  const handleRemoveTax = async (taxId: string) => {
+    try {
+      await supabase.from('invoice_taxes').delete().eq('id', taxId);
+      await loadData();
+    } catch (error) {
+      console.error('Error removing tax:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -268,6 +314,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const tabs = [
     { id: 'basic' as TabType, label: 'Datos Básicos' },
     { id: 'amounts' as TabType, label: 'Importes' },
+    { id: 'taxes' as TabType, label: 'Impuestos' },
     { id: 'electronic' as TabType, label: 'Factura Electrónica' },
     { id: 'classification' as TabType, label: 'Códigos' },
     { id: 'concepts' as TabType, label: 'Conceptos' },
@@ -676,6 +723,131 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'taxes' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Asignar Impuesto */}
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4">Asignar Impuesto</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código de Impuesto
+                  </label>
+                  <select
+                    value={selectedTaxCodeId}
+                    onChange={(e) => setSelectedTaxCodeId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar impuesto...</option>
+                    {taxCodes.map((taxCode) => (
+                      <option key={taxCode.id} value={taxCode.id}>
+                        {taxCode.tango_code} - {taxCode.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Base Imponible
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={taxBase}
+                    onChange={(e) => setTaxBase(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Importe del Impuesto
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={taxAmount}
+                      onChange={(e) => setTaxAmount(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={handleAddTax}
+                      disabled={!selectedTaxCodeId || !taxAmount}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  💡 Agrega los impuestos que aplican a esta factura. La base imponible es opcional.
+                </p>
+              </div>
+            </div>
+
+            {/* Impuestos Asignados */}
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4">Impuestos Asignados</h3>
+
+              <div className="space-y-2">
+                {invoiceTaxes.map((tax) => (
+                  <div
+                    key={tax.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">
+                        {tax.tax_codes?.tango_code} - {tax.tax_codes?.description}
+                      </div>
+                      {tax.tax_base > 0 && (
+                        <div className="text-xs text-gray-500">
+                          Base imponible: ${tax.tax_base.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm font-medium text-gray-900">
+                        ${tax.tax_amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveTax(tax.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {invoiceTaxes.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No hay impuestos asignados
+                  </p>
+                )}
+              </div>
+
+              {invoiceTaxes.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Total Impuestos:</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      ${invoiceTaxes.reduce((sum, tax) => sum + tax.tax_amount, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
