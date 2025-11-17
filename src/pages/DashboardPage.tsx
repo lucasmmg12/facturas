@@ -280,17 +280,21 @@ function ReviewPanel({
   }));
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="flex flex-col gap-8">
+      {/* Comprobantes recientes - Arriba */}
       <div 
         className="rounded-2xl overflow-hidden shadow-2xl"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(34, 197, 94, 0.3)',
+          maxHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div 
-          className="px-6 py-5"
+          className="px-6 py-5 flex-shrink-0"
           style={{
             borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
           }}
@@ -300,101 +304,103 @@ function ReviewPanel({
             Selecciona un comprobante para revisarlo y editar sus datos.
           </p>
         </div>
-        {loading ? (
-          <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
-        ) : error ? (
-          <div className="p-6 text-sm text-red-300">{error}</div>
-        ) : formattedInvoices.length === 0 ? (
-          <div className="p-6 text-sm text-green-200">
-            Todavía no hay comprobantes en el sistema.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                    Proveedor
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                    Comprobante
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
-                    Total
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
-                    Estado
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {formattedInvoices.map((invoice) => {
-                  const isActive = invoice.id === selectedInvoiceId;
-                  return (
-                    <tr
-                      key={invoice.id}
-                      role="button"
-                      tabIndex={0}
-                      className="cursor-pointer transition-all duration-200"
-                      style={{
-                        background: isActive 
-                          ? 'rgba(34, 197, 94, 0.2)' 
-                          : 'transparent',
-                        borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                      onClick={() => onSelectInvoice(invoice.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onSelectInvoice(invoice.id);
-                        }
-                      }}
-                    >
-                      <td className="px-6 py-4 text-sm text-white">
-                        {invoice.formattedDate}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-white">
-                        {invoice.supplier_name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-green-200">
-                        {invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-semibold text-white">
-                        {invoice.formattedTotal}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <StatusBadge status={invoice.status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
+          ) : error ? (
+            <div className="p-6 text-sm text-red-300">{error}</div>
+          ) : formattedInvoices.length === 0 ? (
+            <div className="p-6 text-sm text-green-200">
+              Todavía no hay comprobantes en el sistema.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                  <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                      Fecha
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                      Proveedor
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                      Comprobante
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
+                      Total
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
+                      Estado
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formattedInvoices.map((invoice) => {
+                    const isActive = invoice.id === selectedInvoiceId;
+                    return (
+                      <tr
+                        key={invoice.id}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer transition-all duration-200"
+                        style={{
+                          background: isActive 
+                            ? 'rgba(34, 197, 94, 0.2)' 
+                            : 'transparent',
+                          borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                        onClick={() => onSelectInvoice(invoice.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onSelectInvoice(invoice.id);
+                          }
+                        }}
+                      >
+                        <td className="px-6 py-4 text-sm text-white">
+                          {invoice.formattedDate}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-white">
+                          {invoice.supplier_name}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-green-200">
+                          {invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-right font-semibold text-white">
+                          {invoice.formattedTotal}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <StatusBadge status={invoice.status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Editor de Comprobante - Abajo */}
       <div 
-        className="rounded-2xl overflow-hidden shadow-2xl"
+        className="rounded-2xl overflow-hidden shadow-2xl flex-1"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(34, 197, 94, 0.3)',
-          minHeight: '600px',
-          height: '100%',
+          minHeight: '500px',
           display: 'flex',
           flexDirection: 'column',
         }}
