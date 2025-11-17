@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { FileUploader } from '../components/FileUploader';
 import { extractDataFromPDF } from '../services/ocr-service';
 import { extractDataWithOpenAI } from '../services/openai-ocr-service';
-import { createInvoice, checkDuplicateInvoice } from '../services/invoice-service';
+import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
@@ -175,22 +175,14 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           cai_cae_expiration: ocrResult.caiCaeExpiration || null,
         });
 
+        // Crear automáticamente los impuestos detectados por OCR
         if (ocrResult.taxes && ocrResult.taxes.length > 0) {
-          for (const tax of ocrResult.taxes) {
-            const { data: taxCode } = await supabase
-              .from('tax_codes')
-              .select('id')
-              .eq('code', tax.taxType)
-              .maybeSingle();
-
-            if (taxCode) {
-              await supabase.from('invoice_taxes').insert({
-                invoice_id: invoice.id,
-                tax_code_id: taxCode.id,
-                tax_base: tax.taxBase,
-                tax_amount: tax.taxAmount,
-              });
-            }
+          try {
+            await createInvoiceTaxesFromOCR(invoice.id, ocrResult.taxes);
+            console.log(`[Upload] ${ocrResult.taxes.length} impuestos creados automáticamente`);
+          } catch (taxError) {
+            console.error('[Upload] Error al crear impuestos automáticamente:', taxError);
+            // No fallar todo el proceso si falla la creación de impuestos
           }
         }
 
