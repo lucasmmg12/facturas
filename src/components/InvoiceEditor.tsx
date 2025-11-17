@@ -3,14 +3,14 @@
 // Permite agregar conceptos, impuestos y marcar como listo para exportar.
 
 import { useState, useEffect } from 'react';
-import { Save, Check, X, Plus, Trash2 } from 'lucide-react';
+import { Save, X, Plus, Trash2 } from 'lucide-react';
 import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
 import { INVOICE_TYPES_OPTIONS } from '../utils/invoice-types';
-import { formatCUIT, validateCUIT } from '../utils/validators';
-import type { Database, InvoiceStatus } from '../lib/database.types';
+import { formatCUIT } from '../utils/validators';
+import type { Database } from '../lib/database.types';
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
 type TaxCode = Database['public']['Tables']['tax_codes']['Row'];
@@ -390,6 +390,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <option value="EXPORTED" style={{ background: '#1a1a1a' }}>Exportado</option>
               <option value="ERROR" style={{ background: '#1a1a1a' }}>Error</option>
             </select>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-3 py-2 rounded-lg flex items-center space-x-1 disabled:opacity-50 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+              }}
+              title="Guardar estado"
+            >
+              <Save className="h-4 w-4 text-white" />
+            </button>
           </div>
 
           <button
