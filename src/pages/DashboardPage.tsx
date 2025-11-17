@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UploadPage } from './UploadPage';
 import { ActivityLogPage } from './ActivityLogPage';
 import { ChangelogPage } from './ChangelogPage';
+import { SuppliersPage } from './SuppliersPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
@@ -28,7 +29,7 @@ interface ReviewPanelProps {
 
 export function DashboardPage() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'activity' | 'changelog'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'activity' | 'suppliers' | 'changelog'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -37,6 +38,7 @@ export function DashboardPage() {
       { id: 'upload' as const, label: 'Carga automática' },
       { id: 'review' as const, label: 'Revisión y edición' },
       { id: 'export' as const, label: 'Exportar a Tango' },
+      { id: 'suppliers' as const, label: 'Proveedores' },
       { id: 'activity' as const, label: 'Mi Historial' },
       { id: 'changelog' as const, label: 'Actualizaciones' },
     ],
@@ -105,6 +107,8 @@ export function DashboardPage() {
                 nuevamente.
               </div>
             )}
+
+            {activeTab === 'suppliers' && <SuppliersPage />}
 
             {activeTab === 'activity' && <ActivityLogPage />}
 
