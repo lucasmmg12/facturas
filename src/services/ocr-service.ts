@@ -30,7 +30,8 @@ export interface OCRResult {
   otherTaxesAmount: number;
   totalAmount: number;
   taxes: Array<{
-    taxType: string;
+    taxCode: string;
+    description: string;
     taxBase: number;
     taxAmount: number;
     rate: number | null;
@@ -379,13 +380,15 @@ function extractAmounts(text: string): {
 }
 
 function extractTaxes(text: string): Array<{
-  taxType: string;
+  taxCode: string;
+  description: string;
   taxBase: number;
   taxAmount: number;
   rate: number | null;
 }> {
   const taxes: Array<{
-    taxType: string;
+    taxCode: string;
+    description: string;
     taxBase: number;
     taxAmount: number;
     rate: number | null;
@@ -401,9 +404,11 @@ function extractTaxes(text: string): Array<{
       const rate = parseFloat(match[1]);
       const base = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
       const amount = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
+      const taxCode = `IVA_${match[1].replace('.', '_')}`;
 
       taxes.push({
-        taxType: `IVA_${match[1].replace('.', '_')}`,
+        taxCode,
+        description: `IVA ${match[1]}%`,
         taxBase: base,
         taxAmount: amount,
         rate,
