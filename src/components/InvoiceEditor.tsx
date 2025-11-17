@@ -256,6 +256,35 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
+  const handleTaxCodeSelected = (taxCodeId: string) => {
+    setSelectedTaxCodeId(taxCodeId);
+    
+    if (!taxCodeId || !invoice) return;
+    
+    // Buscar el tax code seleccionado
+    const selectedTax = taxCodes.find(tc => tc.id === taxCodeId);
+    
+    if (selectedTax && selectedTax.rate && invoice.net_taxed > 0) {
+      // Auto-calcular base imponible y monto si tenemos alícuota
+      const baseAmount = invoice.net_taxed;
+      const calculatedTaxAmount = baseAmount * (selectedTax.rate / 100);
+      
+      setTaxBase(baseAmount.toFixed(2));
+      setTaxAmount(calculatedTaxAmount.toFixed(2));
+      
+      console.log('[InvoiceEditor] Auto-calculado impuesto:', {
+        taxCode: selectedTax.tango_code,
+        rate: selectedTax.rate,
+        base: baseAmount,
+        amount: calculatedTaxAmount
+      });
+    } else {
+      // Si no hay rate o net_taxed, dejar que el usuario ingrese manualmente
+      setTaxBase('');
+      setTaxAmount('');
+    }
+  };
+
   const handleAddTax = async () => {
     if (!invoice || !selectedTaxCodeId || !taxAmount) {
       alert('Por favor selecciona un código de impuesto e ingresa el monto');
@@ -740,13 +769,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <select
                     value={selectedTaxCodeId}
-                    onChange={(e) => setSelectedTaxCodeId(e.target.value)}
+                    onChange={(e) => handleTaxCodeSelected(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Seleccionar impuesto...</option>
                     {taxCodes.map((taxCode) => (
                       <option key={taxCode.id} value={taxCode.id}>
                         {taxCode.tango_code} - {taxCode.description}
+                        {taxCode.rate ? ` (${taxCode.rate}%)` : ''}
                       </option>
                     ))}
                   </select>
@@ -792,7 +822,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-800">
-                  💡 Agrega los impuestos que aplican a esta factura. La base imponible es opcional.
+                  💡 <strong>Auto-cálculo inteligente:</strong> Al seleccionar un impuesto con alícuota conocida (ej: IVA 21%), 
+                  la base imponible y el monto se calculan automáticamente desde el subtotal gravado. Puedes modificar los valores si es necesario.
                 </p>
               </div>
             </div>
