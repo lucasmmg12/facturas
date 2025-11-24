@@ -4,6 +4,7 @@ import { ActivityLogPage } from './ActivityLogPage';
 import { ChangelogPage } from './ChangelogPage';
 import { SuppliersPage } from './SuppliersPage';
 import { TaxCodesPage } from './TaxCodesPage';
+import { MasterDataPage } from './MasterDataPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
@@ -39,6 +40,7 @@ export function DashboardPage() {
       { id: 'upload' as const, label: 'Carga automática' },
       { id: 'review' as const, label: 'Revisión y edición' },
       { id: 'export' as const, label: 'Exportar a Tango' },
+      { id: 'maestros' as const, label: 'Maestros' },
       { id: 'suppliers' as const, label: 'Proveedores' },
       { id: 'tax_codes' as const, label: 'Códigos Impuestos' },
       { id: 'activity' as const, label: 'Mi Historial' },
@@ -62,7 +64,7 @@ export function DashboardPage() {
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
       <div className="space-y-8">
-        <section 
+        <section
           className="rounded-3xl overflow-hidden shadow-2xl"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -71,7 +73,7 @@ export function DashboardPage() {
             boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
           }}
         >
-          <div 
+          <div
             className="flex flex-wrap items-center gap-3 px-6 py-5"
             style={{
               borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
@@ -84,21 +86,20 @@ export function DashboardPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
-                    isActive
-                      ? 'text-white shadow-lg'
-                      : 'text-green-300 hover:text-white'
-                  }`}
+                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${isActive
+                    ? 'text-white shadow-lg'
+                    : 'text-green-300 hover:text-white'
+                    }`}
                   style={
                     isActive
                       ? {
-                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-                        }
+                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                        boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                      }
                       : {
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(34, 197, 94, 0.3)',
-                        }
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                      }
                   }
                 >
                   {tab.label}
@@ -133,6 +134,8 @@ export function DashboardPage() {
                 nuevamente.
               </div>
             )}
+
+            {activeTab === 'maestros' && <MasterDataPage />}
 
             {activeTab === 'suppliers' && <SuppliersPage />}
 
@@ -282,7 +285,7 @@ function ReviewPanel({
   return (
     <div className="flex flex-col gap-8">
       {/* Comprobantes recientes - Arriba */}
-      <div 
+      <div
         className="rounded-2xl overflow-hidden shadow-2xl"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
@@ -293,7 +296,7 @@ function ReviewPanel({
           flexDirection: 'column',
         }}
       >
-        <div 
+        <div
           className="px-6 py-5 flex-shrink-0"
           style={{
             borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
@@ -345,8 +348,8 @@ function ReviewPanel({
                         tabIndex={0}
                         className="cursor-pointer transition-all duration-200"
                         style={{
-                          background: isActive 
-                            ? 'rgba(34, 197, 94, 0.2)' 
+                          background: isActive
+                            ? 'rgba(34, 197, 94, 0.2)'
                             : 'transparent',
                           borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
                         }}
@@ -394,7 +397,7 @@ function ReviewPanel({
       </div>
 
       {/* Editor de Comprobante - Abajo */}
-      <div 
+      <div
         className="rounded-2xl overflow-hidden shadow-2xl flex-1"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
@@ -467,6 +470,15 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       setMessage(null);
 
       const result = await generateTangoExport(profileId);
+
+      if (!result.diagnostics.valid) {
+        setError(`Se encontraron ${result.diagnostics.errors.length} errores de validación. Revise los datos maestros o los comprobantes.`);
+        // Optionally show detailed errors. For now, we just alert.
+        // Ideally we would show a list.
+        console.error('Export diagnostics:', result.diagnostics.errors);
+        return;
+      }
+
       downloadExport(result.filename, result.data);
 
       setMessage(`Exportamos ${result.invoiceIds.length} comprobantes correctamente.`);
@@ -485,7 +497,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
 
   return (
     <div className="space-y-8">
-      <div 
+      <div
         className="rounded-xl p-6"
         style={{
           background: 'rgba(34, 197, 94, 0.1)',
@@ -499,7 +511,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       </div>
 
       {error && (
-        <div 
+        <div
           className="rounded-xl px-4 py-3 text-sm"
           style={{
             background: 'rgba(239, 68, 68, 0.2)',
@@ -512,7 +524,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       )}
 
       {message && (
-        <div 
+        <div
           className="rounded-xl px-4 py-3 text-sm"
           style={{
             background: 'rgba(34, 197, 94, 0.2)',
@@ -525,7 +537,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
       )}
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <div 
+        <div
           className="rounded-xl p-6 shadow-2xl"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -538,7 +550,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
             {loading ? '...' : readyInvoices.length}
           </p>
         </div>
-        <div 
+        <div
           className="rounded-xl p-6 shadow-2xl"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
