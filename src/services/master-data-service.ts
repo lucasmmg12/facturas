@@ -112,14 +112,25 @@ export async function importProviders(file: File): Promise<ImportResult> {
       return { success: false, message: 'Errores de validación en el archivo.', errors };
     }
 
+    // Remove duplicates (keep last occurrence by CUIT)
+    const uniqueRows = new Map();
+    validRows.forEach(row => {
+      uniqueRows.set(row.cuit, row);
+    });
+    const finalRows = Array.from(uniqueRows.values());
+
     // Upsert to Supabase
     const { error } = await supabase
       .from('suppliers')
-      .upsert(validRows, { onConflict: 'cuit' });
+      .upsert(finalRows, { onConflict: 'cuit' });
 
     if (error) throw error;
 
-    return { success: true, message: `Se importaron ${validRows.length} proveedores correctamente.`, count: validRows.length };
+    return {
+      success: true,
+      message: `Se importaron ${finalRows.length} proveedores correctamente${validRows.length !== finalRows.length ? ` (se eliminaron ${validRows.length - finalRows.length} duplicados)` : ''}.`,
+      count: finalRows.length
+    };
 
   } catch (error: any) {
     console.error('Error importing providers:', error);
@@ -167,13 +178,24 @@ export async function importConcepts(file: File): Promise<ImportResult> {
       return { success: false, message: 'Errores de validación.', errors };
     }
 
+    // Remove duplicates (keep last occurrence by code)
+    const uniqueRows = new Map();
+    validRows.forEach(row => {
+      uniqueRows.set(row.tango_concept_code, row);
+    });
+    const finalRows = Array.from(uniqueRows.values());
+
     const { error } = await supabase
       .from('tango_concepts')
-      .upsert(validRows, { onConflict: 'tango_concept_code' });
+      .upsert(finalRows, { onConflict: 'tango_concept_code' });
 
     if (error) throw error;
 
-    return { success: true, message: `Se importaron ${validRows.length} conceptos.`, count: validRows.length };
+    return {
+      success: true,
+      message: `Se importaron ${finalRows.length} conceptos${validRows.length !== finalRows.length ? ` (se eliminaron ${validRows.length - finalRows.length} duplicados)` : ''}.`,
+      count: finalRows.length
+    };
 
   } catch (error: any) {
     return { success: false, message: `Error: ${error.message}` };
@@ -224,13 +246,24 @@ export async function importAliquotas(file: File): Promise<ImportResult> {
       return { success: false, message: 'Errores de validación.', errors };
     }
 
+    // Remove duplicates (keep last occurrence by code)
+    const uniqueRows = new Map();
+    validRows.forEach(row => {
+      uniqueRows.set(row.code, row);
+    });
+    const finalRows = Array.from(uniqueRows.values());
+
     const { error } = await supabase
       .from('tax_codes')
-      .upsert(validRows, { onConflict: 'code' });
+      .upsert(finalRows, { onConflict: 'code' });
 
     if (error) throw error;
 
-    return { success: true, message: `Se importaron ${validRows.length} alícuotas.`, count: validRows.length };
+    return {
+      success: true,
+      message: `Se importaron ${finalRows.length} alícuotas${validRows.length !== finalRows.length ? ` (se eliminaron ${validRows.length - finalRows.length} duplicados)` : ''}.`,
+      count: finalRows.length
+    };
 
   } catch (error: any) {
     return { success: false, message: `Error: ${error.message}` };
