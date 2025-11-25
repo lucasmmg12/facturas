@@ -16,6 +16,7 @@ interface AutofillResult {
         operation_type?: string;
         classifier_code?: string;
         afip_voucher_code?: string;
+        destination_branch_number?: string;
         currency_code?: string;
         exchange_rate?: number;
         accounting_date?: string;
@@ -71,36 +72,48 @@ export async function autofillInvoiceFields(
             }
         }
 
-        // 3. CÓDIGO DE SECTOR
-        // Regla: Siempre 1, excepto reposición de gastos → 10
-        if (invoiceData.expense_code?.toLowerCase().includes('reposición') ||
-            invoiceData.expense_code?.toLowerCase().includes('reposicion')) {
-            result.sector_code = '10';
-        } else {
-            result.sector_code = '1';
-        }
+        // 3. CÓDIGO DE GASTO (expense_code)
+        // Valores válidos: S/C, 0, 2
+        // Se debe cargar desde la hoja maestra de conceptos
+        // Por defecto: vacío (se asignará al seleccionar concepto)
 
-        // 4. CONDICIÓN DE COMPRA
-        // Por defecto: 1 (Cuenta corriente)
-        // TODO: Podríamos detectar si dice "CONTADO" en el comprobante
-        result.purchase_condition = '1'; // Cta Cte por defecto
+        // 4. CÓDIGO DE SECTOR (sector_code)
+        // Default: 2 (usado en mayoría de planillas del Sanatorio)
+        // Otros valores posibles: 0
+        result.sector_code = '2';
 
-        // 5. TIPO DE OPERACIÓN
-        // Siempre "O"
+        // 5. CONDICIÓN DE COMPRA (purchase_condition)
+        // IMPORTANTE: Solo valores numéricos 1 o 2
+        // 1 = Cuenta corriente (98% de los casos - DEFAULT)
+        // 2 = Contado (casos específicos)
+        result.purchase_condition = detectPurchaseCondition(invoiceData);
+
+        // 6. CÓDIGO DE CLASIFICADOR (classifier_code)
+        // Default: 0 (opcional, usado raramente)
+        result.classifier_code = '0';
+
+        // 7. TIPO DE OPERACIÓN AFIP (operation_type / afip_operation_type_code)
+        // O = Compra estándar (siempre en Sanatorio Argentino)
+        // E = Exportaciones
+        // I = Importaciones
         result.operation_type = 'O';
 
-        // 6. CÓDIGO DE CLASIFICACIÓN
-        // Siempre "B" (Bienes y Servicios)
-        result.classifier_code = 'B';
-
-        // 7. CÓDIGO DE COMPROBANTE AFIP
+        // 8. CÓDIGO DE COMPROBANTE AFIP (afip_voucher_code)
+        // Automático según tipo de comprobante
+        // 001 = Factura A/B/C
+        // 011 = Nota de Crédito
+        // 012 = Nota de Débito
         result.afip_voucher_code = mapInvoiceTypeToAFIPCode(invoiceData.invoice_type);
 
-        // 8. MONEDA Y COTIZACIÓN
+        // 9. NRO. SUCURSAL DESTINO (destination_branch_number)
+        // Siempre 0 (no se utiliza en Sanatorio)
+        result.destination_branch_number = '0';
+
+        // 10. MONEDA Y COTIZACIÓN
         result.currency_code = 'C'; // Corriente
         result.exchange_rate = 1.0;
 
-        // 9. FECHA CONTABLE
+        // 11. FECHA CONTABLE
         // Por defecto = fecha de emisión (el usuario puede cambiarla)
         result.accounting_date = invoiceData.issue_date;
 
@@ -122,34 +135,61 @@ export async function autofillInvoiceFields(
 }
 
 /**
- * Maps invoice type to AFIP voucher code
+ * Maps invoice type to AFIP voucher code for Tango Gestión
+ * Según planillas reales del Sanatorio Argentino:
+ * 001 = Factura A/B/C (según punto de venta)
+ * 011 = Nota de Crédito
+ * 012 = Nota de Débito
  */
 function mapInvoiceTypeToAFIPCode(invoiceType: InvoiceType): string {
-    // Reglas:
-    // Factura A/B/C → 011
-    // Ticket / Factura ticket → 081
-    // Nota de crédito → (preparado para tabla AFIP)
-
     switch (invoiceType) {
         case 'FACTURA_A':
         case 'FACTURA_B':
         case 'FACTURA_C':
         case 'FACTURA_M':
-            return '011';
+            return '001'; // Factura
 
         case 'NOTA_CREDITO_A':
         case 'NOTA_CREDITO_B':
         case 'NOTA_CREDITO_C':
-            return '013'; // Código AFIP para Nota de Crédito
+            return '011'; // Nota de Crédito
 
         case 'NOTA_DEBITO_A':
         case 'NOTA_DEBITO_B':
         case 'NOTA_DEBITO_C':
-            return '012'; // Código AFIP para Nota de Débito
+            return '012'; // Nota de Débito
 
         default:
-            return '011'; // Por defecto factura
+            return '001'; // Por defecto factura
     }
+}
+
+// Detects purchase condition from invoice data
+// Returns ONLY numeric values: '1' or '2'
+// 1 = Cuenta corriente (DEFAULT - 98% of cases)
+// 2 = Contado (specific cases only)
+function detectPurchaseCondition(invoiceData: {
+    supplier_name?: string;
+    invoice_type: InvoiceType;
+    expense_code?: string;
+}): string {
+    // Check if any field mentions "CONTADO" or "EFECTIVO"
+    const textToCheck = [
+        invoiceData.supplier_name || '',
+        invoiceData.expense_code || '',
+    ].join(' ').toLowerCase();
+
+    // Keywords that indicate "Contado" payment
+    const contadoKeywords = ['contado', 'efectivo', 'cash', 'pago inmediato'];
+
+    for (const keyword of contadoKeywords) {
+        if (textToCheck.includes(keyword)) {
+            return '2'; // Contado
+        }
+    }
+
+    // Default: Cuenta corriente (98% of cases)
+    return '1';
 }
 
 /**
@@ -283,9 +323,9 @@ export function validateInvoiceForExport(invoice: any): {
         errors.push('CUIT de proveedor inválido o pertenece al Sanatorio.');
     }
 
-    // 2. Validar código de sector (debe ser numérico)
-    if (!invoice.sector_code || isNaN(Number(invoice.sector_code))) {
-        errors.push('Código de sector debe ser numérico.');
+    // 2. Validar código de sector (debe ser numérico: 2 o 0)
+    if (!invoice.sector_code || !['2', '0'].includes(String(invoice.sector_code))) {
+        errors.push('Código de sector debe ser 2 (default) o 0.');
     }
 
     // 3. Validar condición de compra (1 o 2)
@@ -293,22 +333,29 @@ export function validateInvoiceForExport(invoice: any): {
         errors.push('Condición de compra debe ser 1 (Cta Cte) o 2 (Contado).');
     }
 
-    // 4. Validar tipo de operación
+    // 4. Validar tipo de operación (debe ser O)
     if (invoice.operation_type !== 'O') {
-        errors.push('Tipo de operación debe ser "O".');
+        errors.push('Tipo de operación debe ser "O" (compra estándar).');
     }
 
-    // 5. Validar clasificador
-    if (invoice.classifier_code !== 'B') {
-        errors.push('Código de clasificador debe ser "B".');
+    // 5. Validar clasificador (debe ser 0)
+    if (invoice.classifier_code !== '0') {
+        errors.push('Código de clasificador debe ser "0".');
     }
 
-    // 6. Validar código AFIP
+    // 6. Validar código AFIP (001, 011, 012)
     if (!invoice.afip_voucher_code) {
         errors.push('Código de comprobante AFIP es obligatorio.');
+    } else if (!['001', '011', '012'].includes(invoice.afip_voucher_code)) {
+        errors.push('Código AFIP debe ser 001 (Factura), 011 (N/C) o 012 (N/D).');
     }
 
-    // 7. Validar moneda y cotización
+    // 7. Validar sucursal destino (debe ser 0)
+    if (invoice.destination_branch_number !== '0' && invoice.destination_branch_number !== undefined) {
+        errors.push('Nro. de Sucursal Destino debe ser 0.');
+    }
+
+    // 8. Validar moneda y cotización
     if (!invoice.currency_code) {
         errors.push('Código de moneda es obligatorio.');
     }
@@ -316,7 +363,7 @@ export function validateInvoiceForExport(invoice: any): {
         errors.push('Cotización debe ser mayor a 0.');
     }
 
-    // 8. Validar fechas
+    // 9. Validar fechas
     if (!invoice.issue_date) {
         errors.push('Fecha de emisión es obligatoria.');
     }

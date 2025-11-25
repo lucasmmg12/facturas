@@ -9,6 +9,8 @@ import { autofillInvoiceFields } from '../services/invoice-autofill-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
+import { SupplierSearchSelect } from './SupplierSearchSelect';
+import { SearchableSelect } from './SearchableSelect';
 import { INVOICE_TYPES_OPTIONS } from '../utils/invoice-types';
 import { formatCUIT } from '../utils/validators';
 import type { Database } from '../lib/database.types';
@@ -24,6 +26,12 @@ interface InvoiceEditorProps {
 }
 
 type TabType = 'basic' | 'amounts' | 'taxes' | 'electronic' | 'classification' | 'concepts';
+
+// Condiciones de compra - SOLO valores numéricos
+const PURCHASE_CONDITIONS = [
+  { code: '1', description: 'Cuenta Corriente' },
+  { code: '2', description: 'Contado' },
+];
 
 export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps) {
   const { profile } = useAuth();
@@ -46,6 +54,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [taxBase, setTaxBase] = useState('');
   const [taxAmount, setTaxAmount] = useState('');
   const [autofillWarnings, setAutofillWarnings] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -172,6 +181,36 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       console.error('Error saving invoice:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      // Eliminar impuestos asociados
+      await supabase.from('invoice_taxes').delete().eq('invoice_id', invoiceId);
+
+      // Eliminar conceptos asociados
+      await supabase.from('invoice_concepts').delete().eq('invoice_id', invoiceId);
+
+      // Eliminar la factura
+      const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+
+      if (error) throw error;
+
+      // Cerrar el editor y recargar la lista
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      alert('Error al eliminar el comprobante. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -405,17 +444,31 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <h2 className="text-2xl font-bold text-white">Editar Comprobante</h2>
             <StatusBadge status={invoice.status} />
           </div>
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
-            style={{
-              background: 'rgba(0, 0, 0, 0.3)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-            }}
-          >
-            <X className="h-4 w-4 text-white" />
-            <span className="text-white">Cerrar</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8))',
+                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-white" />
+              <span className="text-white">{deleting ? 'Eliminando...' : 'Eliminar'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
+              <X className="h-4 w-4 text-white" />
+              <span className="text-white">Cerrar</span>
+            </button>
+          </div>
         </div>
 
         {/* Sección de Estado */}
@@ -499,10 +552,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Proveedor <span className="text-red-400">*</span>
                   </label>
-                  <select
-                    value={invoice.supplier_id || ''}
-                    onChange={(e) => {
-                      const supplier = suppliers.find((s) => s.id === e.target.value);
+                  <SupplierSearchSelect
+                    suppliers={suppliers}
+                    selectedSupplierId={invoice.supplier_id || null}
+                    onSelect={(supplier) => {
                       if (supplier) {
                         setInvoice({
                           ...invoice,
@@ -510,21 +563,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                           supplier_cuit: supplier.cuit,
                           supplier_name: supplier.razon_social,
                         });
+                      } else {
+                        setInvoice({
+                          ...invoice,
+                          supplier_id: null,
+                          supplier_cuit: '',
+                          supplier_name: '',
+                        });
                       }
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
-                  >
-                    <option value="">Seleccionar proveedor</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.razon_social} - {formatCUIT(supplier.cuit)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -700,19 +748,25 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    Condición de Compra
+                    Condición de Compra <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={invoice.purchase_condition || ''}
-                    onChange={(e) => setInvoice({ ...invoice, purchase_condition: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                  <SearchableSelect
+                    items={PURCHASE_CONDITIONS}
+                    selectedId={invoice.purchase_condition || null}
+                    onSelect={(condition) => {
+                      setInvoice({
+                        ...invoice,
+                        purchase_condition: condition?.code || '1',
+                      });
                     }}
-                    placeholder="Ej: Contado, 30 días, etc."
+                    getItemId={(item) => item.code}
+                    getItemCode={(item) => item.code}
+                    getItemDescription={(item) => item.description}
+                    placeholder="Seleccionar condición de compra..."
                   />
+                  <p className="mt-1 text-xs text-green-400">
+                    1 = Cuenta Corriente (predeterminado) | 2 = Contado
+                  </p>
                 </div>
               </div>
             </div>
@@ -943,25 +997,23 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    Código de Impuesto
+                    Código de Impuesto (Alícuota)
                   </label>
-                  <select
-                    value={selectedTaxCodeId}
-                    onChange={(e) => handleTaxCodeSelected(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                  <SearchableSelect
+                    items={taxCodes}
+                    selectedId={selectedTaxCodeId}
+                    onSelect={(taxCode) => {
+                      if (taxCode) {
+                        handleTaxCodeSelected(taxCode.id);
+                      } else {
+                        setSelectedTaxCodeId('');
+                      }
                     }}
-                  >
-                    <option value="">Seleccionar impuesto...</option>
-                    {taxCodes.map((taxCode) => (
-                      <option key={taxCode.id} value={taxCode.id}>
-                        {taxCode.tango_code} - {taxCode.description}
-                        {taxCode.rate ? ` (${taxCode.rate}%)` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    getItemId={(item) => item.id}
+                    getItemCode={(item) => item.tango_code || item.code}
+                    getItemDescription={(item) => `${item.description}${item.rate ? ` (${item.rate}%)` : ''}`}
+                    placeholder="Buscar por código o descripción..."
+                  />
                 </div>
 
                 <div>
@@ -1167,11 +1219,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 border: '1px solid rgba(34, 197, 94, 0.3)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Códigos de Clasificación</h3>
+              <h3 className="font-semibold text-white mb-2 text-lg">Códigos de Clasificación</h3>
+              <p className="text-sm text-green-300 mb-6">
+                Estos códigos corresponden a las columnas finales del Excel de Tango Gestión
+              </p>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Código de Gasto */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Código de Gasto
+                    <span className="ml-2 text-xs text-gray-400">(Columna U)</span>
                   </label>
                   <input
                     type="text"
@@ -1182,98 +1240,128 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
                     }}
+                    placeholder="S/C, 0, 2 o vacío"
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Valores válidos: S/C, 0, 2. Se asigna desde conceptos.
+                  </p>
                 </div>
 
+                {/* Código de Sector */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Código de Sector
+                    <span className="ml-2 text-xs text-gray-400">(Columna V)</span>
                   </label>
                   <input
                     type="text"
-                    value={invoice.sector_code || ''}
+                    value={invoice.sector_code || '2'}
                     onChange={(e) => setInvoice({ ...invoice, sector_code: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
                     }}
+                    placeholder="2"
                   />
+                  <p className="mt-1 text-xs text-green-400">
+                    ✓ Default: 2 (usado en mayoría de planillas)
+                  </p>
                 </div>
 
+                {/* Código de Clasificador - READ ONLY */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Código de Clasificador
+                    <span className="ml-2 text-xs text-gray-400">(Columna W)</span>
+                    <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
-                    value={invoice.classifier_code || ''}
-                    onChange={(e) => setInvoice({ ...invoice, classifier_code: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    value={invoice.classifier_code || '0'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Siempre 0 (no editable)
+                  </p>
                 </div>
 
+                {/* Tipo de Operación AFIP - READ ONLY */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    Código de Tipo de Operación AFIP
+                    Tipo de Operación AFIP
+                    <span className="ml-2 text-xs text-gray-400">(Columna X)</span>
+                    <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
-                    value={invoice.afip_operation_type_code || ''}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, afip_operation_type_code: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    value={invoice.afip_operation_type_code || 'O'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    O = Compra estándar (no editable)
+                  </p>
                 </div>
 
+                {/* Código Comprobante AFIP - READ ONLY */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Código de Comprobante AFIP
+                    <span className="ml-2 text-xs text-gray-400">(Columna Y)</span>
+                    <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
-                    value={invoice.afip_voucher_code || ''}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, afip_voucher_code: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    value={invoice.afip_voucher_code || '001'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    001=Factura, 011=N/C, 012=N/D (según tipo)
+                  </p>
                 </div>
 
+                {/* Sucursal Destino - READ ONLY */}
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Nro. de Sucursal Destino
+                    <span className="ml-2 text-xs text-gray-400">(Columna Z)</span>
+                    <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
-                    value={invoice.destination_branch_number || ''}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, destination_branch_number: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    value={invoice.destination_branch_number || '0'}
+                    readOnly
+                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Siempre 0 (no se utiliza)
+                  </p>
                 </div>
 
+                {/* Observaciones */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Observaciones
+                    <span className="ml-2 text-xs text-gray-400">(Columna AA)</span>
                   </label>
                   <textarea
                     value={invoice.observations || ''}
@@ -1284,9 +1372,22 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
                     }}
-                    placeholder="Observaciones adicionales..."
+                    placeholder="Observaciones adicionales (campo libre)..."
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Campo totalmente libre, puede ir vacío
+                  </p>
                 </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-6 p-4 rounded-lg" style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+              }}>
+                <p className="text-sm text-blue-300">
+                  <strong>ℹ️ Información:</strong> Los campos marcados con <span className="text-yellow-400">● Automático</span> se completan automáticamente según el tipo de comprobante y no deben modificarse manualmente.
+                </p>
               </div>
             </div>
           </div>
@@ -1332,24 +1433,19 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    Concepto Tango
+                    Concepto
                   </label>
-                  <select
-                    value={selectedConceptId}
-                    onChange={(e) => handleConceptSelected(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                  <SearchableSelect
+                    items={concepts}
+                    selectedId={selectedConceptId}
+                    onSelect={(concept) => {
+                      setSelectedConceptId(concept?.id || '');
                     }}
-                  >
-                    <option value="">Seleccionar concepto...</option>
-                    {concepts.map((concept) => (
-                      <option key={concept.id} value={concept.id}>
-                        {concept.tango_concept_code} - {concept.description}
-                      </option>
-                    ))}
-                  </select>
+                    getItemId={(item) => item.id}
+                    getItemCode={(item) => item.tango_concept_code}
+                    getItemDescription={(item) => item.description}
+                    placeholder="Buscar por código (ej: 786) o descripción (ej: bienes de uso)..."
+                  />
                 </div>
 
                 <div>
