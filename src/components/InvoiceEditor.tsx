@@ -3,8 +3,9 @@
 // Permite agregar conceptos, impuestos y marcar como listo para exportar.
 
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2 } from 'lucide-react';
+import { Save, X, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
+import { autofillInvoiceFields } from '../services/invoice-autofill-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
@@ -44,6 +45,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [selectedTaxCodeId, setSelectedTaxCodeId] = useState('');
   const [taxBase, setTaxBase] = useState('');
   const [taxAmount, setTaxAmount] = useState('');
+  const [autofillWarnings, setAutofillWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -62,10 +64,42 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
       if (invoiceData) {
         // Asegurar que is_electronic sea true por defecto
-        const invoiceWithDefaults = {
+        let invoiceWithDefaults = {
           ...invoiceData.invoice,
           is_electronic: invoiceData.invoice.is_electronic ?? true,
         };
+
+        // AUTOCOMPLETAR CAMPOS si la factura no está lista para exportar
+        if (invoiceWithDefaults.status !== 'READY_FOR_EXPORT' && invoiceWithDefaults.status !== 'EXPORTED' && profile) {
+          const autofillResult = await autofillInvoiceFields(
+            {
+              supplier_cuit: invoiceWithDefaults.supplier_cuit,
+              supplier_name: invoiceWithDefaults.supplier_name,
+              invoice_type: invoiceWithDefaults.invoice_type,
+              issue_date: invoiceWithDefaults.issue_date,
+              expense_code: invoiceWithDefaults.expense_code || undefined,
+            },
+            profile.id
+          );
+
+          if (autofillResult.success && autofillResult.data) {
+            // Aplicar los campos autocompletados
+            invoiceWithDefaults = {
+              ...invoiceWithDefaults,
+              ...autofillResult.data,
+              // Asegurar que accounting_date se setee si no existe
+              accounting_date: invoiceWithDefaults.accounting_date || autofillResult.data.accounting_date,
+            };
+
+            // Guardar warnings si existen
+            if (autofillResult.data.warnings && autofillResult.data.warnings.length > 0) {
+              setAutofillWarnings(autofillResult.data.warnings);
+            }
+          } else if (autofillResult.errors) {
+            setAutofillWarnings(autofillResult.errors);
+          }
+        }
+
         setInvoice(invoiceWithDefaults);
         setInvoiceTaxes(invoiceData.taxes);
         setInvoiceConcepts(invoiceData.concepts);
@@ -172,7 +206,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
   const handleConceptSelected = (conceptId: string) => {
     setSelectedConceptId(conceptId);
-    
+
     // Auto-completar con el importe disponible
     if (conceptId && invoice) {
       const available = getAvailableAmount();
@@ -258,20 +292,20 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
   const handleTaxCodeSelected = (taxCodeId: string) => {
     setSelectedTaxCodeId(taxCodeId);
-    
+
     if (!taxCodeId || !invoice) return;
-    
+
     // Buscar el tax code seleccionado
     const selectedTax = taxCodes.find(tc => tc.id === taxCodeId);
-    
+
     if (selectedTax && selectedTax.rate && invoice.net_taxed > 0) {
       // Auto-calcular base imponible y monto si tenemos alícuota
       const baseAmount = invoice.net_taxed;
       const calculatedTaxAmount = baseAmount * (selectedTax.rate / 100);
-      
+
       setTaxBase(baseAmount.toFixed(2));
       setTaxAmount(calculatedTaxAmount.toFixed(2));
-      
+
       console.log('[InvoiceEditor] Auto-calculado impuesto:', {
         taxCode: selectedTax.tango_code,
         rate: selectedTax.rate,
@@ -331,7 +365,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div 
+        <div
           className="animate-spin rounded-full h-8 w-8 border-b-2"
           style={{
             borderTopColor: 'rgba(34, 197, 94, 0.8)',
@@ -359,7 +393,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
   return (
     <div className="h-full flex flex-col">
-      <div 
+      <div
         className="px-8 py-6"
         style={{
           background: 'rgba(0, 0, 0, 0.2)',
@@ -383,7 +417,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <span className="text-white">Cerrar</span>
           </button>
         </div>
-        
+
         {/* Sección de Estado */}
         <div className="flex flex-col items-center space-y-3">
           <div className="flex items-center space-x-3">
@@ -427,19 +461,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-6 border-b-2 font-medium text-sm transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'text-white'
-                    : 'text-green-300 hover:text-white'
-                }`}
+                className={`py-4 px-6 border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === tab.id
+                  ? 'text-white'
+                  : 'text-green-300 hover:text-white'
+                  }`}
                 style={
                   activeTab === tab.id
                     ? {
-                        borderBottomColor: 'rgba(34, 197, 94, 0.8)',
-                      }
+                      borderBottomColor: 'rgba(34, 197, 94, 0.8)',
+                    }
                     : {
-                        borderBottomColor: 'transparent',
-                      }
+                      borderBottomColor: 'transparent',
+                    }
                 }
               >
                 {tab.label}
@@ -452,7 +485,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       <div className="flex-1 overflow-y-auto p-8" style={{ background: 'transparent', minHeight: 0 }}>
         {activeTab === 'basic' && (
           <div className="max-w-5xl mx-auto space-y-8">
-            <div 
+            <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
@@ -528,14 +561,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               </div>
             </div>
 
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Datos del Comprobante</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -574,10 +607,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         setInvoice({ ...invoice, point_of_sale: e.target.value })
                       }
                       className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                      }}
                     />
                     <input
                       type="text"
@@ -587,10 +620,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         setInvoice({ ...invoice, invoice_number: e.target.value })
                       }
                       className="w-full px-4 py-3 rounded-lg text-white transition-all"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                      }}
                     />
                   </div>
                 </div>
@@ -688,14 +721,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
         {activeTab === 'amounts' && (
           <div className="max-w-5xl mx-auto space-y-8">
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Importes Base</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -897,14 +930,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         {activeTab === 'taxes' && (
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Asignar Impuesto */}
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Asignar Impuesto</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -977,7 +1010,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
               </div>
 
-              <div 
+              <div
                 className="mt-4 p-4 rounded-lg"
                 style={{
                   background: 'rgba(34, 197, 94, 0.1)',
@@ -985,21 +1018,21 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 }}
               >
                 <p className="text-xs text-green-200">
-                  💡 <strong className="text-white">Auto-cálculo inteligente:</strong> Al seleccionar un impuesto con alícuota conocida (ej: IVA 21%), 
+                  💡 <strong className="text-white">Auto-cálculo inteligente:</strong> Al seleccionar un impuesto con alícuota conocida (ej: IVA 21%),
                   la base imponible y el monto se calculan automáticamente desde el subtotal gravado. Puedes modificar los valores si es necesario.
                 </p>
               </div>
             </div>
 
             {/* Impuestos Asignados */}
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Impuestos Asignados</h3>
 
               <div className="space-y-2">
@@ -1059,14 +1092,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
         {activeTab === 'electronic' && (
           <div className="max-w-5xl mx-auto space-y-8">
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Factura Electrónica</h3>
               <div className="space-y-4">
                 <div>
@@ -1126,14 +1159,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
         {activeTab === 'classification' && (
           <div className="max-w-5xl mx-auto space-y-8">
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Códigos de Clasificación</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -1262,14 +1295,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         {activeTab === 'concepts' && (
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Asignar Concepto Existente */}
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-white text-lg">Asignar Concepto</h3>
                 {invoice && (
@@ -1331,9 +1364,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         placeholder="0.00"
                         value={conceptAmount}
                         onChange={(e) => handleConceptAmountChange(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          conceptError ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${conceptError ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {conceptError && (
                         <p className="text-xs text-red-600 mt-1">{conceptError}</p>
@@ -1354,7 +1386,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
               </div>
 
-              <div 
+              <div
                 className="mt-4 p-4 rounded-lg"
                 style={{
                   background: 'rgba(34, 197, 94, 0.1)',
@@ -1368,14 +1400,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             </div>
 
             {/* Conceptos Asignados */}
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-white text-lg">Conceptos Asignados</h3>
                 <button
@@ -1388,14 +1420,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               </div>
 
               {showNewConceptForm && (
-                <div 
+                <div
                   className="mb-4 p-4 rounded-lg space-y-3"
                   style={{
                     background: 'rgba(0, 0, 0, 0.2)',
                     border: '1px solid rgba(34, 197, 94, 0.3)',
                   }}
                 >
-                    <h4 className="text-sm font-medium text-white">Crear Nuevo Concepto Tango</h4>
+                  <h4 className="text-sm font-medium text-white">Crear Nuevo Concepto Tango</h4>
                   <input
                     type="text"
                     placeholder="Código Tango (ej: 010101)"
@@ -1485,14 +1517,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               </div>
             </div>
 
-              <div 
-                className="rounded-xl p-8 shadow-2xl"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+            >
               <h3 className="font-semibold text-white mb-6 text-lg">Notas Internas</h3>
               <textarea
                 value={invoice.notes || ''}
