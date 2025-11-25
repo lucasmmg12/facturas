@@ -106,7 +106,7 @@ export async function generateTangoExport(userId: string): Promise<{
   const [taxesResults, conceptsResults, suppliersResult, taxCodesResult, tangoConceptsResult] = await Promise.all([
     Promise.all(invoiceIds.map((id) => supabase.from('invoice_taxes').select('*').eq('invoice_id', id))),
     Promise.all(invoiceIds.map((id) => supabase.from('invoice_concepts').select('*').eq('invoice_id', id))),
-    supabase.from('suppliers').select('*'),
+    supabase.from('suppliers').select('*', { count: 'exact' }).range(0, 9999), // Cargar hasta 10,000 proveedores
     supabase.from('tax_codes').select('*'),
     supabase.from('tango_concepts').select('*'),
   ]);

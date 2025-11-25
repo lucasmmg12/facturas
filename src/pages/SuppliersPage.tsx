@@ -38,8 +38,9 @@ export function SuppliersPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('suppliers')
-        .select('*')
-        .order('razon_social');
+        .select('*', { count: 'exact' })
+        .order('razon_social')
+        .range(0, 9999); // Cargar hasta 10,000 proveedores
 
       if (error) throw error;
       setSuppliers(data || []);
@@ -155,7 +156,7 @@ export function SuppliersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div 
+        <div
           className="animate-spin rounded-full h-8 w-8 border-b-2"
           style={{
             borderTopColor: 'rgba(34, 197, 94, 0.8)',
@@ -196,7 +197,7 @@ export function SuppliersPage() {
       </div>
 
       {showNewForm && (
-        <div 
+        <div
           className="rounded-xl shadow-2xl p-8"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -380,7 +381,7 @@ export function SuppliersPage() {
         </div>
       )}
 
-      <div 
+      <div
         className="rounded-xl shadow-2xl overflow-hidden"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
@@ -417,8 +418,8 @@ export function SuppliersPage() {
               </tr>
             ) : (
               suppliers.map((supplier) => (
-                <tr 
-                  key={supplier.id} 
+                <tr
+                  key={supplier.id}
                   className="transition-all duration-200"
                   style={{
                     borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
