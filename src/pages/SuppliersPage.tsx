@@ -36,14 +36,33 @@ export function SuppliersPage() {
   const loadSuppliers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*', { count: 'exact' })
-        .order('razon_social')
-        .range(0, 9999); // Cargar hasta 10,000 proveedores
 
-      if (error) throw error;
-      setSuppliers(data || []);
+      // Cargar TODOS los proveedores usando paginación automática
+      let allSuppliers: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('razon_social')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allSuppliers = [...allSuppliers, ...data];
+          hasMore = data.length === pageSize; // Si obtuvimos menos de 1000, ya no hay más
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log(`✅ Cargados ${allSuppliers.length} proveedores en total`);
+      setSuppliers(allSuppliers);
     } catch (error) {
       console.error('Error loading suppliers:', error);
     } finally {

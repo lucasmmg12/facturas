@@ -64,17 +64,34 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     try {
       setLoading(true);
 
-      // Cargar proveedores SIN LÍMITE (Supabase por defecto limita a 1000)
-      // Usamos un rango muy grande para obtener todos los registros
-      const suppliersQuery = supabase
-        .from('suppliers')
-        .select('*', { count: 'exact' })
-        .order('razon_social')
-        .range(0, 9999); // Obtener hasta 10,000 proveedores
+      // Cargar TODOS los proveedores usando paginación automática
+      let allSuppliers: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      const [invoiceData, suppliersData, taxCodesData, conceptsData] = await Promise.all([
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('razon_social')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allSuppliers = [...allSuppliers, ...data];
+          hasMore = data.length === pageSize; // Si obtuvimos menos de 1000, ya no hay más
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log(`✅ Cargados ${allSuppliers.length} proveedores en total`);
+
+      const [invoiceData, taxCodesData, conceptsData] = await Promise.all([
         getInvoiceWithDetails(invoiceId),
-        suppliersQuery,
         supabase.from('tax_codes').select('*').eq('active', true),
         supabase.from('tango_concepts').select('*').eq('active', true).order('description'),
       ]);
@@ -122,7 +139,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         setInvoiceConcepts(invoiceData.concepts);
       }
 
-      setSuppliers(suppliersData.data || []);
+      setSuppliers(allSuppliers);
       setTaxCodes(taxCodesData.data || []);
       setConcepts(conceptsData.data || []);
     } catch (error) {

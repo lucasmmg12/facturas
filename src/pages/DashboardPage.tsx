@@ -8,7 +8,7 @@ import { MasterDataPage } from './MasterDataPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
-import { getInvoices, getInvoicesReadyForExport } from '../services/invoice-service';
+import { getInvoices, getInvoicesReadyForExport, deleteInvoice } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
 import { generateTangoExport, downloadExport } from '../services/tango-export-service';
 import type { Database } from '../lib/database.types';
@@ -248,6 +248,8 @@ function ReviewPanel({
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -269,6 +271,64 @@ function ReviewPanel({
   useEffect(() => {
     void loadInvoices();
   }, [loadInvoices, refreshKey]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(invoices.map(inv => inv.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de eliminar ${selectedIds.size} comprobante(s)? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+
+      // Eliminar todas las facturas seleccionadas
+      await Promise.all(
+        Array.from(selectedIds).map(id => deleteInvoice(id))
+      );
+
+      // Limpiar selección
+      setSelectedIds(new Set());
+
+      // Recargar lista
+      await loadInvoices();
+      onInvoiceUpdated();
+
+      // Si la factura seleccionada fue eliminada, deseleccionar
+      if (selectedInvoiceId && selectedIds.has(selectedInvoiceId)) {
+        onSelectInvoice(null);
+      }
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'Error al eliminar los comprobantes.'
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const formattedInvoices = invoices.map((invoice) => ({
     ...invoice,
@@ -302,10 +362,24 @@ function ReviewPanel({
             borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
           }}
         >
-          <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
-          <p className="text-sm text-green-200">
-            Selecciona un comprobante para revisarlo y editar sus datos.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
+              <p className="text-sm text-green-200">
+                Selecciona un comprobante para revisarlo y editar sus datos.
+              </p>
+            </div>
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {deleting ? 'Eliminando...' : `Eliminar ${selectedIds.size} seleccionado(s)`}
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -321,6 +395,14 @@ function ReviewPanel({
               <table className="min-w-full">
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                   <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                    <th className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === invoices.length && invoices.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
                       Fecha
                     </th>
@@ -328,7 +410,7 @@ function ReviewPanel({
                       Proveedor
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Comprobante
+                      Conceptos
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
                       Total
@@ -341,49 +423,66 @@ function ReviewPanel({
                 <tbody>
                   {formattedInvoices.map((invoice) => {
                     const isActive = invoice.id === selectedInvoiceId;
+                    const isSelected = selectedIds.has(invoice.id);
                     return (
                       <tr
                         key={invoice.id}
-                        role="button"
-                        tabIndex={0}
-                        className="cursor-pointer transition-all duration-200"
+                        className="transition-all duration-200"
                         style={{
                           background: isActive
                             ? 'rgba(34, 197, 94, 0.2)'
-                            : 'transparent',
+                            : isSelected
+                              ? 'rgba(34, 197, 94, 0.1)'
+                              : 'transparent',
                           borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
                         }}
                         onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                          if (!isActive && !isSelected) {
+                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
                           }
                         }}
                         onMouseLeave={(e) => {
-                          if (!isActive) {
+                          if (!isActive && !isSelected) {
                             e.currentTarget.style.background = 'transparent';
                           }
                         }}
-                        onClick={() => onSelectInvoice(invoice.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onSelectInvoice(invoice.id);
-                          }
-                        }}
                       >
-                        <td className="px-6 py-4 text-sm text-white">
+                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => handleSelectOne(invoice.id, e.target.checked)}
+                            className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                          />
+                        </td>
+                        <td
+                          className="px-6 py-4 text-sm text-white cursor-pointer"
+                          onClick={() => onSelectInvoice(invoice.id)}
+                        >
                           {invoice.formattedDate}
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-white">
+                        <td
+                          className="px-6 py-4 text-sm font-medium text-white cursor-pointer"
+                          onClick={() => onSelectInvoice(invoice.id)}
+                        >
                           {invoice.supplier_name}
                         </td>
-                        <td className="px-6 py-4 text-sm text-green-200">
-                          {invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}
+                        <td
+                          className="px-6 py-4 text-sm text-green-200 cursor-pointer"
+                          onClick={() => onSelectInvoice(invoice.id)}
+                        >
+                          <span className="text-xs opacity-70">{invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}</span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-right font-semibold text-white">
+                        <td
+                          className="px-6 py-4 text-sm text-right font-semibold text-white cursor-pointer"
+                          onClick={() => onSelectInvoice(invoice.id)}
+                        >
                           {invoice.formattedTotal}
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td
+                          className="px-6 py-4 text-center cursor-pointer"
+                          onClick={() => onSelectInvoice(invoice.id)}
+                        >
                           <StatusBadge status={invoice.status} />
                         </td>
                       </tr>

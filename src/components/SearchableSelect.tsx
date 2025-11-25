@@ -80,12 +80,28 @@ export function SearchableSelect<T>({
                 break;
             case 'Enter':
                 e.preventDefault();
-                if (filteredItems[highlightedIndex]) {
+                // Si hay una coincidencia exacta de código, seleccionarla
+                const exactMatch = items.find(
+                    (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
+                );
+                if (exactMatch) {
+                    handleSelect(exactMatch);
+                } else if (filteredItems[highlightedIndex]) {
                     handleSelect(filteredItems[highlightedIndex]);
                 }
                 break;
             case 'Escape':
                 setIsOpen(false);
+                break;
+            case 'Tab':
+                // Auto-seleccionar si hay coincidencia exacta de código al presionar Tab
+                const tabMatch = items.find(
+                    (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
+                );
+                if (tabMatch) {
+                    e.preventDefault();
+                    handleSelect(tabMatch);
+                }
                 break;
         }
     };
@@ -101,6 +117,24 @@ export function SearchableSelect<T>({
         setSearchTerm('');
         setIsOpen(false);
     };
+
+    // Auto-seleccionar cuando hay coincidencia exacta de código
+    useEffect(() => {
+        if (searchTerm.trim() && isOpen) {
+            const exactMatch = items.find(
+                (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
+            );
+            if (exactMatch && filteredItems.length > 0) {
+                // Resaltar la coincidencia exacta
+                const exactIndex = filteredItems.findIndex(
+                    (item) => getItemId(item) === getItemId(exactMatch)
+                );
+                if (exactIndex !== -1) {
+                    setHighlightedIndex(exactIndex);
+                }
+            }
+        }
+    }, [searchTerm, filteredItems, items, getItemCode, getItemId, isOpen]);
 
     const getDisplayText = () => {
         if (isOpen) return searchTerm;
@@ -157,6 +191,15 @@ export function SearchableSelect<T>({
                         maxHeight: '300px',
                     }}
                 >
+                    {/* Hint para coincidencia exacta */}
+                    {searchTerm.trim() && items.find(
+                        (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
+                    ) && (
+                            <div className="px-4 py-2 text-xs text-center bg-green-600 bg-opacity-20 border-b border-green-600 border-opacity-30">
+                                <span className="text-green-400">✓ Código encontrado</span> - Presiona <kbd className="px-1.5 py-0.5 bg-black bg-opacity-50 rounded text-white font-mono text-xs">Enter</kbd> o <kbd className="px-1.5 py-0.5 bg-black bg-opacity-50 rounded text-white font-mono text-xs">Tab</kbd> para seleccionar
+                            </div>
+                        )}
+
                     <div className="overflow-y-auto max-h-[300px]">
                         {filteredItems.length === 0 ? (
                             <div className="px-4 py-3 text-center text-green-300">
@@ -166,6 +209,7 @@ export function SearchableSelect<T>({
                             filteredItems.map((item, index) => {
                                 const code = getItemCode(item);
                                 const description = getItemDescription(item);
+                                const isExactMatch = code.toLowerCase() === searchTerm.toLowerCase().trim();
                                 return (
                                     <button
                                         key={getItemId(item)}
@@ -174,11 +218,15 @@ export function SearchableSelect<T>({
                                         className={`w-full px-4 py-3 text-left transition-all ${index === highlightedIndex
                                                 ? 'bg-green-600 bg-opacity-30'
                                                 : 'hover:bg-green-600 hover:bg-opacity-20'
-                                            }`}
+                                            } ${isExactMatch ? 'border-l-4 border-green-400' : ''}`}
                                         type="button"
                                     >
-                                        <div className="font-medium text-white">
-                                            <span className="text-green-400">{code}</span> - {description}
+                                        <div className="font-medium text-white flex items-center gap-2">
+                                            <span className={`${isExactMatch ? 'text-green-300 font-bold' : 'text-green-400'}`}>
+                                                {code}
+                                            </span>
+                                            - {description}
+                                            {isExactMatch && <span className="text-xs text-green-400 ml-auto">✓ Coincidencia exacta</span>}
                                         </div>
                                     </button>
                                 );

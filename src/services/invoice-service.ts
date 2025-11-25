@@ -107,6 +107,15 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus): Pr
   return updateInvoice(id, { status });
 }
 
+export async function deleteInvoice(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
   // Buscar facturas con status READY_FOR_EXPORT
   // donde exported sea false, null, o no esté definido
@@ -218,7 +227,7 @@ export async function createInvoiceTaxesFromOCR(
   const taxRecords = [];
   for (const tax of taxes) {
     const taxCodeId = await mapTaxCodeToId(tax.taxCode);
-    
+
     if (taxCodeId) {
       taxRecords.push({
         invoice_id: invoiceId,
