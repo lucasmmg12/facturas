@@ -64,9 +64,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     try {
       setLoading(true);
 
+      // Cargar proveedores SIN LÍMITE (Supabase por defecto limita a 1000)
+      // Usamos un rango muy grande para obtener todos los registros
+      const suppliersQuery = supabase
+        .from('suppliers')
+        .select('*', { count: 'exact' })
+        .order('razon_social')
+        .range(0, 9999); // Obtener hasta 10,000 proveedores
+
       const [invoiceData, suppliersData, taxCodesData, conceptsData] = await Promise.all([
         getInvoiceWithDetails(invoiceId),
-        supabase.from('suppliers').select('*').order('razon_social'),
+        suppliersQuery,
         supabase.from('tax_codes').select('*').eq('active', true),
         supabase.from('tango_concepts').select('*').eq('active', true).order('description'),
       ]);

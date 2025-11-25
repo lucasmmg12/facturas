@@ -32,7 +32,7 @@ export function SupplierSearchSelect({
 
     useEffect(() => {
         if (searchTerm.trim() === '') {
-            setFilteredSuppliers(suppliers.slice(0, 50)); // Mostrar solo los primeros 50
+            setFilteredSuppliers(suppliers); // Mostrar TODOS los proveedores
         } else {
             const term = searchTerm.toLowerCase();
             const filtered = suppliers.filter(
@@ -41,7 +41,7 @@ export function SupplierSearchSelect({
                     s.cuit.includes(term) ||
                     s.tango_supplier_code?.includes(term)
             );
-            setFilteredSuppliers(filtered.slice(0, 50)); // Limitar a 50 resultados
+            setFilteredSuppliers(filtered.slice(0, 200)); // Limitar a 200 resultados filtrados
         }
         setHighlightedIndex(0);
     }, [searchTerm, suppliers]);
@@ -171,8 +171,8 @@ export function SupplierSearchSelect({
                                     onClick={() => handleSelect(supplier)}
                                     onMouseEnter={() => setHighlightedIndex(index)}
                                     className={`w-full px-4 py-3 text-left transition-all ${index === highlightedIndex
-                                            ? 'bg-green-600 bg-opacity-30'
-                                            : 'hover:bg-green-600 hover:bg-opacity-20'
+                                        ? 'bg-green-600 bg-opacity-30'
+                                        : 'hover:bg-green-600 hover:bg-opacity-20'
                                         }`}
                                     type="button"
                                 >
@@ -187,9 +187,9 @@ export function SupplierSearchSelect({
                             ))
                         )}
                     </div>
-                    {filteredSuppliers.length === 50 && (
+                    {searchTerm && filteredSuppliers.length === 200 && (
                         <div className="px-4 py-2 text-xs text-center text-green-400 border-t border-green-600 border-opacity-30">
-                            Mostrando primeros 50 resultados. Refina tu búsqueda para ver más.
+                            Mostrando primeros 200 resultados. Refina tu búsqueda para ver más.
                         </div>
                     )}
                 </div>
