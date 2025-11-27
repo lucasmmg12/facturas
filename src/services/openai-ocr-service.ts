@@ -180,17 +180,52 @@ function fileToBase64(file: File): Promise<{ base64: string | string[]; mimeType
     // Para PDFs, retornar array de imágenes (una por página)
     return convertPdfToPngBase64(file).then((pages) => ({
       base64: pages,
-      mimeType: 'image/png',
+      mimeType: 'image/jpeg', // Cambiado a JPEG porque ahora comprimimos
     }));
   }
 
-  // Para imágenes, retornar string único
+  // Para imágenes, comprimir y retornar string único
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1] ?? '';
-      resolve({ base64, mimeType: file.type || 'application/octet-stream' });
+    reader.onload = async () => {
+      try {
+        const img = new Image();
+        img.src = reader.result as string;
+        
+        await new Promise((imgResolve, imgReject) => {
+          img.onload = imgResolve;
+          img.onerror = imgReject;
+        });
+
+        // Redimensionar y comprimir la imagen si es muy grande
+        const MAX_DIMENSION = 2048; // OpenAI recomienda máximo 2048px
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          throw new Error('No se pudo obtener el contexto del canvas');
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Comprimir como JPEG con calidad 0.85
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const base64 = dataUrl.split(',')[1] ?? '';
+        resolve({ base64, mimeType: 'image/jpeg' });
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('Error al procesar la imagen'));
+      }
     };
     reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo'));
     reader.readAsDataURL(file);
@@ -226,7 +261,9 @@ async function convertPdfToPngBase64(file: File): Promise<string[]> {
 }
 
 async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
-  const viewport = page.getViewport({ scale: 2 });
+  // Reducir escala para evitar imágenes demasiado grandes (OpenAI tiene límites)
+  // Scale 1.5 es suficiente para OCR y reduce significativamente el tamaño
+  const viewport = page.getViewport({ scale: 1.5 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
@@ -239,7 +276,9 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
 
   await page.render({ canvasContext: context, viewport }).promise;
 
-  const dataUrl = canvas.toDataURL('image/png');
+  // Comprimir la imagen usando JPEG con calidad 0.85 para reducir tamaño
+  // Esto reduce significativamente el tamaño sin perder mucha calidad para OCR
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
   return dataUrl.split(',')[1] ?? '';
 }
 

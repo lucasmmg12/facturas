@@ -55,42 +55,40 @@ serve(async (req) => {
     }
 
     // Obtener el body
-    const { base64, mimeType }: OCRRequest = await req.json();
+    const requestData: OCRRequest = await req.json();
 
-    if (!base64 || !mimeType) {
+    if (!requestData.base64 || !requestData.mimeType) {
       throw new Error('Faltan parámetros: base64 y mimeType son requeridos');
     }
 
-    const isMultiplePages = Array.isArray(base64);
-    const pagesCount = isMultiplePages ? base64.length : 1;
+    // Normalizar: siempre trabajar con array
+    const base64Array = Array.isArray(requestData.base64) 
+      ? requestData.base64 
+      : [requestData.base64];
+    
+    const pagesCount = base64Array.length;
+    const mimeType = requestData.mimeType;
 
     console.log('[Supabase Edge Function] Procesando OCR para usuario:', user.id);
-    console.log('[Supabase Edge Function] Múltiples páginas:', isMultiplePages);
     console.log('[Supabase Edge Function] Cantidad de páginas:', pagesCount);
-    if (isMultiplePages) {
-      console.log('[Supabase Edge Function] Tamaños de imágenes:', base64.map((b, i) => `Página ${i + 1}: ${b.length} chars`).join(', '));
-    } else {
-      console.log('[Supabase Edge Function] Tamaño de imagen:', base64.length);
+    console.log('[Supabase Edge Function] Tamaños de imágenes:', base64Array.map((b, i) => `Página ${i + 1}: ${b.length} chars`).join(', '));
+
+    // Validar que las imágenes no estén vacías
+    for (let i = 0; i < base64Array.length; i++) {
+      if (!base64Array[i] || base64Array[i].length === 0) {
+        throw new Error(`La página ${i + 1} está vacía`);
+      }
     }
 
     const prompt = buildPrompt(pagesCount > 1);
 
     // Construir el contenido con todas las imágenes
-    const imageContent = isMultiplePages
-      ? base64.map((imgBase64) => ({
-          type: 'image_url' as const,
-          image_url: {
-            url: `data:${mimeType};base64,${imgBase64}`,
-          },
-        }))
-      : [
-          {
-            type: 'image_url' as const,
-            image_url: {
-              url: `data:${mimeType};base64,${base64}`,
-            },
-          },
-        ];
+    const imageContent = base64Array.map((imgBase64) => ({
+      type: 'image_url' as const,
+      image_url: {
+        url: `data:${mimeType};base64,${imgBase64}`,
+      },
+    }));
 
     const requestBody = {
       model: OPENAI_MODEL,
@@ -105,6 +103,13 @@ serve(async (req) => {
       ],
       max_tokens: 2000, // Aumentado para facturas complejas con múltiples páginas
     };
+
+    console.log('[Supabase Edge Function] Request body preparado:', {
+      model: requestBody.model,
+      imagesCount: imageContent.length,
+      promptLength: prompt.length,
+      maxTokens: requestBody.max_tokens
+    });
 
     console.log('[Supabase Edge Function] Enviando solicitud a OpenAI...');
 
@@ -121,15 +126,37 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error('[Supabase Edge Function] Error de OpenAI:', {
         status: response.status,
+        statusText: response.statusText,
         body: errorText,
+        imagesCount: imageContent.length,
+        totalBase64Size: base64Array.reduce((sum, b) => sum + b.length, 0),
       });
 
       let errorDetail = '';
+      let errorType = '';
       try {
         const errorJson = JSON.parse(errorText);
         errorDetail = errorJson.error?.message || errorJson.error?.code || errorText;
+        errorType = errorJson.error?.type || '';
+        console.error('[Supabase Edge Function] Detalles del error:', {
+          message: errorJson.error?.message,
+          type: errorJson.error?.type,
+          code: errorJson.error?.code,
+          param: errorJson.error?.param,
+        });
       } catch {
         errorDetail = errorText || response.statusText;
+      }
+
+      // Si es error 400, puede ser problema de formato, tamaño o límites
+      if (response.status === 400) {
+        const totalSize = base64Array.reduce((sum, b) => sum + b.length, 0);
+        const sizeMB = (totalSize * 3) / 4 / 1024 / 1024; // Aproximación del tamaño en MB
+        throw new Error(
+          `OpenAI rechazó la solicitud (400): ${errorDetail}. ` +
+          `Imágenes: ${pagesCount}, Tamaño total aprox: ${sizeMB.toFixed(2)}MB. ` +
+          `Verifica el formato de las imágenes o reduce el tamaño/resolución.`
+        );
       }
 
       throw new Error(`OpenAI falló (${response.status}): ${errorDetail}`);
