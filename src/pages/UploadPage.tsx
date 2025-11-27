@@ -42,31 +42,14 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
+        const isImage = isImageFile(file);
         let fileToProcess = file;
-
-        if (isImageFile(file)) {
-          newResults[i] = {
-            ...newResults[i],
-            message: 'Convirtiendo imagen a PDF...',
-          };
-          setResults([...newResults]);
-
-          const pdfBlob = await convertImageToPDF(file);
-          fileToProcess = new File([pdfBlob], file.name.replace(/\.[^.]+$/, '.pdf'), {
-            type: 'application/pdf',
-          });
-        }
-
-        newResults[i] = {
-          ...newResults[i],
-          message: 'Extrayendo datos del comprobante...',
-        };
-        setResults([...newResults]);
 
         let ocrResult;
         let ocrMethod = 'Local (Tesseract)';
 
         // Intentar usar OpenAI primero (vía Supabase Edge Function)
+        // OpenAI puede procesar imágenes directamente, no necesita conversión
         try {
           newResults[i] = {
             ...newResults[i],
@@ -75,7 +58,8 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           setResults([...newResults]);
 
           console.log(`[Upload] Iniciando OCR con OpenAI para: ${file.name}`);
-          ocrResult = await extractDataWithOpenAI(fileToProcess);
+          // Enviar el archivo original directamente (imagen o PDF)
+          ocrResult = await extractDataWithOpenAI(file);
           ocrMethod = 'OpenAI';
           console.log(`[Upload] OpenAI OCR exitoso para: ${file.name}`, {
             supplierCuit: ocrResult.supplierCuit,
@@ -97,7 +81,21 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         }
 
         // Si OpenAI falló, usar OCR local
+        // El OCR local requiere PDF, así que convertir imagen si es necesario
         if (!ocrResult) {
+          if (isImage) {
+            newResults[i] = {
+              ...newResults[i],
+              message: 'Convirtiendo imagen a PDF para OCR local...',
+            };
+            setResults([...newResults]);
+
+            const pdfBlob = await convertImageToPDF(file);
+            fileToProcess = new File([pdfBlob], file.name.replace(/\.[^.]+$/, '.pdf'), {
+              type: 'application/pdf',
+            });
+          }
+
           try {
             console.log(`[Upload] Iniciando OCR local para: ${file.name}`);
             ocrResult = await extractDataFromPDF(fileToProcess);
