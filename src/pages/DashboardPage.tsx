@@ -8,6 +8,9 @@ import { MasterDataPage } from './MasterDataPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { ToastContainer } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 import { getInvoices, getInvoicesReadyForExport, deleteInvoice } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
 import { generateTangoExport, downloadExport } from '../services/tango-export-service';
@@ -250,6 +253,8 @@ function ReviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const toast = useToast();
 
   const loadInvoices = useCallback(async () => {
     try {
@@ -290,23 +295,26 @@ function ReviewPanel({
     setSelectedIds(newSelected);
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteClick = () => {
     if (selectedIds.size === 0) return;
+    setShowDeleteModal(true);
+  };
 
-    const confirmed = window.confirm(
-      `¿Estás seguro de eliminar ${selectedIds.size} comprobante(s)? Esta acción no se puede deshacer.`
-    );
-
-    if (!confirmed) return;
+  const handleDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
 
     try {
       setDeleting(true);
       setError(null);
+      setShowDeleteModal(false);
 
       // Eliminar todas las facturas seleccionadas
       await Promise.all(
         Array.from(selectedIds).map(id => deleteInvoice(id))
       );
+
+      const count = selectedIds.size;
+      const idsToCheck = new Set(selectedIds);
 
       // Limpiar selección
       setSelectedIds(new Set());
@@ -316,15 +324,20 @@ function ReviewPanel({
       onInvoiceUpdated();
 
       // Si la factura seleccionada fue eliminada, deseleccionar
-      if (selectedInvoiceId && selectedIds.has(selectedInvoiceId)) {
+      if (selectedInvoiceId && idsToCheck.has(selectedInvoiceId)) {
         onSelectInvoice(null);
       }
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : 'Error al eliminar los comprobantes.'
+
+      // Mostrar notificación de éxito
+      toast.success(
+        `${count} comprobante${count > 1 ? 's' : ''} eliminado${count > 1 ? 's' : ''} correctamente.`
       );
+    } catch (deleteError) {
+      const errorMessage = deleteError instanceof Error
+        ? deleteError.message
+        : 'Error al eliminar los comprobantes.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setDeleting(false);
     }
@@ -343,8 +356,21 @@ function ReviewPanel({
   }));
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Comprobantes recientes - Arriba */}
+    <>
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar comprobantes"
+        message={`¿Estás seguro de eliminar ${selectedIds.size} comprobante${selectedIds.size > 1 ? 's' : ''}? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmButtonColor="red"
+        isLoading={deleting}
+      />
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <div className="flex flex-col gap-8">
+        {/* Comprobantes recientes - Arriba */}
       <div
         className="rounded-2xl overflow-hidden shadow-2xl"
         style={{
@@ -372,7 +398,7 @@ function ReviewPanel({
             {selectedIds.size > 0 && (
               <button
                 type="button"
-                onClick={handleDeleteSelected}
+                onClick={handleDeleteClick}
                 disabled={deleting}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
               >
@@ -523,6 +549,7 @@ function ReviewPanel({
         )}
       </div>
     </div>
+    </>
   );
 }
 

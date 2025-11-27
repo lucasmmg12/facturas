@@ -11,6 +11,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from './StatusBadge';
 import { SupplierSearchSelect } from './SupplierSearchSelect';
 import { SearchableSelect } from './SearchableSelect';
+import { ConfirmModal } from './ConfirmModal';
+import { ToastContainer } from './Toast';
+import { useToast } from '../hooks/useToast';
 import { INVOICE_TYPES_OPTIONS } from '../utils/invoice-types';
 import { formatCUIT } from '../utils/validators';
 import type { Database } from '../lib/database.types';
@@ -55,6 +58,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [taxAmount, setTaxAmount] = useState('');
   const [autofillWarnings, setAutofillWarnings] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -211,13 +216,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer.')) {
-      return;
-    }
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
 
+  const handleDeleteConfirm = async () => {
     try {
       setDeleting(true);
+      setShowDeleteModal(false);
 
       // Eliminar impuestos asociados
       await supabase.from('invoice_taxes').delete().eq('invoice_id', invoiceId);
@@ -230,12 +236,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
       if (error) throw error;
 
+      // Mostrar notificación de éxito
+      toast.success('Comprobante eliminado correctamente.');
+
       // Cerrar el editor y recargar la lista
       onSave();
       onClose();
     } catch (error) {
       console.error('Error deleting invoice:', error);
-      alert('Error al eliminar el comprobante. Por favor, intenta nuevamente.');
+      toast.error('Error al eliminar el comprobante. Por favor, intenta nuevamente.');
     } finally {
       setDeleting(false);
     }
@@ -473,7 +482,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={deleting}
               className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
               style={{
@@ -1669,6 +1678,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           </div>
         )}
       </div>
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar comprobante"
+        message="¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmButtonColor="red"
+        isLoading={deleting}
+      />
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }
