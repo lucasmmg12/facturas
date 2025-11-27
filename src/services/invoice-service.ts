@@ -258,16 +258,11 @@ export async function createInvoiceTaxesFromOCR(
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {
-      // Si el impuesto tiene base pero no tiene importe (taxAmount = 0), intentar calcularlo
-      // Solo para IVA (que tienen tasa), no para percepciones
-      let finalTaxAmount = tax.taxAmount;
-      if (tax.taxBase > 0 && tax.taxAmount === 0 && tax.rate !== null && tax.rate > 0) {
-        // Calcular el importe basándose en la tasa (solo para IVA)
-        finalTaxAmount = Math.round((tax.taxBase * tax.rate) / 100 * 100) / 100; // Redondear a 2 decimales
-        console.log(`[Invoice Service] Calculando taxAmount para ${tax.taxCode} (IVA): ${tax.taxBase} * ${tax.rate}% = ${finalTaxAmount}`);
-      }
-
-      // Si aún no hay importe, registrar un warning pero guardar con 0
+      // SIEMPRE usar el taxAmount que viene de OpenAI/OCR, NO calcularlo
+      // El valor en la factura es el correcto, incluso si difiere del cálculo teórico
+      const finalTaxAmount = tax.taxAmount;
+      
+      // Solo registrar warning si no hay importe pero hay base (para debugging)
       if (finalTaxAmount === 0 && tax.taxBase > 0) {
         console.warn(`[Invoice Service] Advertencia: ${tax.taxCode} (${tax.description}) tiene base (${tax.taxBase}) pero no tiene importe. Se guardará con importe 0.`);
       }
@@ -276,9 +271,9 @@ export async function createInvoiceTaxesFromOCR(
         invoice_id: invoiceId,
         tax_code_id: taxCodeId,
         tax_base: tax.taxBase,
-        tax_amount: finalTaxAmount,
+        tax_amount: finalTaxAmount, // Usar el valor exacto de la factura
       });
-      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount}`);
+      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount} (valor de factura)`);
     } else {
       console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode} (intentó mapear: ${taxCodeToMap})`);
     }
