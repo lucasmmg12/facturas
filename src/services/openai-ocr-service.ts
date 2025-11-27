@@ -262,8 +262,9 @@ async function convertPdfToPngBase64(file: File): Promise<string[]> {
 
 async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
   // Reducir escala para evitar imágenes demasiado grandes (OpenAI tiene límites)
-  // Scale 1.5 es suficiente para OCR y reduce significativamente el tamaño
-  const viewport = page.getViewport({ scale: 1.5 });
+  // Scale 1.2 es suficiente para OCR y reduce significativamente el tamaño
+  // También limitamos las dimensiones máximas a 2048px como recomienda OpenAI
+  let viewport = page.getViewport({ scale: 1.2 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
@@ -271,15 +272,28 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
     throw new Error('No se pudo inicializar el canvas para renderizar el PDF');
   }
 
+  // Limitar dimensiones máximas a 2048px (recomendación de OpenAI)
+  const MAX_DIMENSION = 2048;
+  if (viewport.width > MAX_DIMENSION || viewport.height > MAX_DIMENSION) {
+    const ratio = Math.min(MAX_DIMENSION / viewport.width, MAX_DIMENSION / viewport.height);
+    viewport = page.getViewport({ scale: 1.2 * ratio });
+  }
+
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
   await page.render({ canvasContext: context, viewport }).promise;
 
-  // Comprimir la imagen usando JPEG con calidad 0.85 para reducir tamaño
-  // Esto reduce significativamente el tamaño sin perder mucha calidad para OCR
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-  return dataUrl.split(',')[1] ?? '';
+  // Comprimir la imagen usando JPEG con calidad 0.75 para reducir aún más el tamaño
+  // Calidad 0.75 sigue siendo suficiente para OCR pero reduce significativamente el tamaño
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  const base64 = dataUrl.split(',')[1] ?? '';
+  
+  // Log del tamaño para debugging
+  const sizeKB = (base64.length * 3 / 4 / 1024).toFixed(2);
+  console.log(`[OpenAI OCR] Imagen renderizada: ${viewport.width}x${viewport.height}px, tamaño: ${sizeKB}KB`);
+  
+  return base64;
 }
 
 function sanitizeCUIT(value: any): string | null {
