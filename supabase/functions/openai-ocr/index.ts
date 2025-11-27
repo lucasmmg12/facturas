@@ -73,10 +73,16 @@ serve(async (req) => {
     console.log('[Supabase Edge Function] Cantidad de páginas:', pagesCount);
     console.log('[Supabase Edge Function] Tamaños de imágenes:', base64Array.map((b, i) => `Página ${i + 1}: ${b.length} chars`).join(', '));
 
-    // Validar que las imágenes no estén vacías
+    // Validar que las imágenes no estén vacías y no sean demasiado grandes
+    const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB por imagen (límite de OpenAI)
     for (let i = 0; i < base64Array.length; i++) {
       if (!base64Array[i] || base64Array[i].length === 0) {
         throw new Error(`La página ${i + 1} está vacía`);
+      }
+      // El tamaño en base64 es aproximadamente 4/3 del tamaño original
+      const estimatedSize = (base64Array[i].length * 3) / 4;
+      if (estimatedSize > MAX_IMAGE_SIZE) {
+        throw new Error(`La página ${i + 1} es demasiado grande (${(estimatedSize / 1024 / 1024).toFixed(2)}MB). Máximo permitido: ${(MAX_IMAGE_SIZE / 1024 / 1024).toFixed(2)}MB`);
       }
     }
 
@@ -115,12 +121,23 @@ serve(async (req) => {
       max_tokens: 2000, // Aumentado para facturas complejas con múltiples páginas
     };
 
+    const totalRequestSize = JSON.stringify(requestBody).length;
+    const totalSizeMB = (totalRequestSize / 1024 / 1024).toFixed(2);
+    const totalBase64MB = (base64Array.reduce((sum, b) => sum + b.length, 0) * 3 / 4 / 1024 / 1024).toFixed(2);
+    
     console.log('[Supabase Edge Function] Request body preparado:', {
       model: requestBody.model,
       imagesCount: imageContent.length,
       promptLength: prompt.length,
-      maxTokens: requestBody.max_tokens
+      maxTokens: requestBody.max_tokens,
+      totalRequestSize: `${totalSizeMB}MB`,
+      totalBase64Size: `${totalBase64MB}MB`
     });
+
+    // Validar tamaño total del request (OpenAI tiene límites)
+    if (totalRequestSize > 25 * 1024 * 1024) { // 25MB límite aproximado
+      throw new Error(`El request es demasiado grande (${totalSizeMB}MB). Reduce el tamaño de las imágenes o procesa menos páginas a la vez.`);
+    }
 
     console.log('[Supabase Edge Function] Enviando solicitud a OpenAI...');
 
@@ -175,16 +192,46 @@ serve(async (req) => {
 
     const data = await response.json();
     console.log('[Supabase Edge Function] Respuesta de OpenAI recibida exitosamente');
+    console.log('[Supabase Edge Function] Estructura de respuesta:', {
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length || 0,
+      firstChoiceHasMessage: !!data.choices?.[0]?.message,
+      firstChoiceHasContent: !!data.choices?.[0]?.message?.content,
+      contentType: typeof data.choices?.[0]?.message?.content,
+    });
 
     // Extraer el contenido
-    const outputText = extractOutputText(data);
+    let outputText: string;
+    try {
+      outputText = extractOutputText(data);
+      console.log('[Supabase Edge Function] Texto extraído (primeros 500 chars):', outputText.substring(0, 500));
+    } catch (extractError) {
+      console.error('[Supabase Edge Function] Error al extraer texto:', extractError);
+      console.error('[Supabase Edge Function] Respuesta completa de OpenAI:', JSON.stringify(data, null, 2));
+      throw new Error(`Error al extraer contenido de OpenAI: ${extractError instanceof Error ? extractError.message : 'Error desconocido'}`);
+    }
 
     // Intentar parsear como JSON para validar
+    let parsedJson: any;
     try {
-      JSON.parse(outputText);
-    } catch {
-      console.error('[Supabase Edge Function] OpenAI no devolvió JSON válido:', outputText);
-      throw new Error('OpenAI devolvió un formato inesperado');
+      parsedJson = JSON.parse(outputText);
+      console.log('[Supabase Edge Function] JSON parseado exitosamente');
+    } catch (parseError) {
+      console.error('[Supabase Edge Function] Error al parsear JSON:', parseError);
+      console.error('[Supabase Edge Function] Texto completo recibido:', outputText);
+      // Intentar extraer JSON si está dentro de markdown o texto adicional
+      const jsonMatch = outputText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsedJson = JSON.parse(jsonMatch[0]);
+          console.log('[Supabase Edge Function] JSON extraído de texto con markdown');
+          outputText = jsonMatch[0]; // Usar el JSON extraído
+        } catch {
+          throw new Error(`OpenAI devolvió un formato inesperado. No se pudo parsear como JSON. Texto recibido: ${outputText.substring(0, 200)}...`);
+        }
+      } else {
+        throw new Error(`OpenAI devolvió un formato inesperado. No se encontró JSON válido. Texto recibido: ${outputText.substring(0, 200)}...`);
+      }
     }
 
     return new Response(
@@ -318,22 +365,71 @@ Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 }
 
 function extractOutputText(data: any): string {
-  if (data?.choices && Array.isArray(data.choices) && data.choices.length > 0) {
-    const messageContent = data.choices[0]?.message?.content;
-
-    if (typeof messageContent === 'string' && messageContent.trim()) {
-      let cleaned = messageContent.trim();
-
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-      } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
-      }
-
-      return cleaned.trim();
-    }
+  // Verificar estructura básica
+  if (!data) {
+    throw new Error('OpenAI no devolvió datos');
   }
 
-  throw new Error('OpenAI no devolvió contenido legible en el formato esperado');
+  if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+    console.error('[Supabase Edge Function] Estructura inesperada - no hay choices:', JSON.stringify(data, null, 2));
+    throw new Error('OpenAI no devolvió choices en la respuesta');
+  }
+
+  const firstChoice = data.choices[0];
+  if (!firstChoice?.message) {
+    console.error('[Supabase Edge Function] Estructura inesperada - no hay message:', JSON.stringify(firstChoice, null, 2));
+    throw new Error('OpenAI no devolvió message en la respuesta');
+  }
+
+  const messageContent = firstChoice.message.content;
+
+  if (!messageContent) {
+    console.error('[Supabase Edge Function] Estructura inesperada - no hay content:', JSON.stringify(firstChoice.message, null, 2));
+    throw new Error('OpenAI no devolvió content en el message');
+  }
+
+  // Si el contenido es un array (puede pasar con vision models), extraer el texto
+  if (Array.isArray(messageContent)) {
+    const textParts = messageContent
+      .filter((item: any) => item.type === 'text')
+      .map((item: any) => item.text)
+      .join(' ');
+    
+    if (textParts) {
+      return cleanJsonText(textParts);
+    }
+    throw new Error('OpenAI devolvió un array de contenido sin partes de texto');
+  }
+
+  if (typeof messageContent === 'string' && messageContent.trim()) {
+    return cleanJsonText(messageContent);
+  }
+
+  throw new Error(`OpenAI devolvió un tipo de contenido inesperado: ${typeof messageContent}`);
+}
+
+function cleanJsonText(text: string): string {
+  let cleaned = text.trim();
+
+  // Remover markdown code blocks
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '');
+  }
+
+  // Remover texto antes del primer { si existe
+  const firstBrace = cleaned.indexOf('{');
+  if (firstBrace > 0) {
+    cleaned = cleaned.substring(firstBrace);
+  }
+
+  // Remover texto después del último } si existe
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (lastBrace > 0 && lastBrace < cleaned.length - 1) {
+    cleaned = cleaned.substring(0, lastBrace + 1);
+  }
+
+  return cleaned.trim();
 }
 
