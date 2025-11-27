@@ -134,8 +134,8 @@ export async function generateTangoExport(userId: string): Promise<{
     const afipCode = mapInvoiceTypeToAfipCode(invoice.invoice_type);
 
     // 2.7 Moneda
-    const currency = 'C'; // "C" (corriente)
-    const exchangeRate = 1.0;
+    const currency = invoice.currency_code || 'S'; // Siempre "S" por defecto
+    const exchangeRate = invoice.exchange_rate || 1.0;
 
     // 2.2 Sector (1 or 10)
     // Default to 1. If "reposición de gastos" -> 10. How to detect? 

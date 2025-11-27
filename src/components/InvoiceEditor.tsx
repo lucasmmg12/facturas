@@ -104,10 +104,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       if (invoiceData) {
         // Asegurar que is_electronic sea true por defecto
         // Asegurar que purchase_condition sea "1" por defecto
+        // Asegurar que currency_code sea "S" por defecto
+        // Asegurar que expense_code sea "S/C" por defecto
         let invoiceWithDefaults = {
           ...invoiceData.invoice,
           is_electronic: invoiceData.invoice.is_electronic ?? true,
           purchase_condition: invoiceData.invoice.purchase_condition || '1',
+          currency_code: invoiceData.invoice.currency_code || 'S',
+          expense_code: invoiceData.invoice.expense_code || 'S/C',
         };
 
         // AUTOCOMPLETAR CAMPOS si la factura no está lista para exportar
@@ -172,7 +176,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         invoice_number: invoice.invoice_number,
         issue_date: invoice.issue_date,
         accounting_date: invoice.accounting_date,
-        currency_code: invoice.currency_code,
+        currency_code: invoice.currency_code || 'S',
         exchange_rate: invoice.exchange_rate,
         purchase_condition: invoice.purchase_condition,
         net_taxed: invoice.net_taxed,
@@ -189,7 +193,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         cai_cae: invoice.cai_cae,
         cai_cae_expiration: invoice.cai_cae_expiration,
         non_computable_tax_credit: invoice.non_computable_tax_credit,
-        expense_code: invoice.expense_code,
+        expense_code: invoice.expense_code || 'S/C',
         sector_code: invoice.sector_code,
         classifier_code: invoice.classifier_code,
         afip_operation_type_code: invoice.afip_operation_type_code,
@@ -231,7 +235,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         invoice_number: invoice.invoice_number,
         issue_date: invoice.issue_date,
         accounting_date: invoice.accounting_date,
-        currency_code: invoice.currency_code,
+        currency_code: invoice.currency_code || 'S',
         exchange_rate: invoice.exchange_rate,
         purchase_condition: invoice.purchase_condition,
         net_taxed: invoice.net_taxed,
@@ -248,7 +252,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         cai_cae: invoice.cai_cae,
         cai_cae_expiration: invoice.cai_cae_expiration,
         non_computable_tax_credit: invoice.non_computable_tax_credit,
-        expense_code: invoice.expense_code,
+        expense_code: invoice.expense_code || 'S/C',
         sector_code: invoice.sector_code,
         classifier_code: invoice.classifier_code,
         afip_operation_type_code: invoice.afip_operation_type_code,
@@ -866,19 +870,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   <label className="block text-sm font-medium text-green-300 mb-2">
                     Moneda CTE <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={invoice.currency_code || 'ARS'}
-                    onChange={(e) => setInvoice({ ...invoice, currency_code: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                  <input
+                    type="text"
+                    value="S"
+                    readOnly
+                    disabled
+                    className="w-full px-4 py-3 rounded-lg text-white transition-all cursor-not-allowed opacity-70"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
                     }}
-                  >
-                    <option value="ARS">ARS - Peso Argentino</option>
-                    <option value="USD">USD - Dólar</option>
-                    <option value="EUR">EUR - Euro</option>
-                  </select>
+                  />
                 </div>
 
                 <div>

@@ -74,8 +74,8 @@ export async function autofillInvoiceFields(
 
         // 3. CÓDIGO DE GASTO (expense_code)
         // Valores válidos: S/C, 0, 2
-        // Se debe cargar desde la hoja maestra de conceptos
-        // Por defecto: vacío (se asignará al seleccionar concepto)
+        // Por defecto: S/C
+        result.expense_code = 'S/C';
 
         // 4. CÓDIGO DE SECTOR (sector_code)
         // Default: 2 (usado en mayoría de planillas del Sanatorio)
@@ -110,7 +110,7 @@ export async function autofillInvoiceFields(
         result.destination_branch_number = '0';
 
         // 10. MONEDA Y COTIZACIÓN
-        result.currency_code = 'C'; // Corriente
+        result.currency_code = 'S'; // Siempre "S" por defecto
         result.exchange_rate = 1.0;
 
         // 11. FECHA CONTABLE
