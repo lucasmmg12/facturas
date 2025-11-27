@@ -132,7 +132,7 @@ serve(async (req) => {
           ],
         },
       ],
-      max_tokens: 2000, // Aumentado para facturas complejas con múltiples páginas
+      max_tokens: 6000, // Aumentado a 6000 para facturas complejas con múltiples páginas e impuestos
     };
 
     const totalRequestSize = JSON.stringify(requestBody).length;
