@@ -34,8 +34,8 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     fileType: file.type,
   });
 
-  // Convertir archivo a base64
-  let base64: string;
+  // Convertir archivo a base64 (puede ser string o array de strings para múltiples páginas)
+  let base64: string | string[];
   let mimeType: string;
   
   try {
@@ -43,9 +43,13 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     const result = await fileToBase64(file);
     base64 = result.base64;
     mimeType = result.mimeType;
+    
+    const isMultiplePages = Array.isArray(base64);
     console.log('[OpenAI OCR] Archivo convertido exitosamente', {
       mimeType,
-      base64Length: base64.length
+      isMultiplePages,
+      pagesCount: isMultiplePages ? base64.length : 1,
+      base64Length: isMultiplePages ? base64.map(b => b.length).join(', ') : base64.length
     });
   } catch (error) {
     console.error('[OpenAI OCR] Error al convertir archivo:', error);
@@ -67,9 +71,11 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
 
   const edgeFunctionUrl = `${supabaseUrl}/functions/v1/openai-ocr`;
 
+  const isMultiplePages = Array.isArray(base64);
   console.log('[OpenAI OCR] Llamando a Supabase Edge Function:', {
     url: edgeFunctionUrl,
-    imageSize: base64.length,
+    isMultiplePages,
+    pagesCount: isMultiplePages ? base64.length : 1,
     mimeType: mimeType
   });
 
@@ -83,7 +89,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        base64,
+        base64: isMultiplePages ? base64 : [base64], // Siempre enviar como array
         mimeType,
       }),
     });
@@ -169,14 +175,16 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   };
 }
 
-function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+function fileToBase64(file: File): Promise<{ base64: string | string[]; mimeType: string }> {
   if (file.type === 'application/pdf') {
-    return convertPdfToPngBase64(file).then((base64) => ({
-      base64,
+    // Para PDFs, retornar array de imágenes (una por página)
+    return convertPdfToPngBase64(file).then((pages) => ({
+      base64: pages,
       mimeType: 'image/png',
     }));
   }
 
+  // Para imágenes, retornar string único
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -191,16 +199,30 @@ function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }>
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
-async function convertPdfToPngBase64(file: File): Promise<string> {
+async function convertPdfToPngBase64(file: File): Promise<string[]> {
   if (typeof window === 'undefined') {
     throw new Error('La conversión de PDF a imagen solo está disponible en el navegador');
   }
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-  const page = await pdf.getPage(1);
-  const imageBase64 = await renderPageToBase64(page);
-  return imageBase64;
+  
+  const pages: string[] = [];
+  const totalPages = pdf.numPages;
+  
+  console.log(`[OpenAI OCR] Procesando PDF con ${totalPages} página(s)...`);
+  
+  // Procesar TODAS las páginas del PDF
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    console.log(`[OpenAI OCR] Procesando página ${pageNum} de ${totalPages}...`);
+    const page = await pdf.getPage(pageNum);
+    const imageBase64 = await renderPageToBase64(page);
+    pages.push(imageBase64);
+  }
+  
+  console.log(`[OpenAI OCR] PDF procesado exitosamente: ${pages.length} página(s) convertida(s) a imágenes`);
+  
+  return pages;
 }
 
 async function renderPageToBase64(page: PDFPageProxy): Promise<string> {

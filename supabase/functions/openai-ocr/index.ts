@@ -14,7 +14,7 @@ const corsHeaders = {
 };
 
 interface OCRRequest {
-  base64: string;
+  base64: string | string[]; // Puede ser una imagen o array de imágenes (múltiples páginas)
   mimeType: string;
 }
 
@@ -61,10 +61,36 @@ serve(async (req) => {
       throw new Error('Faltan parámetros: base64 y mimeType son requeridos');
     }
 
-    console.log('[Supabase Edge Function] Procesando OCR para usuario:', user.id);
-    console.log('[Supabase Edge Function] Tamaño de imagen:', base64.length);
+    const isMultiplePages = Array.isArray(base64);
+    const pagesCount = isMultiplePages ? base64.length : 1;
 
-    const prompt = buildPrompt();
+    console.log('[Supabase Edge Function] Procesando OCR para usuario:', user.id);
+    console.log('[Supabase Edge Function] Múltiples páginas:', isMultiplePages);
+    console.log('[Supabase Edge Function] Cantidad de páginas:', pagesCount);
+    if (isMultiplePages) {
+      console.log('[Supabase Edge Function] Tamaños de imágenes:', base64.map((b, i) => `Página ${i + 1}: ${b.length} chars`).join(', '));
+    } else {
+      console.log('[Supabase Edge Function] Tamaño de imagen:', base64.length);
+    }
+
+    const prompt = buildPrompt(pagesCount > 1);
+
+    // Construir el contenido con todas las imágenes
+    const imageContent = isMultiplePages
+      ? base64.map((imgBase64) => ({
+          type: 'image_url' as const,
+          image_url: {
+            url: `data:${mimeType};base64,${imgBase64}`,
+          },
+        }))
+      : [
+          {
+            type: 'image_url' as const,
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`,
+            },
+          },
+        ];
 
     const requestBody = {
       model: OPENAI_MODEL,
@@ -73,16 +99,11 @@ serve(async (req) => {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`,
-              },
-            },
+            ...imageContent, // Enviar todas las imágenes
           ],
         },
       ],
-      max_tokens: 1200,
+      max_tokens: 2000, // Aumentado para facturas complejas con múltiples páginas
     };
 
     console.log('[Supabase Edge Function] Enviando solicitud a OpenAI...');
@@ -155,10 +176,14 @@ serve(async (req) => {
   }
 });
 
-function buildPrompt(): string {
+function buildPrompt(hasMultiplePages: boolean = false): string {
+  const multiplePagesWarning = hasMultiplePages 
+    ? `\n\n⚠️ IMPORTANTE: Este comprobante tiene MÚLTIPLES PÁGINAS. Debes revisar TODAS las páginas.\nLos totales, impuestos y CAE suelen estar en la ÚLTIMA PÁGINA. Revisa cuidadosamente cada página para extraer todos los datos.\n`
+    : '';
+
   return `
 Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
-
+${multiplePagesWarning}
 Estructura esperada:
 {
   "supplierCuit": "string|null",
