@@ -277,17 +277,28 @@ INSTRUCCIONES CRÍTICAS PARA IMPUESTOS:
 4. Identifica CADA línea de impuesto por separado en la factura
 5. Compara la descripción del impuesto en la factura con la lista de códigos disponibles arriba
 6. Usa EXACTAMENTE el código (campo "code") que corresponda según la descripción y tasa
+
+REGLAS ESPECÍFICAS PARA PERCEPCIONES:
+- CUALQUIER percepción de Ingresos Brutos (IIBB) debe usar el código "52", sin excepciones
+- Esto incluye: "Percepción IIBB", "Percepción Ingresos Brutos", "Percep I.B.", "Percep I.B. SIRCREB", "Percepción SIRCREB", o cualquier variación
+- NUNCA uses el código "59" para percepciones de Ingresos Brutos (ese es un impuesto bancario que no aparece en estos comprobantes)
+- Para percepciones de IVA, usa el código "10"
+- Para percepciones de Ganancias, usa el código correspondiente si está disponible
+
 7. Si hay múltiples alícuotas de IVA en la misma factura, crea un registro separado para cada uno
 8. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
 9. El taxAmount es el monto del impuesto calculado
 10. El rate debe coincidir con la tasa del código seleccionado
 
-EJEMPLO:
+EJEMPLOS:
 Si en la factura aparece "IVA 21%" y en la lista hay código "1" con descripción "IVA 21%" y rate 21.00:
 → taxCode: "1", description: "IVA 21%", taxBase: 10000, taxAmount: 2100, rate: 21
 
-Si aparece "Percepción IVA" y en la lista hay código "10":
+Si aparece "Percepción IVA" o "Percepción IVA 3%" y en la lista hay código "10":
 → taxCode: "10", description: "Percepción IVA", taxBase: 0, taxAmount: 150, rate: null
+
+Si aparece "Percepción IIBB", "Percepción Ingresos Brutos", "Percep I.B.", "Percep I.B. SIRCREB" o cualquier variación de percepción de Ingresos Brutos:
+→ taxCode: "52", description: "Percepción IIBB" (o la descripción exacta que aparece en la factura), taxBase: 0, taxAmount: [monto], rate: null
 
 Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 `;

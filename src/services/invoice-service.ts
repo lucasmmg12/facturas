@@ -226,7 +226,29 @@ export async function createInvoiceTaxesFromOCR(
   // Mapear cada taxCode a su ID en la base de datos
   const taxRecords = [];
   for (const tax of taxes) {
-    const taxCodeId = await mapTaxCodeToId(tax.taxCode);
+    let taxCodeToMap = tax.taxCode;
+    
+    // Normalizar percepciones de IIBB/Ingresos Brutos al código 52
+    // Esto asegura que cualquier variación (incluyendo "59" si OpenAI se confunde) se mapee correctamente
+    const descriptionLower = tax.description?.toLowerCase() || '';
+    if (
+      descriptionLower.includes('percepción iibb') ||
+      descriptionLower.includes('percepcion iibb') ||
+      descriptionLower.includes('percepción ingresos brutos') ||
+      descriptionLower.includes('percepcion ingresos brutos') ||
+      descriptionLower.includes('percep i.b.') ||
+      descriptionLower.includes('percep ib') ||
+      descriptionLower.includes('sircreb') ||
+      taxCodeToMap === '59' // Si por error OpenAI devuelve 59 para una percepción de IIBB
+    ) {
+      // Verificar que realmente sea una percepción de IIBB y no otro impuesto
+      if (descriptionLower.includes('iibb') || descriptionLower.includes('ingresos brutos') || descriptionLower.includes('sircreb')) {
+        console.log(`[Invoice Service] Normalizando percepción de IIBB: "${tax.taxCode}" → "52"`);
+        taxCodeToMap = '52';
+      }
+    }
+
+    const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {
       taxRecords.push({
@@ -237,7 +259,7 @@ export async function createInvoiceTaxesFromOCR(
       });
       console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}`);
     } else {
-      console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode}`);
+      console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode} (intentó mapear: ${taxCodeToMap})`);
     }
   }
 
