@@ -100,12 +100,26 @@ serve(async (req) => {
     const prompt = buildPrompt(pagesCount > 1, taxCodes || []);
 
     // Construir el contenido con todas las imágenes
-    const imageContent = base64Array.map((imgBase64) => ({
-      type: 'image_url' as const,
-      image_url: {
-        url: `data:${mimeType};base64,${imgBase64}`,
-      },
-    }));
+    // IMPORTANTE: Verificar que el base64 no tenga el prefijo data: ya incluido
+    const imageContent = base64Array.map((imgBase64, index) => {
+      // Asegurar que el base64 esté limpio (sin prefijo data:)
+      let cleanBase64 = imgBase64;
+      if (imgBase64.includes(',')) {
+        cleanBase64 = imgBase64.split(',')[1] || imgBase64;
+      }
+      
+      // Validar que el base64 sea válido
+      if (!cleanBase64 || cleanBase64.length === 0) {
+        throw new Error(`La imagen de la página ${index + 1} está vacía después de limpiar`);
+      }
+
+      return {
+        type: 'image_url' as const,
+        image_url: {
+          url: `data:${mimeType};base64,${cleanBase64}`,
+        },
+      };
+    });
 
     const requestBody = {
       model: OPENAI_MODEL,
@@ -141,6 +155,18 @@ serve(async (req) => {
 
     console.log('[Supabase Edge Function] Enviando solicitud a OpenAI...');
 
+    // Validar que el request body sea válido antes de enviarlo
+    try {
+      const testStringify = JSON.stringify(requestBody);
+      if (testStringify.length === 0) {
+        throw new Error('El request body está vacío');
+      }
+      console.log('[Supabase Edge Function] Request body serializado correctamente, tamaño:', testStringify.length);
+    } catch (stringifyError) {
+      console.error('[Supabase Edge Function] Error al serializar request body:', stringifyError);
+      throw new Error(`Error al preparar el request: ${stringifyError instanceof Error ? stringifyError.message : 'Error desconocido'}`);
+    }
+
     const response = await fetch(OPENAI_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -150,29 +176,46 @@ serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
+    console.log('[Supabase Edge Function] Respuesta recibida de OpenAI:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Supabase Edge Function] Error de OpenAI:', {
+      console.error('[Supabase Edge Function] Error de OpenAI - Respuesta completa:', {
         status: response.status,
         statusText: response.statusText,
         body: errorText,
+        bodyLength: errorText.length,
         imagesCount: imageContent.length,
         totalBase64Size: base64Array.reduce((sum, b) => sum + b.length, 0),
+        firstImageSize: base64Array[0]?.length || 0,
+        requestBodySize: JSON.stringify(requestBody).length,
       });
 
       let errorDetail = '';
       let errorType = '';
+      let errorCode = '';
+      let errorParam = '';
+      
       try {
         const errorJson = JSON.parse(errorText);
         errorDetail = errorJson.error?.message || errorJson.error?.code || errorText;
         errorType = errorJson.error?.type || '';
-        console.error('[Supabase Edge Function] Detalles del error:', {
+        errorCode = errorJson.error?.code || '';
+        errorParam = errorJson.error?.param || '';
+        
+        console.error('[Supabase Edge Function] Detalles del error parseado:', {
           message: errorJson.error?.message,
           type: errorJson.error?.type,
           code: errorJson.error?.code,
           param: errorJson.error?.param,
+          fullError: JSON.stringify(errorJson, null, 2),
         });
-      } catch {
+      } catch (parseError) {
+        console.error('[Supabase Edge Function] No se pudo parsear el error como JSON:', parseError);
         errorDetail = errorText || response.statusText;
       }
 
@@ -180,11 +223,16 @@ serve(async (req) => {
       if (response.status === 400) {
         const totalSize = base64Array.reduce((sum, b) => sum + b.length, 0);
         const sizeMB = (totalSize * 3) / 4 / 1024 / 1024; // Aproximación del tamaño en MB
-        throw new Error(
-          `OpenAI rechazó la solicitud (400): ${errorDetail}. ` +
-          `Imágenes: ${pagesCount}, Tamaño total aprox: ${sizeMB.toFixed(2)}MB. ` +
-          `Verifica el formato de las imágenes o reduce el tamaño/resolución.`
-        );
+        const requestSizeMB = (JSON.stringify(requestBody).length / 1024 / 1024).toFixed(2);
+        
+        let errorMessage = `OpenAI rechazó la solicitud (400): ${errorDetail}`;
+        if (errorType) errorMessage += `\nTipo: ${errorType}`;
+        if (errorCode) errorMessage += `\nCódigo: ${errorCode}`;
+        if (errorParam) errorMessage += `\nParámetro: ${errorParam}`;
+        errorMessage += `\nImágenes: ${pagesCount}, Tamaño imágenes: ${sizeMB.toFixed(2)}MB, Tamaño request: ${requestSizeMB}MB`;
+        errorMessage += `\nVerifica el formato de las imágenes o reduce el tamaño/resolución.`;
+        
+        throw new Error(errorMessage);
       }
 
       throw new Error(`OpenAI falló (${response.status}): ${errorDetail}`);
