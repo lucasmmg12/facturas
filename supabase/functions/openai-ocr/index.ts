@@ -252,40 +252,122 @@ serve(async (req) => {
     let outputText: string;
     try {
       outputText = extractOutputText(data);
-      console.log('[Supabase Edge Function] Texto extraído (primeros 500 chars):', outputText.substring(0, 500));
+      console.log('[Supabase Edge Function] Texto extraído (primeros 1000 chars):', outputText.substring(0, 1000));
+      console.log('[Supabase Edge Function] Longitud total del texto:', outputText.length);
     } catch (extractError) {
       console.error('[Supabase Edge Function] Error al extraer texto:', extractError);
       console.error('[Supabase Edge Function] Respuesta completa de OpenAI:', JSON.stringify(data, null, 2));
       throw new Error(`Error al extraer contenido de OpenAI: ${extractError instanceof Error ? extractError.message : 'Error desconocido'}`);
     }
 
-    // Intentar parsear como JSON para validar
+    // Intentar parsear como JSON - con múltiples estrategias
     let parsedJson: any;
+    let finalOutputText = outputText;
+    
     try {
+      // Intento 1: Parsear directamente
       parsedJson = JSON.parse(outputText);
-      console.log('[Supabase Edge Function] JSON parseado exitosamente');
+      console.log('[Supabase Edge Function] JSON parseado exitosamente (parseo directo)');
     } catch (parseError) {
-      console.error('[Supabase Edge Function] Error al parsear JSON:', parseError);
-      console.error('[Supabase Edge Function] Texto completo recibido:', outputText);
-      // Intentar extraer JSON si está dentro de markdown o texto adicional
-      const jsonMatch = outputText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          parsedJson = JSON.parse(jsonMatch[0]);
-          console.log('[Supabase Edge Function] JSON extraído de texto con markdown');
-          outputText = jsonMatch[0]; // Usar el JSON extraído
-        } catch {
-          throw new Error(`OpenAI devolvió un formato inesperado. No se pudo parsear como JSON. Texto recibido: ${outputText.substring(0, 200)}...`);
+      console.warn('[Supabase Edge Function] Error al parsear JSON directamente, intentando estrategias alternativas...');
+      console.log('[Supabase Edge Function] Texto completo recibido (primeros 2000 chars):', outputText.substring(0, 2000));
+      
+      // Intento 2: Buscar JSON dentro del texto (puede estar en markdown o con texto adicional)
+      const jsonPatterns = [
+        /\{[\s\S]*\}/,  // Cualquier objeto JSON
+        /```json\s*(\{[\s\S]*?\})\s*```/i,  // JSON en bloque de código markdown
+        /```\s*(\{[\s\S]*?\})\s*```/i,  // JSON en bloque de código sin especificar json
+      ];
+      
+      let jsonFound = false;
+      for (const pattern of jsonPatterns) {
+        const match = outputText.match(pattern);
+        if (match) {
+          const jsonCandidate = match[1] || match[0];
+          try {
+            parsedJson = JSON.parse(jsonCandidate);
+            finalOutputText = jsonCandidate;
+            console.log('[Supabase Edge Function] JSON extraído usando patrón:', pattern.toString());
+            jsonFound = true;
+            break;
+          } catch {
+            // Continuar con el siguiente patrón
+          }
         }
-      } else {
-        throw new Error(`OpenAI devolvió un formato inesperado. No se encontró JSON válido. Texto recibido: ${outputText.substring(0, 200)}...`);
+      }
+      
+      if (!jsonFound) {
+        // Intento 3: Buscar desde el primer { hasta el último }
+        const firstBrace = outputText.indexOf('{');
+        const lastBrace = outputText.lastIndexOf('}');
+        
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          const jsonCandidate = outputText.substring(firstBrace, lastBrace + 1);
+          try {
+            parsedJson = JSON.parse(jsonCandidate);
+            finalOutputText = jsonCandidate;
+            console.log('[Supabase Edge Function] JSON extraído desde primer { hasta último }');
+            jsonFound = true;
+          } catch {
+            // Continuar
+          }
+        }
+      }
+      
+      if (!jsonFound) {
+        // Intento 4: Intentar reparar JSON común (comillas no escapadas, etc.)
+        let repairedJson = outputText;
+        
+        // Buscar el primer { y último }
+        const firstBrace = repairedJson.indexOf('{');
+        const lastBrace = repairedJson.lastIndexOf('}');
+        
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          repairedJson = repairedJson.substring(firstBrace, lastBrace + 1);
+          
+          // Intentar reparar JSON truncado o con problemas comunes
+          // Si termina abruptamente, intentar cerrar objetos/arrays
+          let openBraces = (repairedJson.match(/\{/g) || []).length;
+          let closeBraces = (repairedJson.match(/\}/g) || []).length;
+          let openBrackets = (repairedJson.match(/\[/g) || []).length;
+          let closeBrackets = (repairedJson.match(/\]/g) || []).length;
+          
+          // Cerrar objetos/arrays abiertos
+          while (openBraces > closeBraces) {
+            repairedJson += '}';
+            closeBraces++;
+          }
+          while (openBrackets > closeBrackets) {
+            repairedJson += ']';
+            closeBrackets++;
+          }
+          
+          try {
+            parsedJson = JSON.parse(repairedJson);
+            finalOutputText = repairedJson;
+            console.log('[Supabase Edge Function] JSON reparado y parseado exitosamente');
+            jsonFound = true;
+          } catch {
+            // Último intento fallido
+          }
+        }
+        
+        if (!jsonFound) {
+          console.error('[Supabase Edge Function] No se pudo extraer JSON válido después de todos los intentos');
+          console.error('[Supabase Edge Function] Texto completo (últimos 1000 chars):', outputText.substring(Math.max(0, outputText.length - 1000)));
+          throw new Error(
+            `OpenAI devolvió un formato inesperado. No se pudo extraer JSON válido.\n` +
+            `Texto recibido (primeros 500 chars): ${outputText.substring(0, 500)}...\n` +
+            `Longitud total: ${outputText.length} caracteres`
+          );
+        }
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        data: outputText,
+        data: finalOutputText, // Usar el texto final extraído/reparado
         usage: data.usage,
       }),
       {
