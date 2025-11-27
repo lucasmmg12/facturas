@@ -222,6 +222,13 @@ export async function createInvoiceTaxesFromOCR(
   }
 
   console.log('[Invoice Service] Creando impuestos automáticamente:', taxes);
+  console.log('[Invoice Service] Detalles de impuestos recibidos:', taxes.map(t => ({
+    taxCode: t.taxCode,
+    description: t.description,
+    taxBase: t.taxBase,
+    taxAmount: t.taxAmount,
+    rate: t.rate
+  })));
 
   // Mapear cada taxCode a su ID en la base de datos
   const taxRecords = [];
@@ -251,13 +258,27 @@ export async function createInvoiceTaxesFromOCR(
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {
+      // Si el impuesto tiene base pero no tiene importe (taxAmount = 0), intentar calcularlo
+      // Solo para IVA (que tienen tasa), no para percepciones
+      let finalTaxAmount = tax.taxAmount;
+      if (tax.taxBase > 0 && tax.taxAmount === 0 && tax.rate !== null && tax.rate > 0) {
+        // Calcular el importe basándose en la tasa (solo para IVA)
+        finalTaxAmount = Math.round((tax.taxBase * tax.rate) / 100 * 100) / 100; // Redondear a 2 decimales
+        console.log(`[Invoice Service] Calculando taxAmount para ${tax.taxCode} (IVA): ${tax.taxBase} * ${tax.rate}% = ${finalTaxAmount}`);
+      }
+
+      // Si aún no hay importe, registrar un warning pero guardar con 0
+      if (finalTaxAmount === 0 && tax.taxBase > 0) {
+        console.warn(`[Invoice Service] Advertencia: ${tax.taxCode} (${tax.description}) tiene base (${tax.taxBase}) pero no tiene importe. Se guardará con importe 0.`);
+      }
+
       taxRecords.push({
         invoice_id: invoiceId,
         tax_code_id: taxCodeId,
         tax_base: tax.taxBase,
-        tax_amount: tax.taxAmount,
+        tax_amount: finalTaxAmount,
       });
-      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}`);
+      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount}`);
     } else {
       console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode} (intentó mapear: ${taxCodeToMap})`);
     }

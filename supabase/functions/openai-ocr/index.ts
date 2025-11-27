@@ -285,20 +285,33 @@ REGLAS ESPECÍFICAS PARA PERCEPCIONES:
 - Para percepciones de IVA, usa el código "10"
 - Para percepciones de Ganancias, usa el código correspondiente si está disponible
 
+IMPORTANTE - EXTRACCIÓN DE IMPORTES:
+- Para CADA impuesto que identifiques, DEBES extraer TANTO la base imponible (taxBase) COMO el monto del impuesto (taxAmount)
+- Para IVA: busca la columna o línea que muestre el monto del IVA calculado. Ejemplo: si dice "Base: $10.000, Imp: $2.100", entonces taxBase=10000 y taxAmount=2100
+- Para percepciones: el taxAmount es el monto de la percepción que aparece en la factura
+- NUNCA dejes taxAmount en 0 o null si el impuesto aparece en la factura con un monto
+- Si hay una tabla de impuestos al final del documento, revisa CADA fila y extrae ambos valores (base y monto)
+
 7. Si hay múltiples alícuotas de IVA en la misma factura, crea un registro separado para cada uno
 8. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
-9. El taxAmount es el monto del impuesto calculado
+9. El taxAmount es el monto del impuesto calculado - DEBE ser mayor que 0 si el impuesto aparece en la factura
 10. El rate debe coincidir con la tasa del código seleccionado
 
 EJEMPLOS:
-Si en la factura aparece "IVA 21%" y en la lista hay código "1" con descripción "IVA 21%" y rate 21.00:
-→ taxCode: "1", description: "IVA 21%", taxBase: 10000, taxAmount: 2100, rate: 21
+Si en la factura aparece una tabla de IVA como:
+"IVA 21% | Base: $43.491,75 | Imp: $9.133,27"
+→ taxCode: "1", description: "IVA 21%", taxBase: 43491.75, taxAmount: 9133.27, rate: 21
 
-Si aparece "Percepción IVA" o "Percepción IVA 3%" y en la lista hay código "10":
-→ taxCode: "10", description: "Percepción IVA", taxBase: 0, taxAmount: 150, rate: null
+Si aparece "IVA 10.5%" con "Base: $5.681,16 | Imp: $596,52":
+→ taxCode: "2", description: "IVA 10.5%", taxBase: 5681.16, taxAmount: 596.52, rate: 10.5
 
-Si aparece "Percepción IIBB", "Percepción Ingresos Brutos", "Percep I.B.", "Percep I.B. SIRCREB" o cualquier variación de percepción de Ingresos Brutos:
-→ taxCode: "52", description: "Percepción IIBB" (o la descripción exacta que aparece en la factura), taxBase: 0, taxAmount: [monto], rate: null
+Si aparece "Percepción IVA" o "Percepción IVA 1.5%" con monto "$6.639,10":
+→ taxCode: "10", description: "Percepción IVA 1.5%", taxBase: 234751.49, taxAmount: 6639.10, rate: null
+
+Si aparece "Percepción IIBB", "Percepción Ingresos Brutos", "Percep I.B. 3%", "Percep I.B. SIRCREB" o cualquier variación de percepción de Ingresos Brutos con monto "$7.870,31":
+→ taxCode: "52", description: "Percepción I.B. 3%" (o la descripción exacta que aparece en la factura), taxBase: 262343.75, taxAmount: 7870.31, rate: null
+
+IMPORTANTE: Si un impuesto aparece en la factura, SIEMPRE debe tener un taxAmount mayor que 0. Si solo ves la base pero no el monto, calcula el monto basándote en la tasa del impuesto.
 
 Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 `;
