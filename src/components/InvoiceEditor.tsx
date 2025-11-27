@@ -3,7 +3,7 @@
 // Permite agregar conceptos, impuestos y marcar como listo para exportar.
 
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, X, Plus, Trash2, AlertCircle, CheckCircle, CheckCircle2 } from 'lucide-react';
 import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
 import { autofillInvoiceFields } from '../services/invoice-autofill-service';
 import { supabase } from '../lib/supabase';
@@ -216,6 +216,64 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
+  const handleMarkAsReadyForExport = async () => {
+    if (!invoice || !profile) return;
+
+    try {
+      setSaving(true);
+
+      const updateData: any = {
+        supplier_id: invoice.supplier_id,
+        supplier_cuit: invoice.supplier_cuit,
+        supplier_name: invoice.supplier_name,
+        invoice_type: invoice.invoice_type,
+        point_of_sale: invoice.point_of_sale,
+        invoice_number: invoice.invoice_number,
+        issue_date: invoice.issue_date,
+        accounting_date: invoice.accounting_date,
+        currency_code: invoice.currency_code,
+        exchange_rate: invoice.exchange_rate,
+        purchase_condition: invoice.purchase_condition,
+        net_taxed: invoice.net_taxed,
+        net_untaxed: invoice.net_untaxed,
+        net_exempt: invoice.net_exempt,
+        iva_amount: invoice.iva_amount,
+        other_taxes_amount: invoice.other_taxes_amount,
+        advance_payment: invoice.advance_payment,
+        discount: invoice.discount,
+        freight: invoice.freight,
+        interest: invoice.interest,
+        total_amount: invoice.total_amount,
+        is_electronic: invoice.is_electronic ?? true,
+        cai_cae: invoice.cai_cae,
+        cai_cae_expiration: invoice.cai_cae_expiration,
+        non_computable_tax_credit: invoice.non_computable_tax_credit,
+        expense_code: invoice.expense_code,
+        sector_code: invoice.sector_code,
+        classifier_code: invoice.classifier_code,
+        afip_operation_type_code: invoice.afip_operation_type_code,
+        afip_voucher_code: invoice.afip_voucher_code,
+        destination_branch_number: invoice.destination_branch_number,
+        observations: invoice.observations,
+        notes: invoice.notes,
+        status: 'READY_FOR_EXPORT', // Cambiar estado a listo para exportar
+        exported: false, // Asegurar que exported sea false
+        updated_by: profile.id,
+      };
+
+      await updateInvoice(invoice.id, updateData);
+
+      // Actualizar el estado local
+      setInvoice({ ...invoice, status: 'READY_FOR_EXPORT', exported: false });
+
+      onSave();
+    } catch (error) {
+      console.error('Error marking as ready for export:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
   };
@@ -290,6 +348,38 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
   };
 
+  // Función para recargar solo los conceptos asignados sin recargar todo
+  const reloadInvoiceConcepts = async () => {
+    if (!invoiceId) return;
+    try {
+      const { data: concepts, error } = await supabase
+        .from('invoice_concepts')
+        .select('*, tango_concepts(*)')
+        .eq('invoice_id', invoiceId);
+
+      if (error) throw error;
+      setInvoiceConcepts(concepts || []);
+    } catch (error) {
+      console.error('Error reloading invoice concepts:', error);
+    }
+  };
+
+  // Función para recargar solo los impuestos asignados sin recargar todo
+  const reloadInvoiceTaxes = async () => {
+    if (!invoiceId) return;
+    try {
+      const { data: taxes, error } = await supabase
+        .from('invoice_taxes')
+        .select('*, tax_codes(*)')
+        .eq('invoice_id', invoiceId);
+
+      if (error) throw error;
+      setInvoiceTaxes(taxes || []);
+    } catch (error) {
+      console.error('Error reloading invoice taxes:', error);
+    }
+  };
+
   const handleAddConcept = async () => {
     if (!invoice || !selectedConceptId || !conceptAmount) {
       alert('Por favor selecciona un concepto e ingresa un monto');
@@ -324,7 +414,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       setSelectedConceptId('');
       setConceptAmount('');
       setConceptError('');
-      await loadData();
+      // Solo recargar los conceptos, no todo el componente
+      await reloadInvoiceConcepts();
     } catch (error) {
       console.error('Error adding concept:', error);
       alert('Error al asignar el concepto');
@@ -334,7 +425,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const handleRemoveConcept = async (conceptId: string) => {
     try {
       await supabase.from('invoice_concepts').delete().eq('id', conceptId);
-      await loadData();
+      // Solo recargar los conceptos, no todo el componente
+      await reloadInvoiceConcepts();
     } catch (error) {
       console.error('Error removing concept:', error);
     }
@@ -421,7 +513,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       setSelectedTaxCodeId('');
       setTaxBase('');
       setTaxAmount('');
-      await loadData();
+      // Solo recargar los impuestos, no todo el componente
+      await reloadInvoiceTaxes();
     } catch (error) {
       console.error('Error adding tax:', error);
       alert('Error al asignar el impuesto');
@@ -431,7 +524,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const handleRemoveTax = async (taxId: string) => {
     try {
       await supabase.from('invoice_taxes').delete().eq('id', taxId);
-      await loadData();
+      // Solo recargar los impuestos, no todo el componente
+      await reloadInvoiceTaxes();
     } catch (error) {
       console.error('Error removing tax:', error);
     }
@@ -528,18 +622,34 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <option value="ERROR" style={{ background: '#1a1a1a' }}>Error</option>
             </select>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-              boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-            }}
-          >
-            <Save className="h-4 w-4 text-white" />
-            <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
+                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+              }}
+            >
+              <Save className="h-4 w-4 text-white" />
+              <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
+            </button>
+            <button
+              onClick={handleMarkAsReadyForExport}
+              disabled={saving || invoice.status === 'READY_FOR_EXPORT' || invoice.status === 'EXPORTED'}
+              className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8))',
+                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4 text-white" />
+              <span className="text-white font-semibold">
+                {saving ? 'Guardando...' : 'Listo para Exportar'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1484,7 +1594,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     items={concepts}
                     selectedId={selectedConceptId}
                     onSelect={(concept) => {
-                      setSelectedConceptId(concept?.id || '');
+                      if (concept) {
+                        handleConceptSelected(concept.id);
+                      } else {
+                        setSelectedConceptId('');
+                        setConceptAmount('');
+                      }
                     }}
                     getItemId={(item) => item.id}
                     getItemCode={(item) => item.tango_concept_code}
