@@ -80,7 +80,18 @@ serve(async (req) => {
       }
     }
 
-    const prompt = buildPrompt(pagesCount > 1);
+    // Obtener tax_codes activos de la base de datos
+    const { data: taxCodes, error: taxCodesError } = await supabaseClient
+      .from('tax_codes')
+      .select('code, description, rate, tax_type')
+      .eq('active', true)
+      .order('code');
+
+    if (taxCodesError) {
+      console.warn('[Supabase Edge Function] Error al obtener tax_codes:', taxCodesError);
+    }
+
+    const prompt = buildPrompt(pagesCount > 1, taxCodes || []);
 
     // Construir el contenido con todas las imágenes
     const imageContent = base64Array.map((imgBase64) => ({
@@ -203,14 +214,30 @@ serve(async (req) => {
   }
 });
 
-function buildPrompt(hasMultiplePages: boolean = false): string {
+function buildPrompt(
+  hasMultiplePages: boolean = false,
+  taxCodes: Array<{ code: string; description: string; rate: number | null; tax_type: string }> = []
+): string {
+  // Construir sección de códigos de impuestos disponibles
+  let taxCodesSection = '';
+  if (taxCodes.length > 0) {
+    taxCodesSection = `\n\nCÓDIGOS DE IMPUESTOS DISPONIBLES EN LA BASE DE DATOS:\n`;
+    taxCodes.forEach((tc) => {
+      const rateInfo = tc.rate !== null ? ` (tasa: ${tc.rate}%)` : '';
+      taxCodesSection += `- Código "${tc.code}": ${tc.description}${rateInfo} (tipo: ${tc.tax_type})\n`;
+    });
+    taxCodesSection += `\nDEBES usar EXACTAMENTE estos códigos en el campo "taxCode" del JSON.\n`;
+  }
+
   const multiplePagesWarning = hasMultiplePages 
-    ? `\n\n⚠️ IMPORTANTE: Este comprobante tiene MÚLTIPLES PÁGINAS. Debes revisar TODAS las páginas.\nLos totales, impuestos y CAE suelen estar en la ÚLTIMA PÁGINA. Revisa cuidadosamente cada página para extraer todos los datos.\n`
-    : '';
+    ? `\n\n🚨 CRÍTICO - MÚLTIPLES PÁGINAS DETECTADAS 🚨\n\nEste comprobante tiene MÚLTIPLES PÁGINAS. DEBES revisar ABSOLUTAMENTE TODAS las páginas, especialmente:\n- La ÚLTIMA PÁGINA donde suelen estar los TOTALES, IMPUESTOS y CAE\n- Las páginas intermedias donde pueden estar detalles de productos/servicios\n- La primera página donde están los datos del proveedor y receptor\n\nNO te detengas en la primera página. Revisa CADA página completa antes de extraer los datos finales.\nLos valores de netTaxed, netUntaxed, netExempt, ivaAmount, otherTaxesAmount y totalAmount están en la ÚLTIMA PÁGINA.\nLos impuestos detallados (taxes array) también están en la ÚLTIMA PÁGINA.\n`
+    : `\n\n⚠️ IMPORTANTE: Revisa TODO el documento completo. Los totales e impuestos suelen estar al final del documento.\n`;
 
   return `
 Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
+
 ${multiplePagesWarning}
+${taxCodesSection}
 Estructura esperada:
 {
   "supplierCuit": "string|null",
@@ -232,7 +259,7 @@ Estructura esperada:
   "caiCaeExpiration": "YYYY-MM-DD|null",
   "taxes": [
     { 
-      "taxCode": "IVA_21|IVA_10_5|IVA_27|IVA_5|IVA_2_5|PERC_IIBB|PERC_IVA|PERC_GANANCIAS|EXENTO|NO_GRAVADO|OTRO",
+      "taxCode": "string (debe ser uno de los códigos disponibles arriba)",
       "description": "string",
       "taxBase": "number",
       "taxAmount": "number",
@@ -244,31 +271,23 @@ Estructura esperada:
 IMPORTANTE PARA CAE: Busca el CAE (Código de Autorización Electrónica) que es un número de 14 dígitos. También busca la fecha de vencimiento del CAE.
 
 INSTRUCCIONES CRÍTICAS PARA IMPUESTOS:
-1. Identifica CADA línea de impuesto por separado en la factura
-2. Para IVA, especifica la alícuota EXACTA usando el taxCode correcto:
-   - Si dice "IVA 21%" o "21.00%" → taxCode: "IVA_21", rate: 21
-   - Si dice "IVA 10.5%" o "10.50%" → taxCode: "IVA_10_5", rate: 10.5
-   - Si dice "IVA 27%" → taxCode: "IVA_27", rate: 27
-   - Si dice "IVA 5%" → taxCode: "IVA_5", rate: 5
-   - Si dice "IVA 2.5%" → taxCode: "IVA_2_5", rate: 2.5
-3. Para percepciones y retenciones:
-   - Percepción IIBB o Ingresos Brutos → taxCode: "PERC_IIBB"
-   - Percepción IVA → taxCode: "PERC_IVA"
-   - Percepción Ganancias → taxCode: "PERC_GANANCIAS"
-4. Para otros impuestos:
-   - Exento → taxCode: "EXENTO"
-   - No Gravado → taxCode: "NO_GRAVADO"
-   - Cualquier otro impuesto no identificado → taxCode: "OTRO"
-5. Si hay múltiples alícuotas de IVA en la misma factura (ej: productos con 21% y 10.5%), crea un registro separado para cada uno
-6. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
-7. El taxAmount es el monto del impuesto calculado
+1. Revisa TODAS las páginas del documento si hay múltiples
+2. Los totales e impuestos suelen estar al final del documento
+3. Busca el CAE en todas las páginas
+4. Identifica CADA línea de impuesto por separado en la factura
+5. Compara la descripción del impuesto en la factura con la lista de códigos disponibles arriba
+6. Usa EXACTAMENTE el código (campo "code") que corresponda según la descripción y tasa
+7. Si hay múltiples alícuotas de IVA en la misma factura, crea un registro separado para cada uno
+8. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
+9. El taxAmount es el monto del impuesto calculado
+10. El rate debe coincidir con la tasa del código seleccionado
 
-EJEMPLO de factura con IVA mixto:
-"taxes": [
-  { "taxCode": "IVA_21", "description": "IVA 21%", "taxBase": 10000, "taxAmount": 2100, "rate": 21 },
-  { "taxCode": "IVA_10_5", "description": "IVA 10.5%", "taxBase": 5000, "taxAmount": 525, "rate": 10.5 },
-  { "taxCode": "PERC_IIBB", "description": "Percepción IIBB", "taxBase": 0, "taxAmount": 150, "rate": null }
-]
+EJEMPLO:
+Si en la factura aparece "IVA 21%" y en la lista hay código "1" con descripción "IVA 21%" y rate 21.00:
+→ taxCode: "1", description: "IVA 21%", taxBase: 10000, taxAmount: 2100, rate: 21
+
+Si aparece "Percepción IVA" y en la lista hay código "10":
+→ taxCode: "10", description: "Percepción IVA", taxBase: 0, taxAmount: 150, rate: null
 
 Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 `;
