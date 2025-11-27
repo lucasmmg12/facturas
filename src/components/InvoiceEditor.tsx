@@ -98,9 +98,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
       if (invoiceData) {
         // Asegurar que is_electronic sea true por defecto
+        // Asegurar que purchase_condition sea "1" por defecto
         let invoiceWithDefaults = {
           ...invoiceData.invoice,
           is_electronic: invoiceData.invoice.is_electronic ?? true,
+          purchase_condition: invoiceData.invoice.purchase_condition || '1',
         };
 
         // AUTOCOMPLETAR CAMPOS si la factura no está lista para exportar
@@ -708,7 +710,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   <input
                     type="date"
                     value={invoice.issue_date}
-                    onChange={(e) => setInvoice({ ...invoice, issue_date: e.target.value })}
+                    onChange={(e) => {
+                      const newIssueDate = e.target.value;
+                      setInvoice({ 
+                        ...invoice, 
+                        issue_date: newIssueDate,
+                        // Actualizar automáticamente la fecha contable cuando cambia la fecha de emisión
+                        accounting_date: newIssueDate || invoice.accounting_date
+                      });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -723,7 +733,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <input
                     type="date"
-                    value={invoice.accounting_date || ''}
+                    value={invoice.accounting_date || invoice.issue_date || ''}
                     onChange={(e) => setInvoice({ ...invoice, accounting_date: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
@@ -777,7 +787,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <SearchableSelect
                     items={PURCHASE_CONDITIONS}
-                    selectedId={invoice.purchase_condition || null}
+                    selectedId={invoice.purchase_condition || '1'}
                     onSelect={(condition) => {
                       setInvoice({
                         ...invoice,
@@ -788,6 +798,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     getItemCode={(item) => item.code}
                     getItemDescription={(item) => item.description}
                     placeholder="Seleccionar condición de compra..."
+                    showCodeOnly={true}
                   />
                   <p className="mt-1 text-xs text-green-400">
                     1 = Cuenta Corriente (predeterminado) | 2 = Contado

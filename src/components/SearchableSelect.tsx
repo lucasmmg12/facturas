@@ -11,6 +11,7 @@ interface SearchableSelectProps<T> {
     placeholder?: string;
     disabled?: boolean;
     label?: string;
+    showCodeOnly?: boolean; // Si es true, solo muestra el código sin la descripción
 }
 
 export function SearchableSelect<T>({
@@ -22,6 +23,7 @@ export function SearchableSelect<T>({
     getItemDescription,
     placeholder = 'Buscar...',
     disabled = false,
+    showCodeOnly = false,
 }: SearchableSelectProps<T>) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -140,6 +142,9 @@ export function SearchableSelect<T>({
         if (isOpen) return searchTerm;
         if (selectedItem) {
             const code = getItemCode(selectedItem);
+            if (showCodeOnly) {
+                return code;
+            }
             const description = getItemDescription(selectedItem);
             return `${code} - ${description}`;
         }
