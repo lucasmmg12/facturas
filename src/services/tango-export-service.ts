@@ -281,19 +281,23 @@ export async function generateTangoExport(userId: string): Promise<{
 // Helpers
 
 function mapInvoiceTypeToTango(invoiceType: string): string {
-  const mapping: Record<string, string> = {
-    FACTURA_A: 'FA',
-    FACTURA_B: 'FB',
-    FACTURA_C: 'FC',
-    FACTURA_M: 'FM',
-    NOTA_CREDITO_A: 'NCA',
-    NOTA_CREDITO_B: 'NCB',
-    NOTA_CREDITO_C: 'NCC',
-    NOTA_DEBITO_A: 'NDA',
-    NOTA_DEBITO_B: 'NDB',
-    NOTA_DEBITO_C: 'NDC',
-  };
-  return mapping[invoiceType] || invoiceType;
+  // Todas las facturas (A, B, C, M) → "FAC"
+  if (invoiceType.startsWith('FACTURA')) {
+    return 'FAC';
+  }
+  
+  // Todas las notas de crédito (A, B, C) → "N/C"
+  if (invoiceType.startsWith('NOTA_CREDITO')) {
+    return 'N/C';
+  }
+  
+  // Todas las notas de débito (A, B, C) → "N/D"
+  if (invoiceType.startsWith('NOTA_DEBITO')) {
+    return 'N/D';
+  }
+  
+  // Fallback por si hay algún tipo no contemplado
+  return invoiceType;
 }
 
 function mapInvoiceTypeToAfipCode(invoiceType: string): string {
