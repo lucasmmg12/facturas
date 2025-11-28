@@ -144,7 +144,20 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     totalAmount: normalizeNumber(parsed.totalAmount),
   };
 
+  // Log de los impuestos RAW antes de normalizar para debugging
+  console.log('[OpenAI OCR] Impuestos RAW de OpenAI:', JSON.stringify(parsed.taxes, null, 2));
+  
   const taxes = normalizeTaxes(parsed.taxes);
+  
+  // Log de los impuestos después de normalizar
+  console.log('[OpenAI OCR] Impuestos normalizados:', taxes.map(t => ({
+    taxCode: t.taxCode,
+    description: t.description,
+    taxBase: t.taxBase,
+    taxAmount: t.taxAmount,
+    rate: t.rate
+  })));
+  
   const caiCae = normalizeString(parsed.caiCae ?? parsed.cae ?? parsed.cai);
   const caiCaeExpiration = normalizeString(parsed.caiCaeExpiration ?? parsed.caeExpiration ?? parsed.caiExpiration);
 
