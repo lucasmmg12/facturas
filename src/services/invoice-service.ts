@@ -258,9 +258,15 @@ export async function createInvoiceTaxesFromOCR(
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {
-      // SIEMPRE usar el taxAmount que viene de OpenAI/OCR, NO calcularlo
-      // El valor en la factura es el correcto, incluso si difiere del cálculo teórico
-      const finalTaxAmount = tax.taxAmount;
+      // Para IVA 21% (código 1) e IVA 10.5% (código 2), usar taxBase como taxAmount
+      // Para los demás impuestos, usar el taxAmount que viene de OpenAI/OCR
+      let finalTaxAmount = tax.taxAmount;
+      
+      if (taxCodeToMap === '1' || taxCodeToMap === '2') {
+        // IVA 21% o IVA 10.5%: usar taxBase como taxAmount
+        finalTaxAmount = tax.taxBase;
+        console.log(`[Invoice Service] IVA ${taxCodeToMap === '1' ? '21%' : '10.5%'}: usando taxBase como taxAmount (${tax.taxBase})`);
+      }
       
       // Solo registrar warning si no hay importe pero hay base (para debugging)
       if (finalTaxAmount === 0 && tax.taxBase > 0) {
@@ -271,9 +277,9 @@ export async function createInvoiceTaxesFromOCR(
         invoice_id: invoiceId,
         tax_code_id: taxCodeId,
         tax_base: tax.taxBase,
-        tax_amount: finalTaxAmount, // Usar el valor exacto de la factura
+        tax_amount: finalTaxAmount,
       });
-      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount} (valor de factura)`);
+      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount}`);
     } else {
       console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode} (intentó mapear: ${taxCodeToMap})`);
     }
