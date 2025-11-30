@@ -155,14 +155,23 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           }
         }
 
-        if (!ocrResult.supplierCuit || !ocrResult.invoiceType || !ocrResult.invoiceNumber) {
-          console.error('[Upload] Datos insuficientes extraídos:', {
+        // Verificar datos mínimos, pero continuar aunque falten algunos
+        // El usuario podrá completarlos manualmente después
+        const missingCriticalData: string[] = [];
+        if (!ocrResult.supplierCuit) missingCriticalData.push('CUIT del proveedor');
+        if (!ocrResult.invoiceType) missingCriticalData.push('Tipo de comprobante');
+        if (!ocrResult.invoiceNumber) missingCriticalData.push('Número de factura');
+        
+        if (missingCriticalData.length > 0) {
+          console.warn('[Upload] Algunos datos críticos no se pudieron extraer:', {
+            missing: missingCriticalData,
             supplierCuit: ocrResult.supplierCuit,
             invoiceType: ocrResult.invoiceType,
             invoiceNumber: ocrResult.invoiceNumber,
             ocrMethod,
           });
-          throw new Error(`No se pudo extraer información suficiente del comprobante (método: ${ocrMethod})`);
+          // No lanzar error, continuar con el procesamiento
+          // El usuario completará los datos faltantes manualmente
         }
 
         // VALIDACIONES Y ADVERTENCIAS - Mostrar durante el procesamiento
@@ -172,16 +181,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           warnings: [] as string[],
         };
 
-        // 1. Advertencia CRÍTICA sobre PDFs con múltiples facturas
+        // 1. Advertencia sobre PDFs con múltiples páginas (solo si tiene más de 1 página)
         if (file.type === 'application/pdf') {
           const pagesCount = ocrResult.pagesCount || 1;
           if (pagesCount > 1) {
             validations.warnings.push(
-              `⚠️ ADVERTENCIA CRÍTICA: El PDF tiene ${pagesCount} página(s). El sistema analiza 1 sola factura por proceso. Si el PDF contiene más de 1 factura, el sistema NO funcionará correctamente. Por favor, separa las facturas en archivos individuales (1 factura por archivo).`
-            );
-          } else {
-            validations.warnings.push(
-              'ℹ️ RECORDATORIO: El sistema procesa 1 factura por archivo. Si necesitas procesar múltiples facturas, carga cada una en un archivo separado.'
+              `⚠️ ADVERTENCIA: El PDF tiene ${pagesCount} página(s). Verifica que contenga solo 1 factura. Si contiene más de 1 factura, el sistema NO funcionará correctamente.`
             );
           }
         }
@@ -202,12 +207,10 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         if (ocrResult.supplierCuit) {
           const cleanCuit = ocrResult.supplierCuit.replace(/[-\s]/g, '');
           if (!validateCUIT(cleanCuit)) {
-            validations.errors.push(`❌ CUIT del proveedor inválido: ${ocrResult.supplierCuit}. Por favor, verifica que el CUIT sea correcto.`);
-            validations.isValid = false;
+            validations.warnings.push(`⚠️ CUIT del proveedor inválido: ${ocrResult.supplierCuit}. Por favor, verifica y corrige el CUIT manualmente.`);
           }
         } else {
-          validations.errors.push('❌ No se pudo detectar el CUIT del proveedor. Por favor, verifica que el comprobante sea legible.');
-          validations.isValid = false;
+          validations.warnings.push('⚠️ No se pudo detectar el CUIT del proveedor. Deberás ingresarlo manualmente.');
         }
 
         // 3. Validar totales y consistencia de montos
@@ -220,14 +223,13 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           totalAmount: ocrResult.totalAmount,
         });
         if (!totalsValidation.valid) {
-          validations.errors.push(...totalsValidation.errors.map(e => `❌ ${e}`));
-          validations.isValid = false;
+          // Convertir errores en advertencias para permitir continuar
+          validations.warnings.push(...totalsValidation.errors.map(e => `⚠️ ${e} - Verifica y corrige manualmente si es necesario.`));
         }
 
         // 4. Validar valores razonables
         if (ocrResult.totalAmount <= 0) {
-          validations.errors.push('❌ El total de la factura debe ser mayor a 0. Verifica que los montos se hayan extraído correctamente.');
-          validations.isValid = false;
+          validations.warnings.push('⚠️ El total de la factura es 0 o negativo. Verifica que los montos se hayan extraído correctamente o ingrésalos manualmente.');
         }
 
         if (ocrResult.netTaxed < 0 || ocrResult.ivaAmount < 0) {
@@ -264,21 +266,24 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           );
         }
 
-        // 7. Validar datos críticos faltantes
+        // 7. Validar datos críticos faltantes (convertir a advertencias para permitir continuar)
         if (!ocrResult.invoiceNumber) {
-          validations.errors.push('❌ No se pudo detectar el número de factura. Verifica que el comprobante sea legible.');
-          validations.isValid = false;
+          validations.warnings.push('⚠️ No se pudo detectar el número de factura. Deberás ingresarlo manualmente.');
         }
         if (!ocrResult.invoiceType) {
-          validations.errors.push('❌ No se pudo detectar el tipo de comprobante. Verifica que el comprobante sea legible.');
-          validations.isValid = false;
+          validations.warnings.push('⚠️ No se pudo detectar el tipo de comprobante. Deberás seleccionarlo manualmente.');
         }
         if (!ocrResult.issueDate) {
-          validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Verifica que la fecha sea legible en el comprobante.');
+          validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Deberás ingresarla manualmente.');
+        }
+        if (!ocrResult.supplierName) {
+          validations.warnings.push('⚠️ No se pudo detectar el nombre del proveedor. Deberás ingresarlo manualmente.');
         }
 
-        // 8. Mensaje de soporte (SIEMPRE visible)
-        validations.warnings.push('📧 Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
+        // 8. Mensaje de soporte solo si hay problemas
+        if (validations.errors.length > 0 || validations.warnings.length > 0) {
+          validations.warnings.push('📧 Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
+        }
 
         // Actualizar validaciones completas antes de verificar duplicados
         newResults[i] = {
@@ -292,12 +297,19 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
-        const duplicate = await checkDuplicateInvoice(
-          ocrResult.supplierCuit,
-          ocrResult.invoiceType,
-          ocrResult.pointOfSale || '00000',
-          ocrResult.invoiceNumber
-        );
+        // Solo verificar duplicados si tenemos los datos mínimos necesarios
+        let duplicate = false;
+        if (ocrResult.supplierCuit && ocrResult.invoiceType && ocrResult.invoiceNumber) {
+          duplicate = await checkDuplicateInvoice(
+            ocrResult.supplierCuit,
+            ocrResult.invoiceType,
+            ocrResult.pointOfSale || '00000',
+            ocrResult.invoiceNumber
+          );
+        } else {
+          console.log('[Upload] No se puede verificar duplicados: faltan datos críticos');
+          validations.warnings.push('⚠️ No se pudo verificar duplicados porque faltan datos. Verifica manualmente si esta factura ya existe.');
+        }
 
         if (duplicate) {
           newResults[i] = {
@@ -315,20 +327,25 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
+        // Crear factura con valores por defecto para datos faltantes
+        // El usuario podrá completarlos después en el editor
         const invoice = await createInvoice({
-          supplier_cuit: ocrResult.supplierCuit,
-          supplier_name: ocrResult.supplierName || 'Sin nombre',
-          invoice_type: ocrResult.invoiceType,
-          point_of_sale: ocrResult.pointOfSale || '00000',
-          invoice_number: ocrResult.invoiceNumber,
-          issue_date: ocrResult.issueDate || new Date().toISOString().split('T')[0],
-          net_taxed: ocrResult.netTaxed,
-          net_untaxed: ocrResult.netUntaxed,
-          net_exempt: ocrResult.netExempt,
-          iva_amount: ocrResult.ivaAmount,
-          other_taxes_amount: ocrResult.otherTaxesAmount,
-          total_amount: ocrResult.totalAmount,
-          status: ocrResult.confidence >= 0.7 ? 'PROCESSED' : 'PENDING_REVIEW',
+          supplier_cuit: ocrResult.supplierCuit || null,
+          supplier_name: ocrResult.supplierName || null,
+          invoice_type: ocrResult.invoiceType || null,
+          point_of_sale: ocrResult.pointOfSale || null,
+          invoice_number: ocrResult.invoiceNumber || null,
+          issue_date: ocrResult.issueDate || null,
+          net_taxed: ocrResult.netTaxed || 0,
+          net_untaxed: ocrResult.netUntaxed || 0,
+          net_exempt: ocrResult.netExempt || 0,
+          iva_amount: ocrResult.ivaAmount || 0,
+          other_taxes_amount: ocrResult.otherTaxesAmount || 0,
+          total_amount: ocrResult.totalAmount || 0,
+          // Si faltan datos críticos, marcar como PENDING_REVIEW para que el usuario los complete
+          status: (ocrResult.confidence >= 0.7 && ocrResult.supplierCuit && ocrResult.invoiceType && ocrResult.invoiceNumber) 
+            ? 'PROCESSED' 
+            : 'PENDING_REVIEW',
           ocr_confidence: ocrResult.confidence,
           created_by: profile.id,
           is_electronic: true,
@@ -347,12 +364,24 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           }
         }
 
+        // Determinar el estado final: success si se creó la factura, aunque tenga advertencias
+        const hasCriticalErrors = validations.errors.length > 0;
+        const hasWarnings = validations.warnings.length > 0;
+        const hasMissingData = !ocrResult.supplierCuit || !ocrResult.invoiceType || !ocrResult.invoiceNumber;
+        
+        let finalMessage = `Comprobante procesado con ${ocrMethod}`;
+        if (hasMissingData) {
+          finalMessage += '. ⚠️ La factura se creó pero faltan datos críticos que deberás completar manualmente antes de exportar.';
+        } else if (hasWarnings) {
+          finalMessage += '. ✅ La factura se creó exitosamente. Revisa las advertencias antes de continuar.';
+        } else {
+          finalMessage += ' exitosamente. ✅ La factura está lista para revisar.';
+        }
+        
         newResults[i] = {
           ...newResults[i],
-          status: validations.isValid ? 'success' : 'error',
-          message: validations.isValid 
-            ? `Comprobante procesado exitosamente con ${ocrMethod}`
-            : `Comprobante procesado con errores de validación (método: ${ocrMethod})`,
+          status: hasCriticalErrors ? 'error' : 'success',
+          message: finalMessage,
           invoiceId: invoice.id,
           validations,
         };
@@ -384,8 +413,36 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <FileUploader onFilesSelected={handleFilesSelected} disabled={uploading} />
+        
+        {/* Reglas e información importante */}
+        <div className="mt-4 border-t pt-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Reglas importantes antes de cargar
+            </h3>
+            <ul className="space-y-2 text-xs text-blue-800">
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>1 factura por archivo:</strong> El sistema analiza 1 sola factura por proceso. Si el PDF contiene más de 1 factura, el sistema NO funcionará correctamente. Por favor, separa las facturas en archivos individuales (1 factura por archivo).</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Datos faltantes:</strong> Si el sistema no puede extraer algún dato del comprobante, la factura se creará igualmente y podrás completar los datos faltantes manualmente después.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Revisa los valores:</strong> Siempre verifica los valores detectados antes de continuar. El sistema puede tener errores en la extracción de datos.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Soporte:</strong> Si tienes dudas o problemas, contacta a soporte: <a href="mailto:lucas@growsanjuan.com" className="underline font-medium">lucas@growsanjuan.com</a></span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       {results.length > 0 && (
