@@ -158,13 +158,98 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     totalAmount: normalizeNumber(parsed.totalAmount),
   };
 
-  // Log de los impuestos RAW antes de normalizar para debugging
-  console.log('[OpenAI OCR] Impuestos RAW de OpenAI:', JSON.stringify(parsed.taxes, null, 2));
+  // NO usar los impuestos RAW de OpenAI porque están generando problemas
+  // En su lugar, construir los impuestos desde el ivaAmount total
+  console.log('[OpenAI OCR] Ignorando impuestos RAW de OpenAI (pueden tener taxBase incorrecto)');
+  console.log('[OpenAI OCR] Construyendo impuestos desde ivaAmount total:', amounts.ivaAmount);
   
-  const taxes = normalizeTaxes(parsed.taxes, amounts, supplierCuit, { rawText: outputText, ...parsed });
+  const taxes: ParsedTaxes = [];
   
-  // Log de los impuestos después de normalizar
-  console.log('[OpenAI OCR] Impuestos normalizados:', taxes.map(t => ({
+  // Si hay IVA, crear impuesto IVA 21% usando el ivaAmount total
+  if (amounts.ivaAmount > 0) {
+    // Calcular taxBase desde taxAmount: taxBase = taxAmount / 0.21
+    const taxBase = amounts.ivaAmount / 0.21;
+    
+    taxes.push({
+      taxCode: '1', // IVA 21%
+      description: 'IVA 21%',
+      taxBase: taxBase,
+      taxAmount: amounts.ivaAmount,
+      rate: 21,
+    });
+    
+    console.log('[OpenAI OCR] ✅ Impuesto IVA 21% creado desde ivaAmount:', {
+      taxCode: '1',
+      taxBase: taxBase,
+      taxAmount: amounts.ivaAmount,
+      rate: 21,
+      formula: `taxBase = ${amounts.ivaAmount} / 0.21 = ${taxBase}`
+    });
+  }
+  
+  // Para NATURGY, aplicar lógica especial si es necesario
+  const NATURGY_CUIT = '30681688540';
+  const cleanSupplierCuit = supplierCuit ? supplierCuit.replace(/[-\s]/g, '') : '';
+  const isNaturgy = cleanSupplierCuit === NATURGY_CUIT;
+  
+  if (isNaturgy && amounts.ivaAmount > 0) {
+    // Para NATURGY, el IVA 27% se calcula como: (Total Energía + Ingresos Brutos) * 0.27
+    console.log('[OpenAI OCR] 🔵 Detectado proveedor NATURGY - Aplicando cálculo especial para IVA 27%');
+    
+    let totalEnergia = 0;
+    let ingresosBrutos = 0;
+
+    // Buscar "Total Energía" en el texto raw
+    const totalEnergiaMatch = outputText.match(/Total Energ[íi]a[:\s]+\$?\s*([\d.,]+)/i);
+    if (totalEnergiaMatch) {
+      totalEnergia = normalizeNumber(totalEnergiaMatch[1]);
+      console.log('[OpenAI OCR] NATURGY - Total Energía encontrado:', totalEnergia);
+    }
+
+    // Buscar "Ingresos Brutos" en los impuestos RAW (solo para obtener el monto)
+    if (Array.isArray(parsed.taxes)) {
+      const ingresosBrutosTax = parsed.taxes.find((t: any) => {
+        const desc = (t.description || '').toLowerCase();
+        return desc.includes('ingresos brutos') && 
+               !desc.includes('percepción') && 
+               !desc.includes('percepcion');
+      });
+      if (ingresosBrutosTax) {
+        ingresosBrutos = normalizeNumber(ingresosBrutosTax.taxAmount || ingresosBrutosTax.taxBase || 0);
+        console.log('[OpenAI OCR] NATURGY - Ingresos Brutos encontrado:', ingresosBrutos);
+      }
+    }
+
+    // Si no encontramos "Total Energía", usar netTaxed como aproximación
+    if (totalEnergia === 0) {
+      totalEnergia = amounts.netTaxed;
+      console.warn('[OpenAI OCR] NATURGY - No se encontró "Total Energía", usando netTaxed:', totalEnergia);
+    }
+
+    // Calcular taxBase y taxAmount según la fórmula especial de NATURGY
+    const naturgyTaxBase = totalEnergia + ingresosBrutos;
+    const naturgyTaxAmount = naturgyTaxBase * 0.27;
+
+    // Reemplazar el IVA 21% con IVA 27% de NATURGY
+    taxes[0] = {
+      taxCode: '100222', // Código especial para NATURGY
+      description: 'IVA 27% Responsable Inscripto',
+      taxBase: naturgyTaxBase,
+      taxAmount: naturgyTaxAmount,
+      rate: 27,
+    };
+
+    console.log('[OpenAI OCR] ✅ NATURGY - IVA 27% calculado:', {
+      totalEnergia,
+      ingresosBrutos,
+      taxBase: naturgyTaxBase,
+      taxAmount: naturgyTaxAmount,
+      formula: `(${totalEnergia} + ${ingresosBrutos}) * 0.27 = ${naturgyTaxAmount}`
+    });
+  }
+  
+  // Log de los impuestos finales
+  console.log('[OpenAI OCR] Impuestos finales construidos:', taxes.map(t => ({
     taxCode: t.taxCode,
     description: t.description,
     taxBase: t.taxBase,
