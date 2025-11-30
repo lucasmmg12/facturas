@@ -12,6 +12,7 @@ import { convertImageToPDF, isImageFile } from '../utils/file-converter';
 import { recordTokenUsage, getEstimatedRemainingBalance, setInitialBalance, getInitialBalance } from '../utils/openai-balance';
 import { validateInvoiceTotals } from '../utils/validators';
 import { validateCUIT } from '../utils/validators';
+import type { InvoiceType } from '../lib/database.types';
 
 interface UploadResult {
   filename: string;
@@ -271,7 +272,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           validations.warnings.push('⚠️ No se pudo detectar el número de factura. Se usará un valor temporal. DEBES ingresarlo manualmente antes de exportar.');
         }
         if (!ocrResult.invoiceType) {
-          validations.warnings.push('⚠️ No se pudo detectar el tipo de comprobante. Se usará "001" (Factura A) como temporal. DEBES seleccionarlo manualmente antes de exportar.');
+          validations.warnings.push('⚠️ No se pudo detectar el tipo de comprobante. Se usará "FACTURA_A" como temporal. DEBES seleccionarlo manualmente antes de exportar.');
         }
         if (!ocrResult.issueDate) {
           validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Se usará la fecha actual como temporal. Debes corregirla manualmente.');
@@ -338,7 +339,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         const invoice = await createInvoice({
           supplier_cuit: ocrResult.supplierCuit || '00000000000', // Valor temporal, usuario debe corregir
           supplier_name: ocrResult.supplierName || 'PROVEEDOR SIN NOMBRE - COMPLETAR', // Valor temporal
-          invoice_type: ocrResult.invoiceType || '001', // Valor temporal (001 = Factura A), usuario debe corregir
+          invoice_type: (ocrResult.invoiceType || 'FACTURA_A') as InvoiceType, // Valor temporal (FACTURA_A = enum válido), usuario debe corregir
           point_of_sale: ocrResult.pointOfSale || '00000', // Valor temporal
           invoice_number: ocrResult.invoiceNumber || '00000000', // Valor temporal, usuario debe corregir
           issue_date: ocrResult.issueDate || today, // Usar fecha actual como temporal
