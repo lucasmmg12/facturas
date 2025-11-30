@@ -9,14 +9,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
+  const colorClasses = getStatusColor(status);
+  
   return (
     <span 
-      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-      style={{
-        background: 'rgba(34, 197, 94, 0.2)',
-        color: '#86efac',
-        border: '1px solid rgba(34, 197, 94, 0.4)',
-      }}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${colorClasses}`}
     >
       {getStatusLabel(status)}
     </span>
