@@ -464,41 +464,141 @@ REGLAS ESPECÍFICAS PARA PERCEPCIONES:
 
 IMPORTANTE - EXTRACCIÓN DE IMPORTES (CRÍTICO):
 
-DEFINICIÓN CRÍTICA DE taxBase (BASE IMPONIBLE):
-- La base imponible (taxBase) es el monto ESPECÍFICO sobre el cual se calculó ESE impuesto en particular
-- NO es el "Neto Gravado" total de la factura
-- NO es el "Subtotal" de la factura
-- NO es el "Importe Neto Gravado" general
-- Para IVA: busca en la TABLA DE IVA la columna "Base" o "Base Imponible" que corresponde ESPECÍFICAMENTE a esa alícuota de IVA
-- Ejemplo: Si hay IVA 21% e IVA 10.5%, cada uno tiene su propia base imponible en la tabla de IVA
-- La base imponible de IVA 21% NO es el netTaxed total, sino la base específica de IVA 21% que aparece en la tabla de impuestos
-- Para percepciones: la base imponible es el monto sobre el cual se calculó la percepción (puede ser el subtotal o un monto específico)
-- Extrae taxBase EXACTAMENTE como aparece en la tabla de impuestos de la factura
+═══════════════════════════════════════════════════════════════════════════════
+SECCIÓN 1: CÓMO EXTRAER taxBase (BASE IMPONIBLE) CORRECTAMENTE
+═══════════════════════════════════════════════════════════════════════════════
 
-DEFINICIÓN DE taxAmount (MONTO DEL IMPUESTO) - REGLA FUNDAMENTAL:
-- taxAmount SIEMPRE se calcula como: taxAmount = taxBase * (rate / 100)
-- Para IVA 21%: taxAmount = taxBase * 0.21
-- Para IVA 10.5%: taxAmount = taxBase * 0.105
-- Para IVA 27%: taxAmount = taxBase * 0.27
-- NUNCA uses el "Neto Gravado" total o el "Subtotal" como taxAmount
-- NUNCA uses el valor del campo "ivaAmount" total de la factura como taxAmount de un impuesto individual
-- SIEMPRE calcula taxAmount multiplicando taxBase por la tasa correspondiente
-- Si la tasa (rate) es null o desconocida, entonces puedes usar el valor que aparece en la factura, pero esto es excepcional
+PROCESO OBLIGATORIO PARA EXTRAER taxBase DE IVA:
 
-7. Si hay múltiples alícuotas de IVA en la misma factura, crea un registro separado para cada uno
-8. La base imponible (taxBase) es el monto sobre el cual se calculó el impuesto
-9. El taxAmount es el monto del impuesto calculado - DEBE ser mayor que 0 si el impuesto aparece en la factura
-10. El rate debe coincidir con la tasa del código seleccionado
+1. LOCALIZA LA TABLA DE IVA EN LA FACTURA:
+   - Busca al final del documento (después de productos/servicios, antes de totales)
+   - La tabla puede tener formato de tabla o líneas de texto
+   - Busca encabezados como: "Alicuota", "Base Imponible", "Base", "Importe", "Impuesto"
 
-EJEMPLOS:
-Si en la factura aparece una tabla de IVA como:
-"IVA 21% | Base: $43.491,75 | Imp: $9.133,27"
-→ taxCode: "1", description: "IVA 21%", taxBase: 43491.75, taxAmount: 43491.75 * 0.21 = 9133.27, rate: 21
-NOTA: Aunque en la factura aparezca "Imp: $9.133,27", debes calcular taxAmount = 43491.75 * 0.21 para asegurar la consistencia
+2. IDENTIFICA CADA FILA DE LA TABLA:
+   - Cada alícuota de IVA tiene su PROPIA FILA independiente
+   - Ejemplo de estructura:
+     ┌──────────┬──────────────────┬──────────────┐
+     │ Alicuota │ Base Imponible   │ Importe      │
+     ├──────────┼──────────────────┼──────────────┤
+     │ 21%      │ $43.491,75       │ $9.133,27    │  ← FILA 1
+     │ 10.5%    │ $5.681,16        │ $596,52      │  ← FILA 2
+     └──────────┴──────────────────┴──────────────┘
 
-Si aparece "IVA 10.5%" con "Base: $5.681,16 | Imp: $596,52":
-→ taxCode: "2", description: "IVA 10.5%", taxBase: 5681.16, taxAmount: 5681.16 * 0.105 = 596.52, rate: 10.5
-NOTA: Calcula taxAmount = 5681.16 * 0.105, no uses directamente el valor "Imp: $596,52" de la factura
+3. PARA IVA 21% (taxCode "1"):
+   a) Busca la FILA que contiene "21%" o "21,00%" o "IVA 21%" en la columna de alícuota
+   b) Lee el valor de la columna "Base Imponible" o "Base" de ESA FILA ESPECÍFICA
+   c) Ese valor es el taxBase para IVA 21%
+   d) EJEMPLO: Si la fila dice "21% | Base: $43.491,75", entonces taxBase = 43491.75
+   e) ❌ NO uses el total "Neto Gravado" ($49.172,91 en el ejemplo)
+   f) ❌ NO uses la suma de todas las bases
+   g) ✅ USA SOLO el valor de la columna "Base" de la fila de 21%
+
+4. PARA IVA 10.5% (taxCode "2"):
+   a) Busca la FILA que contiene "10.5%" o "10,50%" o "IVA 10.5%" en la columna de alícuota
+   b) Lee el valor de la columna "Base Imponible" o "Base" de ESA FILA ESPECÍFICA
+   c) Ese valor es el taxBase para IVA 10.5%
+   d) EJEMPLO: Si la fila dice "10.5% | Base: $5.681,16", entonces taxBase = 5681.16
+   e) ❌ NO uses el total "Neto Gravado"
+   f) ❌ NO uses el mismo valor que usaste para IVA 21%
+   g) ✅ USA SOLO el valor de la columna "Base" de la fila de 10.5%
+
+5. VALIDACIÓN POST-EXTRACCIÓN:
+   - Si hay múltiples alícuotas, la SUMA de todos los taxBase debe ser ≈ netTaxed
+   - Pero cada taxBase individual debe ser diferente (a menos que sea el único IVA)
+   - Si todos los taxBase son iguales al netTaxed, ESTÁS EXTRAYENDO MAL
+
+═══════════════════════════════════════════════════════════════════════════════
+SECCIÓN 2: CÓMO CALCULAR taxAmount (MONTO DEL IMPUESTO)
+═══════════════════════════════════════════════════════════════════════════════
+
+REGLA ABSOLUTA: taxAmount = taxBase * (rate / 100)
+
+PARA IVA CON TASA CONOCIDA:
+- IVA 21% (taxCode "1"): taxAmount = taxBase * 0.21
+- IVA 10.5% (taxCode "2"): taxAmount = taxBase * 0.105
+- IVA 27%: taxAmount = taxBase * 0.27
+- IVA 5%: taxAmount = taxBase * 0.05
+- IVA 2.5%: taxAmount = taxBase * 0.025
+
+EJEMPLO PRÁCTICO:
+- Si taxBase = 43491.75 y rate = 21
+- Entonces taxAmount = 43491.75 * 0.21 = 9133.2675 ≈ 9133.27
+- ❌ NO uses el valor "Imp: $9.133,27" que aparece en la factura
+- ✅ SIEMPRE calcula: taxAmount = taxBase * (rate / 100)
+
+PARA PERCEPCIONES (rate = null):
+- Si no hay tasa, usa el valor que aparece explícitamente en la factura
+- taxBase puede ser el subtotal o un monto específico según la factura
+
+═══════════════════════════════════════════════════════════════════════════════
+SECCIÓN 3: EJEMPLOS COMPLETOS PASO A PASO
+═══════════════════════════════════════════════════════════════════════════════
+
+EJEMPLO 1 - FACTURA CON MÚLTIPLES ALÍCUOTAS DE IVA:
+
+Factura muestra:
+- Neto Gravado: $49.172,91
+- Tabla de IVA:
+  ┌──────────┬──────────────────┬──────────────┐
+  │ 21%      │ $43.491,75       │ $9.133,27    │
+  │ 10.5%    │ $5.681,16        │ $596,52      │
+  └──────────┴──────────────────┴──────────────┘
+
+RESPUESTA CORRECTA:
+{
+  "taxes": [
+    {
+      "taxCode": "1",
+      "description": "IVA 21%",
+      "taxBase": 43491.75,        ← De la fila de 21%
+      "taxAmount": 9133.27,       ← Calculado: 43491.75 * 0.21
+      "rate": 21
+    },
+    {
+      "taxCode": "2",
+      "description": "IVA 10.5%",
+      "taxBase": 5681.16,         ← De la fila de 10.5%
+      "taxAmount": 596.52,        ← Calculado: 5681.16 * 0.105
+      "rate": 10.5
+    }
+  ]
+}
+
+RESPUESTA INCORRECTA (NO HAGAS ESTO):
+{
+  "taxes": [
+    {
+      "taxCode": "1",
+      "taxBase": 49172.91,        ← ❌ ERROR: Usó el netTaxed total
+      "taxAmount": 10326.31,      ← ❌ ERROR: Calculado desde base incorrecta
+    }
+  ]
+}
+
+EJEMPLO 2 - FACTURA CON UNA SOLA ALÍCUOTA DE IVA:
+
+Factura muestra:
+- Neto Gravado: $42.060.284,43
+- Tabla de IVA:
+  ┌──────────┬──────────────────────┬──────────────┐
+  │ 21%      │ $42.060.284,43       │ $8.832.659,73│
+  └──────────┴──────────────────────┴──────────────┘
+
+RESPUESTA CORRECTA:
+{
+  "taxes": [
+    {
+      "taxCode": "1",
+      "description": "IVA 21%",
+      "taxBase": 42060284.43,     ← De la fila de 21% (puede coincidir con netTaxed si es único IVA)
+      "taxAmount": 8832659.73,    ← Calculado: 42060284.43 * 0.21
+      "rate": 21
+    }
+  ]
+}
+
+EJEMPLO 3 - PERCEPCIONES:
 
 Si aparece "Percepción IVA" o "Percepción IVA 1.5%" con monto "$6.639,10":
 → taxCode: "10", description: "Percepción IVA 1.5%", taxBase: 234751.49, taxAmount: 6639.10, rate: null
@@ -506,7 +606,23 @@ Si aparece "Percepción IVA" o "Percepción IVA 1.5%" con monto "$6.639,10":
 Si aparece "Percepción IIBB", "Percepción Ingresos Brutos", "Percep I.B. 3%", "Percep I.B. SIRCREB" o cualquier variación de percepción de Ingresos Brutos con monto "$7.870,31":
 → taxCode: "52", description: "Percepción I.B. 3%" (o la descripción exacta que aparece en la factura), taxBase: 262343.75, taxAmount: 7870.31, rate: null
 
-IMPORTANTE: Si un impuesto aparece en la factura, SIEMPRE debe tener un taxAmount mayor que 0. Si no puedes encontrar el monto explícito en la factura, usa null (NO calcules el monto).
+═══════════════════════════════════════════════════════════════════════════════
+SECCIÓN 4: CHECKLIST ANTES DE EXTRAER taxBase
+═══════════════════════════════════════════════════════════════════════════════
+
+Antes de extraer taxBase, verifica:
+☐ ¿Encontré la tabla de IVA en la factura?
+☐ ¿Identifiqué cada fila de la tabla por separado?
+☐ ¿Estoy usando el valor de la columna "Base" de la fila correcta?
+☐ ¿El taxBase que extraje corresponde a la alícuota correcta?
+☐ Si hay múltiples alícuotas, ¿cada una tiene su propio taxBase diferente?
+☐ ¿La suma de todos los taxBase es aproximadamente igual al netTaxed?
+☐ ¿NO estoy usando el netTaxed total como taxBase de un impuesto individual?
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IMPORTANTE: Si un impuesto aparece en la factura, SIEMPRE debe tener un taxAmount mayor que 0. 
+Si no puedes encontrar el monto explícito en la factura, usa null (NO calcules el monto).
 
 Usa null si no encuentras un dato. Usa números con punto decimal (no comas).
 `;
