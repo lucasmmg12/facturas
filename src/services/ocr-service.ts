@@ -40,6 +40,13 @@ export interface OCRResult {
   caiCaeExpiration: string | null;
   confidence: number;
   rawText?: string;
+  // Información de tokens (solo para OpenAI)
+  tokens?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    estimatedCost?: number;
+  };
 }
 
 export async function extractDataFromPDF(file: File): Promise<OCRResult> {

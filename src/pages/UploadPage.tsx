@@ -1,7 +1,7 @@
 // Esta página maneja la subida de comprobantes y su procesamiento automático.
 // Convierte imágenes a PDF, ejecuta OCR y crea registros iniciales en la base de datos.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileUploader } from '../components/FileUploader';
 import { extractDataFromPDF } from '../services/ocr-service';
 import { extractDataWithOpenAI } from '../services/openai-ocr-service';
@@ -9,12 +9,19 @@ import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR } from 
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { convertImageToPDF, isImageFile } from '../utils/file-converter';
+import { recordTokenUsage, getEstimatedRemainingBalance, setInitialBalance, getInitialBalance } from '../utils/openai-balance';
 
 interface UploadResult {
   filename: string;
   status: 'processing' | 'success' | 'error' | 'duplicate';
   message: string;
   invoiceId?: string;
+  tokens?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    estimatedCost?: number;
+  };
 }
 
 interface UploadPageProps {
@@ -25,6 +32,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
   const { profile } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
+  const [balanceInfo, setBalanceInfo] = useState(getEstimatedRemainingBalance());
+
+  // Actualizar información de saldo cuando cambian los resultados
+  useEffect(() => {
+    setBalanceInfo(getEstimatedRemainingBalance());
+  }, [results]);
 
   const handleFilesSelected = async (files: File[]) => {
     if (!profile) return;
@@ -66,7 +79,23 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
             invoiceType: ocrResult.invoiceType,
             invoiceNumber: ocrResult.invoiceNumber,
             confidence: ocrResult.confidence,
+            tokens: ocrResult.tokens,
           });
+          
+          // Guardar información de tokens en el resultado y registrar el uso
+          if (ocrResult.tokens) {
+            newResults[i] = {
+              ...newResults[i],
+              tokens: ocrResult.tokens,
+            };
+            setResults([...newResults]);
+            
+            // Registrar el uso para tracking de saldo
+            if (ocrResult.tokens.estimatedCost !== undefined) {
+              recordTokenUsage(ocrResult.tokens.total_tokens, ocrResult.tokens.estimatedCost);
+              setBalanceInfo(getEstimatedRemainingBalance());
+            }
+          }
         } catch (aiError) {
           const errorMessage = aiError instanceof Error ? aiError.message : 'Error desconocido';
           console.error('[Upload] OpenAI OCR falló, usando OCR local como respaldo', {
@@ -223,8 +252,40 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
       {results.length > 0 && (
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Resultados del Procesamiento</h2>
+            <div className="flex items-center gap-4">
+              {balanceInfo.initialBalance !== null ? (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Saldo estimado:</span>{' '}
+                  <span className={balanceInfo.remaining !== null && balanceInfo.remaining < 5 ? 'text-red-600 font-bold' : 'text-green-600'}>
+                    ${balanceInfo.remaining !== null ? balanceInfo.remaining.toFixed(2) : 'N/A'}
+                  </span>
+                  {' '}
+                  <span className="text-gray-400">
+                    (usado: ${balanceInfo.totalUsed.toFixed(2)})
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    const balance = prompt('Ingresa el saldo inicial de tu cuenta de OpenAI (en USD):');
+                    if (balance) {
+                      const balanceNum = parseFloat(balance);
+                      if (!isNaN(balanceNum) && balanceNum > 0) {
+                        setInitialBalance(balanceNum);
+                        setBalanceInfo(getEstimatedRemainingBalance());
+                      } else {
+                        alert('Por favor ingresa un número válido mayor a 0');
+                      }
+                    }
+                  }}
+                  className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                >
+                  Configurar saldo inicial
+                </button>
+              )}
+            </div>
           </div>
           <div className="divide-y divide-gray-200">
             {results.map((result, index) => (
@@ -258,6 +319,21 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                   >
                     {result.message}
                   </p>
+                  {result.tokens && (
+                    <div className="mt-2 text-xs text-gray-500 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Tokens:</span>
+                        <span>{result.tokens.total_tokens.toLocaleString()} total</span>
+                        <span className="text-gray-400">({result.tokens.prompt_tokens.toLocaleString()} entrada + {result.tokens.completion_tokens.toLocaleString()} salida)</span>
+                      </div>
+                      {result.tokens.estimatedCost !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Costo estimado:</span>
+                          <span className="text-blue-600">${result.tokens.estimatedCost.toFixed(4)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

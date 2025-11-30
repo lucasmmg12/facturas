@@ -111,6 +111,19 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   console.log('[OpenAI OCR] Respuesta exitosa de Edge Function');
 
   const outputText = data.data;
+  const usage = data.usage; // Información de tokens de OpenAI
+  
+  // Calcular costo estimado si hay información de tokens
+  let estimatedCost: number | undefined;
+  if (usage) {
+    estimatedCost = calculateEstimatedCost(usage);
+    console.log('[OpenAI OCR] Tokens consumidos:', {
+      prompt_tokens: usage.prompt_tokens,
+      completion_tokens: usage.completion_tokens,
+      total_tokens: usage.total_tokens,
+      estimatedCost: `$${estimatedCost.toFixed(4)}`,
+    });
+  }
   console.log('[OpenAI OCR] Texto extraído (primeros 500 chars):', outputText.substring(0, 500));
 
   let parsed: any;
@@ -185,6 +198,12 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     caiCaeExpiration,
     confidence,
     rawText: outputText,
+    tokens: usage ? {
+      prompt_tokens: usage.prompt_tokens || 0,
+      completion_tokens: usage.completion_tokens || 0,
+      total_tokens: usage.total_tokens || 0,
+      estimatedCost,
+    } : undefined,
   };
 }
 
@@ -455,5 +474,28 @@ function calculateConfidence(data: {
   if (data.totalAmount > 0) score += CONFIDENCE_WEIGHTS.totalAmount;
 
   return Math.round(Math.min(score, 1) * 100) / 100;
+}
+
+/**
+ * Calcula el costo estimado basado en el uso de tokens
+ * Precios de gpt-4o (a partir de 2024):
+ * - Input: $2.50 por 1M tokens
+ * - Output: $10.00 por 1M tokens
+ */
+function calculateEstimatedCost(usage: {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+}): number {
+  const INPUT_COST_PER_MILLION = 2.50;
+  const OUTPUT_COST_PER_MILLION = 10.00;
+
+  const promptTokens = usage.prompt_tokens || 0;
+  const completionTokens = usage.completion_tokens || 0;
+
+  const inputCost = (promptTokens / 1_000_000) * INPUT_COST_PER_MILLION;
+  const outputCost = (completionTokens / 1_000_000) * OUTPUT_COST_PER_MILLION;
+
+  return inputCost + outputCost;
 }
 
