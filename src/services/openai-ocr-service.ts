@@ -147,7 +147,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   // Log de los impuestos RAW antes de normalizar para debugging
   console.log('[OpenAI OCR] Impuestos RAW de OpenAI:', JSON.stringify(parsed.taxes, null, 2));
   
-  const taxes = normalizeTaxes(parsed.taxes);
+  const taxes = normalizeTaxes(parsed.taxes, amounts);
   
   // Log de los impuestos después de normalizar
   console.log('[OpenAI OCR] Impuestos normalizados:', taxes.map(t => ({
@@ -358,19 +358,82 @@ function normalizeNumber(value: any): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function normalizeTaxes(taxes: any): ParsedTaxes {
+function normalizeTaxes(taxes: any, amounts: { netTaxed: number; ivaAmount: number; totalAmount: number }): ParsedTaxes {
   if (!Array.isArray(taxes)) {
     return [];
   }
 
   return taxes
-    .map((tax: any) => ({
-      taxCode: typeof tax?.taxCode === 'string' ? tax.taxCode : (typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO'),
-      description: typeof tax?.description === 'string' ? tax.description : '',
-      taxBase: normalizeNumber(tax?.taxBase),
-      taxAmount: normalizeNumber(tax?.taxAmount),
-      rate: typeof tax?.rate === 'number' ? tax.rate : null,
-    }))
+    .map((tax: any) => {
+      const taxCode = typeof tax?.taxCode === 'string' ? tax.taxCode : (typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO');
+      const description = typeof tax?.description === 'string' ? tax.description : '';
+      const taxBase = normalizeNumber(tax?.taxBase);
+      let taxAmount = normalizeNumber(tax?.taxAmount);
+      const rate = typeof tax?.rate === 'number' ? tax.rate : null;
+
+      // CORRECCIÓN: Detectar si OpenAI extrajo el subtotal en lugar del IVA
+      // Esto ocurre cuando taxAmount es muy similar a taxBase (diferencia < 5%)
+      if (taxCode === '1' || taxCode === '2') {
+        // Es IVA 21% o IVA 10.5%
+        const isIVA21 = taxCode === '1';
+        const expectedRate = isIVA21 ? 21 : 10.5;
+        
+        // Calcular la diferencia porcentual entre taxAmount y taxBase
+        const differencePercent = taxBase > 0 ? Math.abs((taxAmount - taxBase) / taxBase) * 100 : 100;
+        
+        // Si la diferencia es menor al 5%, probablemente OpenAI extrajo el subtotal
+        if (differencePercent < 5 && taxBase > 0) {
+          console.warn('[OpenAI OCR] Detectado posible subtotal en lugar de IVA:', {
+            taxCode,
+            description,
+            taxBase,
+            taxAmountOriginal: taxAmount,
+            differencePercent: differencePercent.toFixed(2) + '%',
+          });
+          
+          // Calcular el IVA correcto: subtotal * tasa
+          const calculatedIVA = taxBase * (expectedRate / 100);
+          
+          // Comparar con el ivaAmount de la factura
+          const tolerance = Math.max(amounts.ivaAmount * 0.01, 1); // 1% de tolerancia o mínimo $1
+          const differenceWithInvoiceIVA = Math.abs(calculatedIVA - amounts.ivaAmount);
+          
+          console.log('[OpenAI OCR] Corrección de IVA:', {
+            calculatedIVA,
+            invoiceIVA: amounts.ivaAmount,
+            difference: differenceWithInvoiceIVA,
+            tolerance,
+            willUseCalculated: differenceWithInvoiceIVA <= tolerance,
+          });
+          
+          // Si el cálculo coincide con el IVA de la factura (dentro de la tolerancia), usar el calculado
+          // Si no coincide, usar el IVA de la factura (puede haber otros impuestos o ajustes)
+          if (differenceWithInvoiceIVA <= tolerance) {
+            taxAmount = calculatedIVA;
+            console.log('[OpenAI OCR] ✅ Corregido: usando IVA calculado (subtotal * tasa)');
+          } else {
+            // Si no coincide, usar el IVA de la factura pero solo si es razonable
+            // (no puede ser mayor que el subtotal)
+            if (amounts.ivaAmount > 0 && amounts.ivaAmount <= taxBase) {
+              taxAmount = amounts.ivaAmount;
+              console.log('[OpenAI OCR] ✅ Corregido: usando IVA de la factura (no coincide con cálculo)');
+            } else {
+              // Si el IVA de la factura no es razonable, usar el calculado
+              taxAmount = calculatedIVA;
+              console.log('[OpenAI OCR] ⚠️ Usando IVA calculado: el IVA de la factura no es razonable');
+            }
+          }
+        }
+      }
+
+      return {
+        taxCode,
+        description,
+        taxBase,
+        taxAmount,
+        rate,
+      };
+    })
     .filter((tax) => tax.taxAmount !== 0 || tax.taxBase !== 0);
 }
 
