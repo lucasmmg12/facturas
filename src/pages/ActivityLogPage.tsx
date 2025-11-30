@@ -2,25 +2,38 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Clock, FileText, Upload, Edit, Trash2, Download } from 'lucide-react';
+import { Clock, FileText, Upload, Edit, Trash2, Download, Calendar } from 'lucide-react';
 
 interface AuditLogEntry {
   id: string;
   action: string;
-  table_name: string;
-  record_id: string | null;
-  old_values: any;
-  new_values: any;
-  user_id: string;
-  user_name: string;
+  entity_type: string;
+  entity_id: string | null;
+  changes: any;
+  user_id: string | null;
   created_at: string;
+  user?: {
+    full_name: string;
+    email: string;
+  };
+}
+
+interface DayActivity {
+  date: string;
+  uploads: number;
+  exports: Array<{
+    filename: string;
+    invoiceCount: number;
+    userName: string;
+    time: string;
+  }>;
 }
 
 export function ActivityLogPage() {
   const { profile } = useAuth();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [dailyActivities, setDailyActivities] = useState<DayActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
     loadLogs();
@@ -30,17 +43,49 @@ export function ActivityLogPage() {
     if (!profile) return;
 
     try {
-      let query = supabase
+      // Cargar todas las actividades (no solo del usuario actual) para ver exportaciones de todos
+      // Hacer join con users para obtener el nombre del usuario
+      const { data: logsData, error: logsError } = await supabase
         .from('audit_log')
         .select('*')
-        .eq('user_id', profile.id)
+        .in('action', ['FILE_UPLOAD', 'EXPORT'])
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
 
-      const { data, error } = await query;
+      if (logsError) throw logsError;
 
-      if (error) throw error;
-      setLogs(data || []);
+      // Obtener IDs únicos de usuarios
+      const userIds = [...new Set((logsData || []).map((log: any) => log.user_id).filter(Boolean))];
+      
+      // Cargar información de usuarios
+      let usersMap: Record<string, { full_name: string; email: string }> = {};
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', userIds);
+
+        if (usersData) {
+          usersData.forEach((user: any) => {
+            usersMap[user.id] = {
+              full_name: user.full_name,
+              email: user.email,
+            };
+          });
+        }
+      }
+
+      // Combinar logs con información de usuarios
+      const logsWithUsers = (logsData || []).map((log: any) => ({
+        ...log,
+        user: log.user_id ? usersMap[log.user_id] || null : null,
+      }));
+      
+      setLogs(logsWithUsers);
+      
+      // Agrupar actividades por día
+      const grouped = groupActivitiesByDay(logsWithUsers);
+      setDailyActivities(grouped);
     } catch (error) {
       console.error('Error cargando logs:', error);
     } finally {
@@ -48,8 +93,61 @@ export function ActivityLogPage() {
     }
   };
 
+  const groupActivitiesByDay = (logs: AuditLogEntry[]): DayActivity[] => {
+    const grouped: Record<string, { dateKey: string; dateFormatted: string; uploads: number; exports: Array<{ filename: string; invoiceCount: number; userName: string; time: string }> }> = {};
+
+    logs.forEach((log) => {
+      const dateKey = new Date(log.created_at).toISOString().split('T')[0];
+      const dateFormatted = new Date(log.created_at).toLocaleDateString('es-AR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = {
+          dateKey,
+          dateFormatted,
+          uploads: 0,
+          exports: [],
+        };
+      }
+
+      if (log.action === 'FILE_UPLOAD') {
+        grouped[dateKey].uploads += 1;
+      } else if (log.action === 'EXPORT') {
+        const time = new Date(log.created_at).toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        grouped[dateKey].exports.push({
+          filename: log.changes?.filename || 'Sin nombre',
+          invoiceCount: log.changes?.invoice_count || 0,
+          userName: log.user?.full_name || log.user?.email || 'Usuario desconocido',
+          time,
+        });
+      }
+    });
+
+    // Convertir a array y ordenar por fecha (más reciente primero)
+    return Object.entries(grouped)
+      .map(([dateKey, data]) => ({
+        date: data.dateFormatted,
+        dateKey, // Guardar para ordenar
+        uploads: data.uploads,
+        exports: data.exports,
+      }))
+      .sort((a, b) => b.dateKey.localeCompare(a.dateKey)) // Ordenar por dateKey (ISO string)
+      .map(({ dateKey, ...rest }) => rest); // Eliminar dateKey del resultado final
+  };
+
   const getActionIcon = (action: string) => {
     switch (action.toUpperCase()) {
+      case 'FILE_UPLOAD':
+        return <Upload className="h-4 w-4 text-green-600" />;
+      case 'EXPORT':
+        return <Download className="h-4 w-4 text-blue-600" />;
       case 'INSERT':
         return <Upload className="h-4 w-4 text-green-600" />;
       case 'UPDATE':
@@ -61,38 +159,6 @@ export function ActivityLogPage() {
     }
   };
 
-  const getActionLabel = (action: string, tableName: string) => {
-    const tableLabels: Record<string, string> = {
-      invoices: 'Comprobante',
-      suppliers: 'Proveedor',
-      export_batches: 'Exportación',
-      tango_concepts: 'Concepto Tango',
-      invoice_concepts: 'Concepto de Comprobante',
-    };
-
-    const actionLabels: Record<string, string> = {
-      INSERT: 'Creó',
-      UPDATE: 'Modificó',
-      DELETE: 'Eliminó',
-    };
-
-    const table = tableLabels[tableName] || tableName;
-    const actionLabel = actionLabels[action.toUpperCase()] || action;
-
-    return `${actionLabel} ${table}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-AR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(date);
-  };
-
-  const filteredLogs = filter === 'all' 
-    ? logs 
-    : logs.filter(log => log.action.toUpperCase() === filter);
 
   if (loading) {
     return (
@@ -107,87 +173,87 @@ export function ActivityLogPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Historial de Actividades</h2>
-          <p className="text-gray-600 mt-1">Tu actividad reciente en el sistema</p>
-        </div>
-
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Todas
-          </button>
-          <button
-            onClick={() => setFilter('INSERT')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'INSERT'
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Creadas
-          </button>
-          <button
-            onClick={() => setFilter('UPDATE')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'UPDATE'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Modificadas
-          </button>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Historial de Actividades</h2>
+        <p className="text-gray-600 mt-1">
+          Archivos subidos y exportaciones realizadas en el sistema
+        </p>
       </div>
 
-      {logs.length === 0 ? (
+      {dailyActivities.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">No hay actividad registrada</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="divide-y divide-gray-200">
-            {filteredLogs.map((log) => (
-              <div key={log.id} className="p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 mt-1">
-                    {getActionIcon(log.action)}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {getActionLabel(log.action, log.table_name)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      <Clock className="h-3 w-3 inline mr-1" />
-                      {formatDate(log.created_at)}
-                    </p>
-                    
-                    {log.new_values && Object.keys(log.new_values).length > 0 && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-blue-600 cursor-pointer hover:underline">
-                          Ver detalles
-                        </summary>
-                        <div className="mt-2 text-xs bg-gray-50 p-2 rounded">
-                          <pre className="whitespace-pre-wrap">
-                            {JSON.stringify(log.new_values, null, 2)}
-                          </pre>
-                        </div>
-                      </details>
-                    )}
+        <div className="space-y-6">
+          {dailyActivities.map((day, dayIndex) => (
+            <div key={dayIndex} className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Header del día */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-green-600" />
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 capitalize">{day.date}</h3>
+                      <p className="text-sm text-gray-600">
+                        {day.uploads} archivo{day.uploads !== 1 ? 's' : ''} subido{day.uploads !== 1 ? 's' : ''}
+                        {day.exports.length > 0 && ` · ${day.exports.length} exportación${day.exports.length !== 1 ? 'es' : ''}`}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Contenido del día */}
+              <div className="divide-y divide-gray-200">
+                {/* Archivos subidos */}
+                {day.uploads > 0 && (
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Upload className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {day.uploads} archivo{day.uploads !== 1 ? 's' : ''} procesado{day.uploads !== 1 ? 's' : ''} este día
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Exportaciones */}
+                {day.exports.map((exportItem, exportIndex) => (
+                  <div key={exportIndex} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0 mt-1">
+                        <Download className="h-5 w-5 text-blue-600" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          Exportación: {exportItem.filename}
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          <p className="text-xs text-gray-600">
+                            <span className="font-medium">{exportItem.invoiceCount}</span> factura{exportItem.invoiceCount !== 1 ? 's' : ''} exportada{exportItem.invoiceCount !== 1 ? 's' : ''}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {exportItem.time} · Usuario: <span className="font-medium">{exportItem.userName}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Mensaje si no hay exportaciones ni uploads */}
+                {day.uploads === 0 && day.exports.length === 0 && (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    No hay actividad registrada este día
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

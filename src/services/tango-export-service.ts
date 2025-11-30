@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { getInvoicesReadyForExport, markInvoicesAsExported } from './invoice-service';
 import { diagnosticoTango } from './tango-diagnostics';
 import type { Database } from '../lib/database.types';
+import { logExport } from './activity-log-service';
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
 
@@ -267,6 +268,14 @@ export async function generateTangoExport(userId: string): Promise<{
 
     if (!batchError) {
       await markInvoicesAsExported(invoiceIds, batch.id);
+      
+      // Registrar actividad de exportación
+      try {
+        await logExport(userId, batch.id, filename, invoices.length);
+      } catch (error) {
+        console.error('[Tango Export] Error al registrar actividad de exportación:', error);
+        // No interrumpir el flujo si falla el registro de actividad
+      }
     }
   }
 

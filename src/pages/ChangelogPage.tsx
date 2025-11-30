@@ -12,6 +12,60 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.7.0',
+    date: '30 de Noviembre, 2024',
+    changes: [
+      {
+        type: 'improvement',
+        description: 'Sistema de impuestos mejorado: ahora se construyen desde el ivaAmount total en lugar de usar datos RAW de OpenAI, eliminando problemas de taxBase incorrecto',
+      },
+      {
+        type: 'feature',
+        description: 'Lógica especial para NATURGY SAN JUAN S.A.: cálculo automático de IVA 27% usando fórmula (Total Energía + Ingresos Brutos) * 0.27',
+      },
+      {
+        type: 'feature',
+        description: 'Botón de advertencia destacado para facturas de NATURGY que alerta sobre la complejidad y fórmula especial de cálculo',
+      },
+      {
+        type: 'improvement',
+        description: 'Sistema más permisivo: permite crear facturas con datos faltantes usando valores temporales, el usuario puede completarlos después',
+      },
+      {
+        type: 'improvement',
+        description: 'Reglas importantes visibles en el área de carga de archivos antes de procesar, mejorando la prevención de errores',
+      },
+      {
+        type: 'improvement',
+        description: 'Validaciones mejoradas durante el procesamiento: se muestran en tiempo real mientras se carga el archivo',
+      },
+      {
+        type: 'improvement',
+        description: 'Prompt de OpenAI mejorado con instrucciones detalladas paso a paso para extraer taxBase correctamente de tablas de IVA',
+      },
+      {
+        type: 'improvement',
+        description: 'Nuevos colores de estado: Amarillo (Procesado), Rojo (Pendiente de Revisión), Azul (Listo para Exportar), Verde (Exportado), Negro (Error)',
+      },
+      {
+        type: 'fix',
+        description: 'Corregido problema donde facturas con datos faltantes no se podían crear debido a restricciones NOT NULL en la base de datos',
+      },
+      {
+        type: 'fix',
+        description: 'Solucionado error de enum al usar código "001" como temporal, ahora usa "FACTURA_A" correctamente',
+      },
+      {
+        type: 'improvement',
+        description: 'Detección automática de tipo de comprobante FACTURA_A para proveedor NATURGY',
+      },
+      {
+        type: 'improvement',
+        description: 'Mensajes de validación más claros indicando qué datos faltan y qué valores temporales se están usando',
+      },
+    ],
+  },
+  {
     version: '1.6.0',
     date: '16 de Noviembre, 2024',
     changes: [

@@ -13,6 +13,7 @@ import { recordTokenUsage, getEstimatedRemainingBalance, setInitialBalance, getI
 import { validateInvoiceTotals } from '../utils/validators';
 import { validateCUIT } from '../utils/validators';
 import type { InvoiceType } from '../lib/database.types';
+import { logFileUpload } from '../services/activity-log-service';
 
 interface UploadResult {
   filename: string;
@@ -417,6 +418,17 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           validations,
         };
         setResults([...newResults]);
+        
+        // Registrar actividad de subida de archivo
+        if (profile && invoice.id) {
+          try {
+            await logFileUpload(profile.id, file.name, invoice.id);
+          } catch (error) {
+            console.error('[Upload] Error al registrar actividad:', error);
+            // No interrumpir el flujo si falla el registro de actividad
+          }
+        }
+        
         if (onInvoiceCreated) {
           onInvoiceCreated(invoice.id);
         }
