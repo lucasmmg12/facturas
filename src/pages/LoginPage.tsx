@@ -24,10 +24,45 @@ export function LoginPage() {
       if (isLogin) {
         await signIn(email, password);
       } else {
-        await signUp(email, password, fullName, 'EXPORTACION');
+        // Validar campos antes de registrar
+        if (!fullName.trim()) {
+          setError('Por favor, ingresa tu nombre completo');
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('La contraseña debe tener al menos 6 caracteres');
+          setLoading(false);
+          return;
+        }
+        await signUp(email, password, fullName.trim(), 'EXPORTACION');
       }
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error');
+      console.error('Error en autenticación:', err);
+      
+      // Mensajes de error más amigables
+      let errorMessage = 'Ocurrió un error';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.error?.message) {
+        errorMessage = err.error.message;
+      }
+      
+      // Traducir errores comunes de Supabase
+      if (errorMessage.includes('User already registered')) {
+        errorMessage = 'Este email ya está registrado. Por favor, inicia sesión.';
+      } else if (errorMessage.includes('Invalid login credentials')) {
+        errorMessage = 'Email o contraseña incorrectos';
+      } else if (errorMessage.includes('Email rate limit exceeded')) {
+        errorMessage = 'Demasiados intentos. Por favor, espera unos minutos.';
+      } else if (errorMessage.includes('Password should be at least')) {
+        errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+      } else if (errorMessage.includes('duplicate key')) {
+        errorMessage = 'Este email ya está registrado. Por favor, inicia sesión.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

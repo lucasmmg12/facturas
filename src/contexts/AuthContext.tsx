@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '../lib/database.types';
+import type { UserRole } from '../lib/database.types';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -80,7 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string, role: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    // 1. Registrar usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -91,25 +93,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (error) throw error;
-
-    // El trigger de la base de datos creará automáticamente el perfil
-    // Esperar un momento para que el trigger se ejecute
-    if (data.user) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Verificar que el perfil se creó
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', data.user.id)
-        .maybeSingle();
-
-      if (profileError || !profile) {
-        console.error('Error verificando perfil:', profileError);
-        throw new Error('Error al crear el perfil de usuario. Por favor, intenta iniciar sesión.');
-      }
+    if (authError) {
+      console.error('[Auth] Error al registrar usuario:', authError);
+      throw authError;
     }
+
+    if (!authData.user) {
+      throw new Error('No se pudo crear el usuario. Por favor, intenta nuevamente.');
+    }
+
+    // 2. Crear perfil en la tabla users manualmente
+    // Esto es más confiable que depender solo del trigger
+    const { data: profileData, error: profileError } = await supabase
+      .from('users')
+      .insert({
+        auth_user_id: authData.user.id,
+        email: email,
+        full_name: fullName,
+        role: role as UserRole, // Cast al tipo UserRole
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('[Auth] Error al crear perfil:', profileError);
+      
+      // Si el error es que el usuario ya existe (por el trigger), intentar cargarlo
+      if (profileError.code === '23505' || profileError.message.includes('duplicate')) {
+        console.log('[Auth] El perfil ya existe (probablemente creado por trigger), cargando...');
+        const { data: existingProfile, error: loadError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', authData.user.id)
+          .maybeSingle();
+
+        if (loadError) {
+          console.error('[Auth] Error al cargar perfil existente:', loadError);
+          throw new Error('Error al crear el perfil de usuario. Por favor, contacta a soporte.');
+        }
+
+        if (existingProfile) {
+          console.log('[Auth] Perfil cargado exitosamente');
+          return; // El perfil ya existe, todo está bien
+        }
+      }
+      
+      throw new Error(`Error al crear el perfil: ${profileError.message}`);
+    }
+
+    if (!profileData) {
+      throw new Error('No se pudo crear el perfil de usuario. Por favor, intenta nuevamente.');
+    }
+
+    console.log('[Auth] Usuario y perfil creados exitosamente');
   };
 
   const signOut = async () => {
