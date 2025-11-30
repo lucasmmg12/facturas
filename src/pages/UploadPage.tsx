@@ -207,10 +207,10 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         if (ocrResult.supplierCuit) {
           const cleanCuit = ocrResult.supplierCuit.replace(/[-\s]/g, '');
           if (!validateCUIT(cleanCuit)) {
-            validations.warnings.push(`⚠️ CUIT del proveedor inválido: ${ocrResult.supplierCuit}. Por favor, verifica y corrige el CUIT manualmente.`);
+            validations.warnings.push(`⚠️ CUIT del proveedor inválido: ${ocrResult.supplierCuit}. Se usará un valor temporal. Debes corregirlo manualmente antes de exportar.`);
           }
         } else {
-          validations.warnings.push('⚠️ No se pudo detectar el CUIT del proveedor. Deberás ingresarlo manualmente.');
+          validations.warnings.push('⚠️ No se pudo detectar el CUIT del proveedor. Se usará un valor temporal. DEBES ingresarlo manualmente antes de exportar.');
         }
 
         // 3. Validar totales y consistencia de montos
@@ -268,16 +268,19 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
         // 7. Validar datos críticos faltantes (convertir a advertencias para permitir continuar)
         if (!ocrResult.invoiceNumber) {
-          validations.warnings.push('⚠️ No se pudo detectar el número de factura. Deberás ingresarlo manualmente.');
+          validations.warnings.push('⚠️ No se pudo detectar el número de factura. Se usará un valor temporal. DEBES ingresarlo manualmente antes de exportar.');
         }
         if (!ocrResult.invoiceType) {
-          validations.warnings.push('⚠️ No se pudo detectar el tipo de comprobante. Deberás seleccionarlo manualmente.');
+          validations.warnings.push('⚠️ No se pudo detectar el tipo de comprobante. Se usará "001" (Factura A) como temporal. DEBES seleccionarlo manualmente antes de exportar.');
         }
         if (!ocrResult.issueDate) {
-          validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Deberás ingresarla manualmente.');
+          validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Se usará la fecha actual como temporal. Debes corregirla manualmente.');
         }
         if (!ocrResult.supplierName) {
-          validations.warnings.push('⚠️ No se pudo detectar el nombre del proveedor. Deberás ingresarlo manualmente.');
+          validations.warnings.push('⚠️ No se pudo detectar el nombre del proveedor. Se usará un valor temporal. Debes ingresarlo manualmente.');
+        }
+        if (!ocrResult.pointOfSale) {
+          validations.warnings.push('⚠️ No se pudo detectar el punto de venta. Se usará "00000" como temporal. Debes corregirlo manualmente si es necesario.');
         }
 
         // 8. Mensaje de soporte solo si hay problemas
@@ -327,15 +330,18 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
-        // Crear factura con valores por defecto para datos faltantes
+        // Crear factura con valores por defecto temporales para campos NOT NULL faltantes
         // El usuario podrá completarlos después en el editor
+        // NOTA: Estos campos tienen restricción NOT NULL en la BD, por lo que usamos valores temporales
+        const today = new Date().toISOString().split('T')[0];
+        
         const invoice = await createInvoice({
-          supplier_cuit: ocrResult.supplierCuit || null,
-          supplier_name: ocrResult.supplierName || null,
-          invoice_type: ocrResult.invoiceType || null,
-          point_of_sale: ocrResult.pointOfSale || null,
-          invoice_number: ocrResult.invoiceNumber || null,
-          issue_date: ocrResult.issueDate || null,
+          supplier_cuit: ocrResult.supplierCuit || '00000000000', // Valor temporal, usuario debe corregir
+          supplier_name: ocrResult.supplierName || 'PROVEEDOR SIN NOMBRE - COMPLETAR', // Valor temporal
+          invoice_type: ocrResult.invoiceType || '001', // Valor temporal (001 = Factura A), usuario debe corregir
+          point_of_sale: ocrResult.pointOfSale || '00000', // Valor temporal
+          invoice_number: ocrResult.invoiceNumber || '00000000', // Valor temporal, usuario debe corregir
+          issue_date: ocrResult.issueDate || today, // Usar fecha actual como temporal
           net_taxed: ocrResult.netTaxed || 0,
           net_untaxed: ocrResult.netUntaxed || 0,
           net_exempt: ocrResult.netExempt || 0,
