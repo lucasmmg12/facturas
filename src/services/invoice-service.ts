@@ -255,6 +255,25 @@ export async function createInvoiceTaxesFromOCR(
       }
     }
 
+    // Mapear código especial 100222 (NATURGY - IVA 27%) a '3' o 'IVA_27' si no existe
+    if (taxCodeToMap === '100222') {
+      // Intentar primero con '3' (código estándar para IVA 27%)
+      const code3Exists = await mapTaxCodeToId('3');
+      if (code3Exists) {
+        console.log(`[Invoice Service] Mapeando código especial NATURGY 100222 → 3 (IVA 27%)`);
+        taxCodeToMap = '3';
+      } else {
+        // Si '3' no existe, intentar con 'IVA_27'
+        const codeIva27Exists = await mapTaxCodeToId('IVA_27');
+        if (codeIva27Exists) {
+          console.log(`[Invoice Service] Mapeando código especial NATURGY 100222 → IVA_27`);
+          taxCodeToMap = 'IVA_27';
+        } else {
+          console.warn(`[Invoice Service] Código 100222 (NATURGY) no se pudo mapear. Se intentará usar directamente.`);
+        }
+      }
+    }
+
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {

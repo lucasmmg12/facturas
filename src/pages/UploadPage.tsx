@@ -19,6 +19,7 @@ interface UploadResult {
   status: 'processing' | 'success' | 'error' | 'duplicate';
   message: string;
   invoiceId?: string;
+  supplierCuit?: string | null; // Agregar para detectar NATURGY
   tokens?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -196,6 +197,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         newResults[i] = {
           ...newResults[i],
           message: 'Validando datos extraídos...',
+          supplierCuit: ocrResult.supplierCuit, // Guardar para detectar NATURGY
           validations: {
             isValid: validations.isValid,
             errors: [...validations.errors],
@@ -284,7 +286,27 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           validations.warnings.push('⚠️ No se pudo detectar el punto de venta. Se usará "00000" como temporal. Debes corregirlo manualmente si es necesario.');
         }
 
-        // 8. Mensaje de soporte solo si hay problemas
+        // 8. Detectar si es NATURGY y aplicar lógica especial
+        const NATURGY_CUIT = '30681688540';
+        const cleanSupplierCuit = ocrResult.supplierCuit ? ocrResult.supplierCuit.replace(/[-\s]/g, '') : '';
+        const isNaturgy = cleanSupplierCuit === NATURGY_CUIT;
+
+        if (isNaturgy) {
+          // Forzar invoice_type a FACTURA_A para NATURGY
+          if (!ocrResult.invoiceType) {
+            ocrResult.invoiceType = 'FACTURA_A' as InvoiceType;
+            validations.warnings.push(
+              'ℹ️ Tipo de comprobante establecido automáticamente como FACTURA_A para NATURGY.'
+            );
+          }
+
+          // Advertencia especial para NATURGY
+          validations.warnings.push(
+            '⚠️ ADVERTENCIA ESPECIAL: Esta factura es de NATURGY SAN JUAN S.A. y tiene muchos campos. Por favor, revisa cuidadosamente todos los datos extraídos, especialmente el cálculo del IVA 27% que se calcula como (Total Energía + Ingresos Brutos) * 0.27.'
+          );
+        }
+
+        // 9. Mensaje de soporte solo si hay problemas
         if (validations.errors.length > 0 || validations.warnings.length > 0) {
           validations.warnings.push('📧 Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
         }
@@ -293,6 +315,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         newResults[i] = {
           ...newResults[i],
           message: 'Verificando duplicados...',
+          supplierCuit: ocrResult.supplierCuit, // Guardar para detectar NATURGY
           validations: {
             isValid: validations.isValid,
             errors: [...validations.errors],
@@ -390,6 +413,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           status: hasCriticalErrors ? 'error' : 'success',
           message: finalMessage,
           invoiceId: invoice.id,
+          supplierCuit: ocrResult.supplierCuit, // Guardar para detectar NATURGY en la UI
           validations,
         };
         setResults([...newResults]);
@@ -521,6 +545,22 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                   >
                     {result.message}
                   </p>
+                  
+                  {/* Botón de advertencia especial para NATURGY */}
+                  {result.supplierCuit && result.supplierCuit.replace(/[-\s]/g, '') === '30681688540' && (
+                    <div className="mt-3 mb-2">
+                      <button
+                        onClick={() => {
+                          alert('⚠️ ADVERTENCIA ESPECIAL - NATURGY SAN JUAN S.A.\n\nEsta factura tiene muchos campos y requiere revisión cuidadosa.\n\nIMPORTANTE:\n- El IVA 27% se calcula como: (Total Energía + Ingresos Brutos) * 0.27\n- El tipo de comprobante es FACTURA_A\n- Verifica todos los impuestos y montos antes de continuar\n\nSi tienes dudas, contacta a soporte: lucas@growsanjuan.com');
+                        }}
+                        className="w-full px-4 py-2 bg-orange-100 border-2 border-orange-400 rounded-md text-orange-900 font-semibold text-sm hover:bg-orange-200 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <AlertTriangle className="h-5 w-5" />
+                        ⚠️ ADVERTENCIA: Factura NATURGY - Revisar cuidadosamente
+                      </button>
+                    </div>
+                  )}
+                  
                   {result.tokens && (
                     <div className="mt-2 text-xs text-gray-500 space-y-1">
                       <div className="flex items-center gap-2">
