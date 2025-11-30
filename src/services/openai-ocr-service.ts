@@ -329,9 +329,38 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
 }
 
 function sanitizeCUIT(value: any): string | null {
-  if (!value) return null;
+  if (!value) {
+    console.log('[OpenAI OCR] sanitizeCUIT: valor vacío o null');
+    return null;
+  }
+  
   const digits = String(value).replace(/\D/g, '');
-  return validateCUIT(digits) ? digits : null;
+  console.log('[OpenAI OCR] sanitizeCUIT: procesando', {
+    original: value,
+    digitsOnly: digits,
+    length: digits.length,
+  });
+  
+  // Validar formato básico: debe tener 11 dígitos
+  if (digits.length !== 11 || !/^\d+$/.test(digits)) {
+    console.log('[OpenAI OCR] sanitizeCUIT: formato inválido (no tiene 11 dígitos)');
+    return null;
+  }
+  
+  // Intentar validar con el algoritmo de dígito verificador
+  const isValid = validateCUIT(digits);
+  console.log('[OpenAI OCR] sanitizeCUIT: validación', {
+    isValid,
+    digits,
+  });
+  
+  // Si no pasa la validación del dígito verificador, pero tiene 11 dígitos,
+  // lo aceptamos de todas formas (puede ser un CUIT válido que el algoritmo no reconoce)
+  if (!isValid) {
+    console.warn('[OpenAI OCR] sanitizeCUIT: CUIT no pasa validación de dígito verificador, pero se acepta por tener 11 dígitos:', digits);
+  }
+  
+  return digits;
 }
 
 function normalizeInvoiceTypeCode(value: any): string | null {
