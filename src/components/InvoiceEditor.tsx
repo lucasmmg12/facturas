@@ -114,6 +114,23 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           expense_code: invoiceData.invoice.expense_code || 'S/C',
         };
 
+        // BUSCAR PROVEEDOR EN LA TABLA DE PROVEEDORES si hay supplier_cuit pero no supplier_id
+        if (invoiceWithDefaults.supplier_cuit && !invoiceWithDefaults.supplier_id) {
+          const cleanCuit = invoiceWithDefaults.supplier_cuit.replace(/[-\s]/g, '');
+          const foundSupplier = allSuppliers.find(s => s.cuit.replace(/[-\s]/g, '') === cleanCuit);
+          
+          if (foundSupplier) {
+            console.log('[InvoiceEditor] Proveedor encontrado en tabla de proveedores:', foundSupplier.razon_social);
+            invoiceWithDefaults = {
+              ...invoiceWithDefaults,
+              supplier_id: foundSupplier.id,
+              supplier_name: foundSupplier.razon_social,
+            };
+          } else {
+            console.log('[InvoiceEditor] Proveedor no encontrado en tabla de proveedores para CUIT:', cleanCuit);
+          }
+        }
+
         // AUTOCOMPLETAR CAMPOS si la factura no está lista para exportar
         if (invoiceWithDefaults.status !== 'READY_FOR_EXPORT' && invoiceWithDefaults.status !== 'EXPORTED' && profile) {
           const autofillResult = await autofillInvoiceFields(
