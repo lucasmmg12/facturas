@@ -419,22 +419,40 @@ function normalizeTaxes(taxes: any, amounts: { netTaxed: number; ivaAmount: numb
       let taxAmount = normalizeNumber(tax?.taxAmount);
       const rate = typeof tax?.rate === 'number' ? tax.rate : null;
 
-      // CORRECCIÓN: Detectar y corregir errores en taxBase y taxAmount
+      // REGLA FUNDAMENTAL: taxAmount = taxBase * rate
+      // Siempre calcular taxAmount correctamente, especialmente para IVA
+      if (rate !== null && rate > 0 && taxBase > 0) {
+        const calculatedTaxAmount = taxBase * (rate / 100);
+        const currentDifference = Math.abs(taxAmount - calculatedTaxAmount);
+        const tolerance = Math.max(calculatedTaxAmount * 0.01, 0.01); // 1% de tolerancia
+        
+        // Si el taxAmount actual no coincide con el cálculo, corregirlo
+        if (currentDifference > tolerance) {
+          console.warn('[OpenAI OCR] taxAmount no coincide con cálculo, corrigiendo:', {
+            taxCode,
+            description,
+            taxBase,
+            taxAmountOriginal: taxAmount,
+            calculatedTaxAmount,
+            rate,
+            difference: currentDifference,
+          });
+          taxAmount = calculatedTaxAmount;
+          console.log('[OpenAI OCR] ✅ Corregido: taxAmount = taxBase * rate');
+        }
+      }
+      
+      // CORRECCIÓN ESPECIAL PARA IVA: Detectar si taxBase es igual al netTaxed total
       if (taxCode === '1' || taxCode === '2') {
         // Es IVA 21% o IVA 10.5%
         const isIVA21 = taxCode === '1';
         const expectedRate = isIVA21 ? 21 : 10.5;
         
-        // DETECCIÓN 1: Si taxBase es igual o muy similar al netTaxed total, probablemente está mal
+        // DETECCIÓN: Si taxBase es igual o muy similar al netTaxed total, está mal
         // El taxBase de IVA NO debería ser igual al netTaxed total, sino la base específica de esa alícuota
         const netTaxedDifference = amounts.netTaxed > 0 ? Math.abs((taxBase - amounts.netTaxed) / amounts.netTaxed) * 100 : 100;
         const isTaxBaseEqualToNetTaxed = netTaxedDifference < 1; // Menos del 1% de diferencia
         
-        // DETECCIÓN 2: Si taxAmount es muy similar a taxBase (diferencia < 5%), probablemente OpenAI extrajo el subtotal
-        const differencePercent = taxBase > 0 ? Math.abs((taxAmount - taxBase) / taxBase) * 100 : 100;
-        const isTaxAmountEqualToTaxBase = differencePercent < 5;
-        
-        // Si taxBase es igual al netTaxed, probablemente OpenAI confundió "Neto Gravado" con la base del IVA
         if (isTaxBaseEqualToNetTaxed && amounts.netTaxed > 0) {
           console.warn('[OpenAI OCR] Detectado taxBase incorrecto (igual a Neto Gravado total):', {
             taxCode,
@@ -444,86 +462,29 @@ function normalizeTaxes(taxes: any, amounts: { netTaxed: number; ivaAmount: numb
             differencePercent: netTaxedDifference.toFixed(2) + '%',
           });
           
-          // Si taxAmount también es igual a taxBase, entonces ambos están mal
-          // En este caso, calcular ambos desde el netTaxed y la tasa
-          if (isTaxAmountEqualToTaxBase) {
-            // Calcular el taxBase correcto: usar el netTaxed como base (es el total gravado)
-            // Pero solo si el taxAmount calculado coincide con el ivaAmount de la factura
-            const calculatedTaxAmount = amounts.netTaxed * (expectedRate / 100);
-            const tolerance = Math.max(amounts.ivaAmount * 0.01, 1);
-            const differenceWithInvoiceIVA = Math.abs(calculatedTaxAmount - amounts.ivaAmount);
-            
-            if (differenceWithInvoiceIVA <= tolerance) {
-              // El netTaxed es correcto como base, calcular el taxAmount
-              taxBase = amounts.netTaxed;
-              taxAmount = calculatedTaxAmount;
-              console.log('[OpenAI OCR] ✅ Corregido: usando netTaxed como base y calculando taxAmount');
-            } else {
-              // Si no coincide, intentar calcular la base desde el ivaAmount de la factura
-              const calculatedTaxBase = amounts.ivaAmount / (expectedRate / 100);
-              if (calculatedTaxBase > 0 && calculatedTaxBase <= amounts.netTaxed) {
-                taxBase = calculatedTaxBase;
-                taxAmount = amounts.ivaAmount;
-                console.log('[OpenAI OCR] ✅ Corregido: usando ivaAmount de factura para calcular base y monto');
-              }
-            }
-          } else if (taxAmount > 0 && expectedRate > 0) {
-            // Si taxAmount parece correcto, calcular taxBase desde taxAmount
-            const calculatedTaxBase = taxAmount / (expectedRate / 100);
-            console.log('[OpenAI OCR] Calculando taxBase correcto desde taxAmount:', {
-              taxAmount,
-              rate: expectedRate,
-              calculatedTaxBase,
-            });
-            
-            // Usar el taxBase calculado si es razonable (no puede ser mayor que el netTaxed)
+          // Intentar calcular la base correcta desde el ivaAmount total de la factura
+          // Si el ivaAmount total coincide con el cálculo usando netTaxed, entonces el netTaxed es la base
+          const calculatedIVAFromNetTaxed = amounts.netTaxed * (expectedRate / 100);
+          const tolerance = Math.max(amounts.ivaAmount * 0.01, 1);
+          const differenceWithInvoiceIVA = Math.abs(calculatedIVAFromNetTaxed - amounts.ivaAmount);
+          
+          if (differenceWithInvoiceIVA <= tolerance) {
+            // El netTaxed es correcto como base para este IVA
+            taxBase = amounts.netTaxed;
+            taxAmount = calculatedIVAFromNetTaxed;
+            console.log('[OpenAI OCR] ✅ Corregido: usando netTaxed como base y calculando taxAmount');
+          } else {
+            // Si no coincide, calcular la base desde el ivaAmount de la factura
+            const calculatedTaxBase = amounts.ivaAmount / (expectedRate / 100);
             if (calculatedTaxBase > 0 && calculatedTaxBase <= amounts.netTaxed) {
               taxBase = calculatedTaxBase;
-              console.log('[OpenAI OCR] ✅ Corregido taxBase: usando base calculada desde taxAmount');
-            }
-          }
-        }
-        
-        // DETECCIÓN 2: Si taxAmount es muy similar a taxBase (diferencia < 5%), probablemente OpenAI extrajo el subtotal
-        if (isTaxAmountEqualToTaxBase && taxBase > 0) {
-          console.warn('[OpenAI OCR] Detectado posible subtotal en lugar de IVA:', {
-            taxCode,
-            description,
-            taxBase,
-            taxAmountOriginal: taxAmount,
-            differencePercent: differencePercent.toFixed(2) + '%',
-          });
-          
-          // Calcular el IVA correcto: subtotal * tasa
-          const calculatedIVA = taxBase * (expectedRate / 100);
-          
-          // Comparar con el ivaAmount de la factura
-          const tolerance = Math.max(amounts.ivaAmount * 0.01, 1); // 1% de tolerancia o mínimo $1
-          const differenceWithInvoiceIVA = Math.abs(calculatedIVA - amounts.ivaAmount);
-          
-          console.log('[OpenAI OCR] Corrección de IVA:', {
-            calculatedIVA,
-            invoiceIVA: amounts.ivaAmount,
-            difference: differenceWithInvoiceIVA,
-            tolerance,
-            willUseCalculated: differenceWithInvoiceIVA <= tolerance,
-          });
-          
-          // Si el cálculo coincide con el IVA de la factura (dentro de la tolerancia), usar el calculado
-          // Si no coincide, usar el IVA de la factura (puede haber otros impuestos o ajustes)
-          if (differenceWithInvoiceIVA <= tolerance) {
-            taxAmount = calculatedIVA;
-            console.log('[OpenAI OCR] ✅ Corregido: usando IVA calculado (subtotal * tasa)');
-          } else {
-            // Si no coincide, usar el IVA de la factura pero solo si es razonable
-            // (no puede ser mayor que el subtotal)
-            if (amounts.ivaAmount > 0 && amounts.ivaAmount <= taxBase) {
               taxAmount = amounts.ivaAmount;
-              console.log('[OpenAI OCR] ✅ Corregido: usando IVA de la factura (no coincide con cálculo)');
+              console.log('[OpenAI OCR] ✅ Corregido: calculando base desde ivaAmount de factura');
             } else {
-              // Si el IVA de la factura no es razonable, usar el calculado
-              taxAmount = calculatedIVA;
-              console.log('[OpenAI OCR] ⚠️ Usando IVA calculado: el IVA de la factura no es razonable');
+              // Si no se puede calcular, mantener el netTaxed pero recalcular taxAmount
+              taxBase = amounts.netTaxed;
+              taxAmount = calculatedIVAFromNetTaxed;
+              console.log('[OpenAI OCR] ⚠️ Usando netTaxed como base (no se pudo calcular base específica)');
             }
           }
         }
