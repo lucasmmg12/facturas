@@ -165,30 +165,52 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           throw new Error(`No se pudo extraer información suficiente del comprobante (método: ${ocrMethod})`);
         }
 
-        // VALIDACIONES Y ADVERTENCIAS
+        // VALIDACIONES Y ADVERTENCIAS - Mostrar durante el procesamiento
         const validations = {
           isValid: true,
           errors: [] as string[],
           warnings: [] as string[],
         };
 
-        // 1. Advertencia sobre PDFs con múltiples facturas
+        // 1. Advertencia CRÍTICA sobre PDFs con múltiples facturas
         if (file.type === 'application/pdf') {
-          validations.warnings.push(
-            '⚠️ IMPORTANTE: El sistema procesa 1 factura por archivo. Si el PDF contiene más de 1 factura, el sistema no funcionará correctamente. Por favor, separa las facturas en archivos individuales.'
-          );
+          const pagesCount = ocrResult.pagesCount || 1;
+          if (pagesCount > 1) {
+            validations.warnings.push(
+              `⚠️ ADVERTENCIA CRÍTICA: El PDF tiene ${pagesCount} página(s). El sistema analiza 1 sola factura por proceso. Si el PDF contiene más de 1 factura, el sistema NO funcionará correctamente. Por favor, separa las facturas en archivos individuales (1 factura por archivo).`
+            );
+          } else {
+            validations.warnings.push(
+              'ℹ️ RECORDATORIO: El sistema procesa 1 factura por archivo. Si necesitas procesar múltiples facturas, carga cada una en un archivo separado.'
+            );
+          }
         }
+
+        // Mostrar validaciones iniciales mientras se procesa
+        newResults[i] = {
+          ...newResults[i],
+          message: 'Validando datos extraídos...',
+          validations: {
+            isValid: validations.isValid,
+            errors: [...validations.errors],
+            warnings: [...validations.warnings],
+          },
+        };
+        setResults([...newResults]);
 
         // 2. Validar CUIT del proveedor
         if (ocrResult.supplierCuit) {
           const cleanCuit = ocrResult.supplierCuit.replace(/[-\s]/g, '');
           if (!validateCUIT(cleanCuit)) {
-            validations.errors.push(`CUIT del proveedor inválido: ${ocrResult.supplierCuit}`);
+            validations.errors.push(`❌ CUIT del proveedor inválido: ${ocrResult.supplierCuit}. Por favor, verifica que el CUIT sea correcto.`);
             validations.isValid = false;
           }
+        } else {
+          validations.errors.push('❌ No se pudo detectar el CUIT del proveedor. Por favor, verifica que el comprobante sea legible.');
+          validations.isValid = false;
         }
 
-        // 3. Validar totales
+        // 3. Validar totales y consistencia de montos
         const totalsValidation = validateInvoiceTotals({
           netTaxed: ocrResult.netTaxed,
           netUntaxed: ocrResult.netUntaxed,
@@ -198,29 +220,77 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           totalAmount: ocrResult.totalAmount,
         });
         if (!totalsValidation.valid) {
-          validations.errors.push(...totalsValidation.errors);
+          validations.errors.push(...totalsValidation.errors.map(e => `❌ ${e}`));
           validations.isValid = false;
         }
 
         // 4. Validar valores razonables
         if (ocrResult.totalAmount <= 0) {
-          validations.errors.push('El total de la factura debe ser mayor a 0');
+          validations.errors.push('❌ El total de la factura debe ser mayor a 0. Verifica que los montos se hayan extraído correctamente.');
           validations.isValid = false;
         }
 
         if (ocrResult.netTaxed < 0 || ocrResult.ivaAmount < 0) {
-          validations.warnings.push('Se detectaron valores negativos en los montos. Por favor, verifica los datos extraídos.');
+          validations.warnings.push('⚠️ Se detectaron valores negativos en los montos. Por favor, verifica los datos extraídos.');
         }
 
-        // 5. Validar confianza del OCR
+        // 5. Validar que los impuestos sumen correctamente
+        if (ocrResult.taxes && ocrResult.taxes.length > 0) {
+          const totalTaxesFromItems = ocrResult.taxes.reduce((sum, tax) => sum + tax.taxAmount, 0);
+          const expectedIvaAmount = ocrResult.taxes
+            .filter(t => t.taxCode === '1' || t.taxCode === '2')
+            .reduce((sum, tax) => sum + tax.taxAmount, 0);
+          
+          // Verificar que el IVA calculado coincida aproximadamente con el IVA total
+          if (expectedIvaAmount > 0 && ocrResult.ivaAmount > 0) {
+            const difference = Math.abs(expectedIvaAmount - ocrResult.ivaAmount);
+            const tolerance = Math.max(ocrResult.ivaAmount * 0.01, 0.01); // 1% de tolerancia
+            if (difference > tolerance) {
+              validations.warnings.push(
+                `⚠️ Diferencia detectada entre IVA calculado ($${expectedIvaAmount.toFixed(2)}) e IVA total ($${ocrResult.ivaAmount.toFixed(2)}). Verifica que los impuestos se hayan extraído correctamente.`
+              );
+            }
+          }
+        }
+
+        // 6. Validar confianza del OCR
         if (ocrResult.confidence < 0.5) {
-          validations.warnings.push(`Baja confianza en la extracción (${(ocrResult.confidence * 100).toFixed(0)}%). Por favor, revisa cuidadosamente los datos extraídos.`);
+          validations.warnings.push(
+            `⚠️ Baja confianza en la extracción (${(ocrResult.confidence * 100).toFixed(0)}%). Por favor, revisa cuidadosamente todos los datos extraídos antes de continuar.`
+          );
+        } else if (ocrResult.confidence < 0.7) {
+          validations.warnings.push(
+            `ℹ️ Confianza moderada en la extracción (${(ocrResult.confidence * 100).toFixed(0)}%). Se recomienda revisar los datos.`
+          );
         }
 
-        // 6. Mensaje de soporte
-        if (validations.errors.length > 0 || validations.warnings.length > 0) {
-          validations.warnings.push('Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
+        // 7. Validar datos críticos faltantes
+        if (!ocrResult.invoiceNumber) {
+          validations.errors.push('❌ No se pudo detectar el número de factura. Verifica que el comprobante sea legible.');
+          validations.isValid = false;
         }
+        if (!ocrResult.invoiceType) {
+          validations.errors.push('❌ No se pudo detectar el tipo de comprobante. Verifica que el comprobante sea legible.');
+          validations.isValid = false;
+        }
+        if (!ocrResult.issueDate) {
+          validations.warnings.push('⚠️ No se pudo detectar la fecha de emisión. Verifica que la fecha sea legible en el comprobante.');
+        }
+
+        // 8. Mensaje de soporte (SIEMPRE visible)
+        validations.warnings.push('📧 Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
+
+        // Actualizar validaciones completas antes de verificar duplicados
+        newResults[i] = {
+          ...newResults[i],
+          message: 'Verificando duplicados...',
+          validations: {
+            isValid: validations.isValid,
+            errors: [...validations.errors],
+            warnings: [...validations.warnings],
+          },
+        };
+        setResults([...newResults]);
 
         const duplicate = await checkDuplicateInvoice(
           ocrResult.supplierCuit,
@@ -420,12 +490,30 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                         </div>
                       )}
                       {result.validations.warnings.length > 0 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                        <div className={`border rounded-md p-3 ${
+                          result.status === 'processing' 
+                            ? 'bg-blue-50 border-blue-200' 
+                            : 'bg-yellow-50 border-yellow-200'
+                        }`}>
                           <div className="flex items-start">
-                            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                            <AlertTriangle className={`h-5 w-5 mt-0.5 mr-2 flex-shrink-0 ${
+                              result.status === 'processing' 
+                                ? 'text-blue-600' 
+                                : 'text-yellow-600'
+                            }`} />
                             <div className="flex-1">
-                              <h4 className="text-sm font-medium text-yellow-800 mb-1">Advertencias:</h4>
-                              <ul className="list-disc list-inside text-xs text-yellow-700 space-y-1">
+                              <h4 className={`text-sm font-medium mb-1 ${
+                                result.status === 'processing' 
+                                  ? 'text-blue-800' 
+                                  : 'text-yellow-800'
+                              }`}>
+                                {result.status === 'processing' ? 'Validaciones y advertencias:' : 'Advertencias:'}
+                              </h4>
+                              <ul className={`list-disc list-inside text-xs space-y-1 ${
+                                result.status === 'processing' 
+                                  ? 'text-blue-700' 
+                                  : 'text-yellow-700'
+                              }`}>
                                 {result.validations.warnings.map((warning, idx) => (
                                   <li key={idx}>{warning}</li>
                                 ))}

@@ -72,10 +72,11 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   const edgeFunctionUrl = `${supabaseUrl}/functions/v1/openai-ocr`;
 
   const isMultiplePages = Array.isArray(base64);
+  const pagesCount = isMultiplePages ? base64.length : 1;
   console.log('[OpenAI OCR] Llamando a Supabase Edge Function:', {
     url: edgeFunctionUrl,
     isMultiplePages,
-    pagesCount: isMultiplePages ? base64.length : 1,
+    pagesCount,
     mimeType: mimeType
   });
 
@@ -198,6 +199,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     caiCaeExpiration,
     confidence,
     rawText: outputText,
+    pagesCount: file.type === 'application/pdf' ? pagesCount : undefined,
     tokens: usage ? {
       prompt_tokens: usage.prompt_tokens || 0,
       completion_tokens: usage.completion_tokens || 0,

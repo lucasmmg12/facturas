@@ -47,6 +47,8 @@ export interface OCRResult {
     total_tokens: number;
     estimatedCost?: number;
   };
+  // Número de páginas del documento (solo para PDFs)
+  pagesCount?: number;
 }
 
 export async function extractDataFromPDF(file: File): Promise<OCRResult> {
