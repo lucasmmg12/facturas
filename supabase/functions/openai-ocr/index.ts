@@ -465,6 +465,18 @@ REGLAS ESPECÍFICAS PARA PERCEPCIONES:
 IMPORTANTE - EXTRACCIÓN DE IMPORTES (CRÍTICO):
 - Para CADA impuesto que identifiques, DEBES extraer TANTO la base imponible (taxBase) COMO el monto del impuesto (taxAmount) EXACTAMENTE como aparecen en la factura
 - NUNCA calcules el taxAmount multiplicando taxBase por la tasa. SIEMPRE usa el valor que aparece explícitamente escrito en la factura
+
+DEFINICIÓN CRÍTICA DE taxBase (BASE IMPONIBLE):
+- La base imponible (taxBase) es el monto ESPECÍFICO sobre el cual se calculó ESE impuesto en particular
+- NO es el "Neto Gravado" total de la factura
+- NO es el "Subtotal" de la factura
+- NO es el "Importe Neto Gravado" general
+- Para IVA: busca en la TABLA DE IVA la columna "Base" o "Base Imponible" que corresponde ESPECÍFICAMENTE a esa alícuota de IVA
+- Ejemplo: Si hay IVA 21% e IVA 10.5%, cada uno tiene su propia base imponible en la tabla de IVA
+- La base imponible de IVA 21% NO es el netTaxed total, sino la base específica de IVA 21% que aparece en la tabla de impuestos
+- Para percepciones: la base imponible es el monto sobre el cual se calculó la percepción (puede ser el subtotal o un monto específico)
+
+DEFINICIÓN DE taxAmount (MONTO DEL IMPUESTO):
 - Para IVA: busca la columna o línea que muestre el monto del IVA. Ejemplo: si en la factura dice "Base: $43.491,75, Imp: $9.133,27", entonces taxBase=43491.75 y taxAmount=9133.27 (NO calcules 21% de 43491.75)
 - El taxAmount debe ser el valor EXACTO que aparece en la factura, no un cálculo matemático
 - Para percepciones: el taxAmount es el monto de la percepción que aparece explícitamente en la factura

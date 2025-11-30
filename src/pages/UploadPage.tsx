@@ -7,9 +7,11 @@ import { extractDataFromPDF } from '../services/ocr-service';
 import { extractDataWithOpenAI } from '../services/openai-ocr-service';
 import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader, AlertTriangle } from 'lucide-react';
 import { convertImageToPDF, isImageFile } from '../utils/file-converter';
 import { recordTokenUsage, getEstimatedRemainingBalance, setInitialBalance, getInitialBalance } from '../utils/openai-balance';
+import { validateInvoiceTotals } from '../utils/validators';
+import { validateCUIT } from '../utils/validators';
 
 interface UploadResult {
   filename: string;
@@ -21,6 +23,12 @@ interface UploadResult {
     completion_tokens: number;
     total_tokens: number;
     estimatedCost?: number;
+  };
+  warnings?: string[];
+  validations?: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
   };
 }
 
@@ -157,6 +165,63 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           throw new Error(`No se pudo extraer información suficiente del comprobante (método: ${ocrMethod})`);
         }
 
+        // VALIDACIONES Y ADVERTENCIAS
+        const validations = {
+          isValid: true,
+          errors: [] as string[],
+          warnings: [] as string[],
+        };
+
+        // 1. Advertencia sobre PDFs con múltiples facturas
+        if (file.type === 'application/pdf') {
+          validations.warnings.push(
+            '⚠️ IMPORTANTE: El sistema procesa 1 factura por archivo. Si el PDF contiene más de 1 factura, el sistema no funcionará correctamente. Por favor, separa las facturas en archivos individuales.'
+          );
+        }
+
+        // 2. Validar CUIT del proveedor
+        if (ocrResult.supplierCuit) {
+          const cleanCuit = ocrResult.supplierCuit.replace(/[-\s]/g, '');
+          if (!validateCUIT(cleanCuit)) {
+            validations.errors.push(`CUIT del proveedor inválido: ${ocrResult.supplierCuit}`);
+            validations.isValid = false;
+          }
+        }
+
+        // 3. Validar totales
+        const totalsValidation = validateInvoiceTotals({
+          netTaxed: ocrResult.netTaxed,
+          netUntaxed: ocrResult.netUntaxed,
+          netExempt: ocrResult.netExempt,
+          ivaAmount: ocrResult.ivaAmount,
+          otherTaxesAmount: ocrResult.otherTaxesAmount,
+          totalAmount: ocrResult.totalAmount,
+        });
+        if (!totalsValidation.valid) {
+          validations.errors.push(...totalsValidation.errors);
+          validations.isValid = false;
+        }
+
+        // 4. Validar valores razonables
+        if (ocrResult.totalAmount <= 0) {
+          validations.errors.push('El total de la factura debe ser mayor a 0');
+          validations.isValid = false;
+        }
+
+        if (ocrResult.netTaxed < 0 || ocrResult.ivaAmount < 0) {
+          validations.warnings.push('Se detectaron valores negativos en los montos. Por favor, verifica los datos extraídos.');
+        }
+
+        // 5. Validar confianza del OCR
+        if (ocrResult.confidence < 0.5) {
+          validations.warnings.push(`Baja confianza en la extracción (${(ocrResult.confidence * 100).toFixed(0)}%). Por favor, revisa cuidadosamente los datos extraídos.`);
+        }
+
+        // 6. Mensaje de soporte
+        if (validations.errors.length > 0 || validations.warnings.length > 0) {
+          validations.warnings.push('Si tienes dudas o problemas, contacta a soporte: lucas@growsanjuan.com');
+        }
+
         const duplicate = await checkDuplicateInvoice(
           ocrResult.supplierCuit,
           ocrResult.invoiceType,
@@ -214,9 +279,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
         newResults[i] = {
           ...newResults[i],
-          status: 'success',
-          message: `Comprobante procesado exitosamente con ${ocrMethod}`,
+          status: validations.isValid ? 'success' : 'error',
+          message: validations.isValid 
+            ? `Comprobante procesado exitosamente con ${ocrMethod}`
+            : `Comprobante procesado con errores de validación (método: ${ocrMethod})`,
           invoiceId: invoice.id,
+          validations,
         };
         setResults([...newResults]);
         if (onInvoiceCreated) {
@@ -330,6 +398,40 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Costo estimado:</span>
                           <span className="text-blue-600">${result.tokens.estimatedCost.toFixed(4)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {result.validations && (result.validations.errors.length > 0 || result.validations.warnings.length > 0) && (
+                    <div className="mt-3 space-y-2">
+                      {result.validations.errors.length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                          <div className="flex items-start">
+                            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-red-800 mb-1">Errores detectados:</h4>
+                              <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+                                {result.validations.errors.map((error, idx) => (
+                                  <li key={idx}>{error}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {result.validations.warnings.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                          <div className="flex items-start">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-yellow-800 mb-1">Advertencias:</h4>
+                              <ul className="list-disc list-inside text-xs text-yellow-700 space-y-1">
+                                {result.validations.warnings.map((warning, idx) => (
+                                  <li key={idx}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>

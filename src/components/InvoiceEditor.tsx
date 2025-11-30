@@ -115,16 +115,22 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         };
 
         // BUSCAR PROVEEDOR EN LA TABLA DE PROVEEDORES si hay supplier_cuit pero no supplier_id
+        // Solo actualizar supplier_id y supplier_name, NO tocar otros campos de la factura
         if (invoiceWithDefaults.supplier_cuit && !invoiceWithDefaults.supplier_id) {
           const cleanCuit = invoiceWithDefaults.supplier_cuit.replace(/[-\s]/g, '');
           const foundSupplier = allSuppliers.find(s => s.cuit.replace(/[-\s]/g, '') === cleanCuit);
           
           if (foundSupplier) {
-            console.log('[InvoiceEditor] Proveedor encontrado en tabla de proveedores:', foundSupplier.razon_social);
+            console.log('[InvoiceEditor] Proveedor encontrado en tabla de proveedores:', {
+              razon_social: foundSupplier.razon_social,
+              tango_supplier_code: foundSupplier.tango_supplier_code,
+            });
+            // Solo actualizar supplier_id y supplier_name, preservar todos los demás campos de la factura
             invoiceWithDefaults = {
               ...invoiceWithDefaults,
               supplier_id: foundSupplier.id,
               supplier_name: foundSupplier.razon_social,
+              // NO actualizar tango_supplier_code ni ningún otro campo
             };
           } else {
             console.log('[InvoiceEditor] Proveedor no encontrado en tabla de proveedores para CUIT:', cleanCuit);
@@ -145,10 +151,22 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           );
 
           if (autofillResult.success && autofillResult.data) {
-            // Aplicar los campos autocompletados
+            // Aplicar los campos autocompletados, pero preservar los valores existentes de la factura
+            // No sobrescribir campos que ya tienen valores en la factura cargada
             invoiceWithDefaults = {
               ...invoiceWithDefaults,
-              ...autofillResult.data,
+              // Solo actualizar supplier_id y supplier_name si no existen
+              supplier_id: invoiceWithDefaults.supplier_id || autofillResult.data.supplier_id,
+              supplier_name: invoiceWithDefaults.supplier_name || autofillResult.data.supplier_name,
+              // NO sobrescribir tango_supplier_code si ya existe (viene de la factura)
+              // Los demás campos del autofill se aplican normalmente
+              ...Object.fromEntries(
+                Object.entries(autofillResult.data).filter(([key]) => 
+                  key !== 'supplier_id' && 
+                  key !== 'supplier_name' && 
+                  key !== 'tango_supplier_code'
+                )
+              ),
               // Asegurar que accounting_date se setee si no existe
               accounting_date: invoiceWithDefaults.accounting_date || autofillResult.data.accounting_date,
             };
