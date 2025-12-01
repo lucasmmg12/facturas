@@ -3,17 +3,15 @@
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Lock, Mail, User } from 'lucide-react';
+import { Sparkles, Lock, Mail } from 'lucide-react';
 
 export function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,22 +19,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await signIn(email, password);
-      } else {
-        // Validar campos antes de registrar
-        if (!fullName.trim()) {
-          setError('Por favor, ingresa tu nombre completo');
-          setLoading(false);
-          return;
-        }
-        if (password.length < 6) {
-          setError('La contraseña debe tener al menos 6 caracteres');
-          setLoading(false);
-          return;
-        }
-        await signUp(email, password, fullName.trim(), 'EXPORTACION');
-      }
+      await signIn(email, password);
     } catch (err: any) {
       console.error('Error en autenticación:', err);
       
@@ -135,35 +118,6 @@ export function LoginPage() {
           ></div>
 
           <div className="relative p-8">
-            {/* Toggle Login/Register */}
-            <div 
-              className="flex mb-6 p-1 rounded-xl"
-              style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-              }}
-            >
-              <button
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  isLogin
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Iniciar Sesión
-              </button>
-              <button
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  !isLogin
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Registrarse
-              </button>
-            </div>
 
             {/* Error message */}
             {error && (
@@ -180,27 +134,6 @@ export function LoginPage() {
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              {!isLogin && (
-                <div>
-                  <label className="block text-sm font-semibold text-green-300 mb-2 flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Nombre Completo
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-400"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
-                    placeholder="Tu nombre completo"
-                  />
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-semibold text-green-300 mb-2 flex items-center gap-2">
                   <Mail className="h-4 w-4" />
@@ -256,7 +189,7 @@ export function LoginPage() {
                   ) : (
                     <>
                       <Sparkles className="h-5 w-5" />
-                      {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
+                      Iniciar Sesión
                     </>
                   )}
                 </span>

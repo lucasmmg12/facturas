@@ -5,6 +5,7 @@ import { ChangelogPage } from './ChangelogPage';
 import { SuppliersPage } from './SuppliersPage';
 import { TaxCodesPage } from './TaxCodesPage';
 import { MasterDataPage } from './MasterDataPage';
+import { UsersManagementPage } from './UsersManagementPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
@@ -34,22 +35,31 @@ interface ReviewPanelProps {
 
 export function DashboardPage() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const tabs = useMemo(
-    () => [
-      { id: 'upload' as const, label: 'Carga automática' },
-      { id: 'review' as const, label: 'Revisión y edición' },
-      { id: 'export' as const, label: 'Exportar a Tango' },
-      { id: 'maestros' as const, label: 'Maestros' },
-      { id: 'suppliers' as const, label: 'Proveedores' },
-      { id: 'tax_codes' as const, label: 'Códigos Impuestos' },
-      { id: 'activity' as const, label: 'Mi Historial' },
-      { id: 'changelog' as const, label: 'Actualizaciones' },
-    ],
-    []
+    () => {
+      const baseTabs: Array<{ id: 'upload' | 'review' | 'export' | 'users' | 'maestros' | 'suppliers' | 'tax_codes' | 'activity' | 'changelog'; label: string }> = [
+        { id: 'upload', label: 'Carga automática' },
+        { id: 'review', label: 'Revisión y edición' },
+        { id: 'export', label: 'Exportar a Tango' },
+        { id: 'maestros', label: 'Maestros' },
+        { id: 'suppliers', label: 'Proveedores' },
+        { id: 'tax_codes', label: 'Códigos Impuestos' },
+        { id: 'activity', label: 'Mi Historial' },
+        { id: 'changelog', label: 'Actualizaciones' },
+      ];
+      
+      // Solo usuarios con rol REVISION ven la pestaña de usuarios
+      if (profile?.role === 'REVISION') {
+        baseTabs.splice(3, 0, { id: 'users', label: 'Usuarios' });
+      }
+      
+      return baseTabs;
+    },
+    [profile]
   );
 
   const handleInvoiceCreated = (invoiceId?: string) => {
@@ -139,6 +149,8 @@ export function DashboardPage() {
             )}
 
             {activeTab === 'maestros' && <MasterDataPage />}
+
+            {activeTab === 'users' && <UsersManagementPage />}
 
             {activeTab === 'suppliers' && <SuppliersPage />}
 
