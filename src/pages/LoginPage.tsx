@@ -50,16 +50,22 @@ export function LoginPage() {
       }
       
       // Traducir errores comunes de Supabase
-      if (errorMessage.includes('User already registered')) {
+      if (errorMessage.includes('User already registered') || errorMessage.includes('already registered')) {
         errorMessage = 'Este email ya está registrado. Por favor, inicia sesión.';
-      } else if (errorMessage.includes('Invalid login credentials')) {
-        errorMessage = 'Email o contraseña incorrectos';
-      } else if (errorMessage.includes('Email rate limit exceeded')) {
-        errorMessage = 'Demasiados intentos. Por favor, espera unos minutos.';
-      } else if (errorMessage.includes('Password should be at least')) {
+      } else if (errorMessage.includes('Invalid login credentials') || errorMessage.includes('Invalid credentials')) {
+        errorMessage = 'Email o contraseña incorrectos. Verifica tus credenciales.';
+      } else if (errorMessage.includes('Email rate limit exceeded') || errorMessage.includes('rate limit')) {
+        errorMessage = 'Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.';
+      } else if (errorMessage.includes('Password should be at least') || errorMessage.includes('password')) {
         errorMessage = 'La contraseña debe tener al menos 6 caracteres';
-      } else if (errorMessage.includes('duplicate key')) {
+      } else if (errorMessage.includes('duplicate key') || errorMessage.includes('duplicate')) {
         errorMessage = 'Este email ya está registrado. Por favor, inicia sesión.';
+      } else if (errorMessage.includes('Email not confirmed') || errorMessage.includes('email confirmation')) {
+        errorMessage = 'Por favor, verifica tu email antes de iniciar sesión. Revisa tu bandeja de entrada.';
+      } else if (errorMessage.includes('permission') || errorMessage.includes('policy') || errorMessage.includes('RLS')) {
+        errorMessage = 'Error de permisos. El perfil se creará automáticamente. Por favor, intenta iniciar sesión.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        errorMessage = 'Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.';
       }
       
       setError(errorMessage);

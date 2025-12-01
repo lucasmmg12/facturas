@@ -43,8 +43,7 @@ export function ActivityLogPage() {
     if (!profile) return;
 
     try {
-      // Cargar todas las actividades (no solo del usuario actual) para ver exportaciones de todos
-      // Hacer join con users para obtener el nombre del usuario
+      // Cargar solo las actividades del usuario actual (RLS filtrará automáticamente)
       const { data: logsData, error: logsError } = await supabase
         .from('audit_log')
         .select('*')
@@ -54,31 +53,14 @@ export function ActivityLogPage() {
 
       if (logsError) throw logsError;
 
-      // Obtener IDs únicos de usuarios
-      const userIds = [...new Set((logsData || []).map((log: any) => log.user_id).filter(Boolean))];
-      
-      // Cargar información de usuarios
-      let usersMap: Record<string, { full_name: string; email: string }> = {};
-      if (userIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, full_name, email')
-          .in('id', userIds);
-
-        if (usersData) {
-          usersData.forEach((user: any) => {
-            usersMap[user.id] = {
-              full_name: user.full_name,
-              email: user.email,
-            };
-          });
-        }
-      }
-
-      // Combinar logs con información de usuarios
+      // Como ahora solo vemos nuestros propios logs (RLS filtra automáticamente),
+      // podemos usar el perfil actual para la información del usuario
       const logsWithUsers = (logsData || []).map((log: any) => ({
         ...log,
-        user: log.user_id ? usersMap[log.user_id] || null : null,
+        user: profile ? {
+          full_name: profile.full_name,
+          email: profile.email,
+        } : null,
       }));
       
       setLogs(logsWithUsers);
@@ -176,7 +158,7 @@ export function ActivityLogPage() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Historial de Actividades</h2>
         <p className="text-gray-600 mt-1">
-          Archivos subidos y exportaciones realizadas en el sistema
+          Tus archivos subidos y exportaciones realizadas
         </p>
       </div>
 
