@@ -46,24 +46,24 @@ export interface TangoExportRow {
 // The user said "27 columnas exactas". I will use the previous headers but ensure strict values.
 // To satisfy the "TangoExportRow" interface used in diagnostics, I will use a mapping or just use the Spanish headers in the object.
 
-// Let's define the strict headers list
+// Headers exactos según la plantilla de Tango (con marcadores de campos requeridos)
 const TANGO_HEADERS = [
-  'ID Comprobante',
-  'Código de proveedor / CUIT',
-  'Tipo de comprobante',
-  'Nro. de comprobante',
-  'Fecha de emisión',
-  'Fecha contable',
-  'Moneda CTE',
+  'ID Comprobante (*)',
+  'Código de proveedor / CUIT (*)',
+  'Tipo de comprobante (*)',
+  'Nro. de comprobante (*)',
+  'Fecha de emisión (*)',
+  'Fecha contable (*)',
+  'Moneda CTE (*)',
   'Cotización',
   'Condición de compra',
-  'Subtotal gravado',
+  'Subtotal gravado (*)',
   'Subtotal no gravado',
   'Anticipo o seña',
   'Bonificación',
   'Flete',
   'Intereses',
-  'Total',
+  'Total (*)',
   'Es factura electrónica',
   'CAI / CAE',
   'Fecha de vencimiento del CAI / CAE',
@@ -71,22 +71,22 @@ const TANGO_HEADERS = [
   'Código de gasto',
   'Código de sector',
   'Código de clasificador',
-  'Código de tipo de operación AFIP', // This might be TIPO_OPERACION? User said "Tipo de operación" -> "O"
+  'Código de tipo de operación AFIP',
   'Código de comprobante AFIP',
   'Nro. de sucursal destino',
   'Observaciones'
 ];
 
 interface TaxRow {
-  'ID Comprobante': string;
-  'Código Impuesto': string;
-  'Importe': number;
+  'ID Comprobante (*)': number;
+  'Código (*)': string;
+  'Importe (*)': number;
 }
 
 interface ConceptRow {
-  'ID Comprobante': string;
-  'Código Concepto': string;
-  'Importe': number;
+  'ID Comprobante (*)': number;
+  'Código de concepto (*)': string;
+  'Importe (*)': number;
 }
 
 export async function generateTangoExport(userId: string): Promise<{
@@ -151,24 +151,24 @@ export async function generateTangoExport(userId: string): Promise<{
     const issueDate = formatDateForTango(invoice.issue_date);
     const accountingDate = invoice.accounting_date ? formatDateForTango(invoice.accounting_date) : issueDate;
 
-    // Construct the row with strict 27 columns
+    // Construct the row with strict 27 columns - exact match to template
     const row: any = {
-      'ID Comprobante': invoice.internal_invoice_id,
-      'Código de proveedor / CUIT': supplierCode,
-      'Tipo de comprobante': mapInvoiceTypeToTango(invoice.invoice_type),
-      'Nro. de comprobante': `${invoice.point_of_sale}-${invoice.invoice_number}`,
-      'Fecha de emisión': issueDate,
-      'Fecha contable': accountingDate,
-      'Moneda CTE': currency,
-      'Cotización': exchangeRate,
+      'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
+      'Código de proveedor / CUIT (*)': supplierCode,
+      'Tipo de comprobante (*)': mapInvoiceTypeToTango(invoice.invoice_type),
+      'Nro. de comprobante (*)': `${invoice.point_of_sale}-${invoice.invoice_number}`,
+      'Fecha de emisión (*)': issueDate,
+      'Fecha contable (*)': accountingDate,
+      'Moneda CTE (*)': currency,
+      'Cotización': exchangeRate === 1 ? 1 : Number(exchangeRate.toFixed(2)),
       'Condición de compra': condition,
-      'Subtotal gravado': Number(invoice.net_taxed?.toFixed(2) || 0),
+      'Subtotal gravado (*)': Number(invoice.net_taxed?.toFixed(2) || 0),
       'Subtotal no gravado': Number(invoice.net_untaxed?.toFixed(2) || 0),
       'Anticipo o seña': Number(invoice.advance_payment?.toFixed(2) || 0),
       'Bonificación': Number(invoice.discount?.toFixed(2) || 0),
       'Flete': Number(invoice.freight?.toFixed(2) || 0),
       'Intereses': Number(invoice.interest?.toFixed(2) || 0),
-      'Total': Number(invoice.total_amount?.toFixed(2) || 0),
+      'Total (*)': Number(invoice.total_amount?.toFixed(2) || 0),
       'Es factura electrónica': invoice.is_electronic ? 'SI' : 'NO',
       'CAI / CAE': invoice.cai_cae || '',
       'Fecha de vencimiento del CAI / CAE': invoice.cai_cae_expiration ? formatDateForTango(invoice.cai_cae_expiration) : '',
@@ -178,7 +178,7 @@ export async function generateTangoExport(userId: string): Promise<{
       'Código de clasificador': 'B', // 2.5 Siempre "B"
       'Código de tipo de operación AFIP': 'O', // 2.4 Siempre "O"
       'Código de comprobante AFIP': afipCode,
-      'Nro. de sucursal destino': invoice.destination_branch_number || '',
+      'Nro. de sucursal destino': invoice.destination_branch_number ? parseInt(invoice.destination_branch_number) : 0,
       'Observaciones': invoice.observations || '',
     };
 
@@ -190,9 +190,9 @@ export async function generateTangoExport(userId: string): Promise<{
       const taxDef = taxCodeMap.get(tax.tax_code_id);
       if (taxDef) {
         taxes.push({
-          'ID Comprobante': invoice.internal_invoice_id,
-          'Código Impuesto': taxDef.tango_code, // 2.9 Use Tango Code
-          'Importe': Number(tax.tax_amount?.toFixed(2) || 0),
+          'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
+          'Código (*)': String(taxDef.tango_code), // 2.9 Use Tango Code as string
+          'Importe (*)': Number(tax.tax_amount?.toFixed(2) || 0),
         });
       }
     });
@@ -203,9 +203,9 @@ export async function generateTangoExport(userId: string): Promise<{
       const conceptDef = conceptMap.get(concept.tango_concept_id);
       if (conceptDef) {
         concepts.push({
-          'ID Comprobante': invoice.internal_invoice_id,
-          'Código Concepto': conceptDef.tango_concept_code, // 2.8 Use Numeric Code
-          'Importe': Number(concept.amount?.toFixed(2) || 0),
+          'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
+          'Código de concepto (*)': String(conceptDef.tango_concept_code).padStart(3, '0'), // 2.8 Use code with leading zeros
+          'Importe (*)': Number(concept.amount?.toFixed(2) || 0),
         });
       }
     });
@@ -214,22 +214,22 @@ export async function generateTangoExport(userId: string): Promise<{
   // Run Diagnostics
   // We need to map the 'headers' array to the 'TangoExportRow' interface expected by diagnostics
   const diagnosticRows = headers.map(h => ({
-    'ID Comprobante': h['ID Comprobante'],
-    'COD_PRO_O_CUIT': h['Código de proveedor / CUIT'],
-    'Tipo de comprobante': h['Tipo de comprobante'],
-    'Nro. de comprobante': h['Nro. de comprobante'],
-    'FECHA_EMISION': h['Fecha de emisión'],
-    'FECHA_CONTABLE': h['Fecha contable'],
-    'MONEDA': h['Moneda CTE'],
+    'ID Comprobante': h['ID Comprobante (*)'],
+    'COD_PRO_O_CUIT': h['Código de proveedor / CUIT (*)'],
+    'Tipo de comprobante': h['Tipo de comprobante (*)'],
+    'Nro. de comprobante': h['Nro. de comprobante (*)'],
+    'FECHA_EMISION': h['Fecha de emisión (*)'],
+    'FECHA_CONTABLE': h['Fecha contable (*)'],
+    'MONEDA': h['Moneda CTE (*)'],
     'COTIZACION': h['Cotización'],
     'COND_COMPRA': h['Condición de compra'],
-    'IMP_NETO_GRAV': h['Subtotal gravado'],
+    'IMP_NETO_GRAV': h['Subtotal gravado (*)'],
     'IMP_NETO_NO_GRAV': h['Subtotal no gravado'],
     'Anticipo o seña': h['Anticipo o seña'],
     'Bonificación': h['Bonificación'],
     'Flete': h['Flete'],
     'Intereses': h['Intereses'],
-    'TOTAL': h['Total'],
+    'TOTAL': h['Total (*)'],
     'Es factura electrónica': h['Es factura electrónica'],
     'CAI / CAE': h['CAI / CAE'],
     'Fecha de vencimiento del CAI / CAE': h['Fecha de vencimiento del CAI / CAE'],
@@ -268,7 +268,7 @@ export async function generateTangoExport(userId: string): Promise<{
 
     if (!batchError) {
       await markInvoicesAsExported(invoiceIds, batch.id);
-      
+
       // Registrar actividad de exportación
       try {
         await logExport(userId, batch.id, filename, invoices.length);
@@ -294,17 +294,17 @@ function mapInvoiceTypeToTango(invoiceType: string): string {
   if (invoiceType.startsWith('FACTURA')) {
     return 'FAC';
   }
-  
+
   // Todas las notas de crédito (A, B, C) → "N/C"
   if (invoiceType.startsWith('NOTA_CREDITO')) {
     return 'N/C';
   }
-  
+
   // Todas las notas de débito (A, B, C) → "N/D"
   if (invoiceType.startsWith('NOTA_DEBITO')) {
     return 'N/D';
   }
-  
+
   // Fallback por si hay algún tipo no contemplado
   return invoiceType;
 }
@@ -354,18 +354,18 @@ function applyHeaderStyle(sheet: XLSX.WorkSheet, columnCount: number) {
 export function downloadExport(filename: string, data: { headers: any[]; taxes: TaxRow[]; concepts: ConceptRow[] }) {
   const workbook = XLSX.utils.book_new();
 
-  // HOJA 1: Encabezados
+  // HOJA 1: Encabezados y totales (nombre exacto de la plantilla)
   const headersSheet = XLSX.utils.json_to_sheet(data.headers);
   applyHeaderStyle(headersSheet, 27);
-  XLSX.utils.book_append_sheet(workbook, headersSheet, 'Encabezados');
+  XLSX.utils.book_append_sheet(workbook, headersSheet, 'Encabezados y totales');
 
-  // HOJA 2: IVA y Otros Impuestos
-  const taxesSheet = data.taxes.length > 0 ? XLSX.utils.json_to_sheet(data.taxes) : XLSX.utils.json_to_sheet([{ 'ID Comprobante': '', 'Código Impuesto': '', 'Importe': '' }]);
+  // HOJA 2: IVA y otros impuestos (nombre exacto de la plantilla)
+  const taxesSheet = data.taxes.length > 0 ? XLSX.utils.json_to_sheet(data.taxes) : XLSX.utils.json_to_sheet([{ 'ID Comprobante (*)': '', 'Código (*)': '', 'Importe (*)': '' }]);
   applyHeaderStyle(taxesSheet, 3);
-  XLSX.utils.book_append_sheet(workbook, taxesSheet, 'IVA y Otros Impuestos');
+  XLSX.utils.book_append_sheet(workbook, taxesSheet, 'IVA y otros impuestos');
 
-  // HOJA 3: Conceptos
-  const conceptsSheet = data.concepts.length > 0 ? XLSX.utils.json_to_sheet(data.concepts) : XLSX.utils.json_to_sheet([{ 'ID Comprobante': '', 'Código Concepto': '', 'Importe': '' }]);
+  // HOJA 3: Conceptos (nombre exacto de la plantilla)
+  const conceptsSheet = data.concepts.length > 0 ? XLSX.utils.json_to_sheet(data.concepts) : XLSX.utils.json_to_sheet([{ 'ID Comprobante (*)': '', 'Código de concepto (*)': '', 'Importe (*)': '' }]);
   applyHeaderStyle(conceptsSheet, 3);
   XLSX.utils.book_append_sheet(workbook, conceptsSheet, 'Conceptos');
 
