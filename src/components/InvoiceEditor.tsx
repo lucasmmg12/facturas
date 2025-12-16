@@ -119,7 +119,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         if (invoiceWithDefaults.supplier_cuit && !invoiceWithDefaults.supplier_id) {
           const cleanCuit = invoiceWithDefaults.supplier_cuit.replace(/[-\s]/g, '');
           const foundSupplier = allSuppliers.find(s => s.cuit.replace(/[-\s]/g, '') === cleanCuit);
-          
+
           if (foundSupplier) {
             console.log('[InvoiceEditor] Proveedor encontrado en tabla de proveedores:', {
               razon_social: foundSupplier.razon_social,
@@ -161,9 +161,9 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               // NO sobrescribir tango_supplier_code si ya existe (viene de la factura)
               // Los demás campos del autofill se aplican normalmente
               ...Object.fromEntries(
-                Object.entries(autofillResult.data).filter(([key]) => 
-                  key !== 'supplier_id' && 
-                  key !== 'supplier_name' && 
+                Object.entries(autofillResult.data).filter(([key]) =>
+                  key !== 'supplier_id' &&
+                  key !== 'supplier_name' &&
                   key !== 'tango_supplier_code'
                 )
               ),
@@ -870,8 +870,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     value={invoice.issue_date}
                     onChange={(e) => {
                       const newIssueDate = e.target.value;
-                      setInvoice({ 
-                        ...invoice, 
+                      setInvoice({
+                        ...invoice,
                         issue_date: newIssueDate,
                         // Actualizar automáticamente la fecha contable cuando cambia la fecha de emisión
                         accounting_date: newIssueDate || invoice.accounting_date
@@ -982,12 +982,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Subtotal Gravado <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.net_taxed}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, net_taxed: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={invoice.net_taxed?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, net_taxed: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1001,12 +1001,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Subtotal No Gravado
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.net_untaxed}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, net_untaxed: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={invoice.net_untaxed?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, net_untaxed: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1020,12 +1020,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Anticipo o Seña
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.advance_payment || 0}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, advance_payment: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={(invoice.advance_payment || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, advance_payment: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1039,12 +1039,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Bonificación
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.discount || 0}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, discount: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={(invoice.discount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, discount: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1058,12 +1058,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Flete
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.freight || 0}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, freight: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={(invoice.freight || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, freight: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1077,12 +1077,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Intereses
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.interest || 0}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, interest: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={(invoice.interest || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, interest: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1096,12 +1096,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     IVA
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.iva_amount}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, iva_amount: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={invoice.iva_amount?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, iva_amount: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1115,15 +1115,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Otros Impuestos
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.other_taxes_amount}
-                    onChange={(e) =>
+                    type="text"
+                    value={invoice.other_taxes_amount?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({
                         ...invoice,
-                        other_taxes_amount: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        other_taxes_amount: parseFloat(value) || 0,
+                      });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
@@ -1137,12 +1137,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Total <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.total_amount}
-                    onChange={(e) =>
-                      setInvoice({ ...invoice, total_amount: parseFloat(e.target.value) || 0 })
-                    }
+                    type="text"
+                    value={invoice.total_amount?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
+                      setInvoice({ ...invoice, total_amount: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold text-lg"
                   />
                 </div>
@@ -1152,15 +1152,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     Crédito Fiscal No Computable
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={invoice.non_computable_tax_credit || 0}
-                    onChange={(e) =>
+                    type="text"
+                    value={(invoice.non_computable_tax_credit || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({
                         ...invoice,
-                        non_computable_tax_credit: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        non_computable_tax_credit: parseFloat(value) || 0,
+                      });
+                    }}
                     className="w-full px-4 py-3 rounded-lg text-white transition-all"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
