@@ -51,12 +51,12 @@ export function DashboardPage() {
         { id: 'activity', label: 'Mi Historial' },
         { id: 'changelog', label: 'Actualizaciones' },
       ];
-      
+
       // Solo usuarios con rol REVISION ven la pestaña de usuarios
       if (profile?.role === 'REVISION') {
         baseTabs.splice(3, 0, { id: 'users', label: 'Usuarios' });
       }
-      
+
       return baseTabs;
     },
     [profile]
@@ -168,7 +168,7 @@ export function DashboardPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <img
-                    src="/logo-header.png"
+                    src="/logogrow.png"
                     alt="Grow Labs Logo"
                     className="h-12 w-12 object-contain bg-white rounded-full p-1"
                   />
@@ -383,184 +383,184 @@ function ReviewPanel({
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
       <div className="flex flex-col gap-8">
         {/* Comprobantes recientes - Arriba */}
-      <div
-        className="rounded-2xl overflow-hidden shadow-2xl"
-        style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          maxHeight: '400px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
         <div
-          className="px-6 py-5 flex-shrink-0"
+          className="rounded-2xl overflow-hidden shadow-2xl"
           style={{
-            borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
-              <p className="text-sm text-green-200">
-                Selecciona un comprobante para revisarlo y editar sus datos.
-              </p>
+          <div
+            className="px-6 py-5 flex-shrink-0"
+            style={{
+              borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
+                <p className="text-sm text-green-200">
+                  Selecciona un comprobante para revisarlo y editar sus datos.
+                </p>
+              </div>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {deleting ? 'Eliminando...' : `Eliminar ${selectedIds.size} seleccionado(s)`}
+                </button>
+              )}
             </div>
-            {selectedIds.size > 0 && (
-              <button
-                type="button"
-                onClick={handleDeleteClick}
-                disabled={deleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                {deleting ? 'Eliminando...' : `Eliminar ${selectedIds.size} seleccionado(s)`}
-              </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
+            ) : error ? (
+              <div className="p-6 text-sm text-red-300">{error}</div>
+            ) : formattedInvoices.length === 0 ? (
+              <div className="p-6 text-sm text-green-200">
+                Todavía no hay comprobantes en el sistema.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                      <th className="px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === invoices.length && invoices.length > 0}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                        Fecha
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                        Proveedor
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                        Conceptos
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
+                        Total
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formattedInvoices.map((invoice) => {
+                      const isActive = invoice.id === selectedInvoiceId;
+                      const isSelected = selectedIds.has(invoice.id);
+                      return (
+                        <tr
+                          key={invoice.id}
+                          className="transition-all duration-200"
+                          style={{
+                            background: isActive
+                              ? 'rgba(34, 197, 94, 0.2)'
+                              : isSelected
+                                ? 'rgba(34, 197, 94, 0.1)'
+                                : 'transparent',
+                            borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive && !isSelected) {
+                              e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive && !isSelected) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}
+                        >
+                          <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleSelectOne(invoice.id, e.target.checked)}
+                              className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                            />
+                          </td>
+                          <td
+                            className="px-6 py-4 text-sm text-white cursor-pointer"
+                            onClick={() => onSelectInvoice(invoice.id)}
+                          >
+                            {invoice.formattedDate}
+                          </td>
+                          <td
+                            className="px-6 py-4 text-sm font-medium text-white cursor-pointer"
+                            onClick={() => onSelectInvoice(invoice.id)}
+                          >
+                            {invoice.supplier_name}
+                          </td>
+                          <td
+                            className="px-6 py-4 text-sm text-green-200 cursor-pointer"
+                            onClick={() => onSelectInvoice(invoice.id)}
+                          >
+                            <span className="text-xs opacity-70">{invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}</span>
+                          </td>
+                          <td
+                            className="px-6 py-4 text-sm text-right font-semibold text-white cursor-pointer"
+                            onClick={() => onSelectInvoice(invoice.id)}
+                          >
+                            {invoice.formattedTotal}
+                          </td>
+                          <td
+                            className="px-6 py-4 text-center cursor-pointer"
+                            onClick={() => onSelectInvoice(invoice.id)}
+                          >
+                            <StatusBadge status={invoice.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
-          ) : error ? (
-            <div className="p-6 text-sm text-red-300">{error}</div>
-          ) : formattedInvoices.length === 0 ? (
-            <div className="p-6 text-sm text-green-200">
-              Todavía no hay comprobantes en el sistema.
-            </div>
+
+        {/* Editor de Comprobante - Abajo */}
+        <div
+          className="rounded-2xl overflow-hidden shadow-2xl flex-1"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            minHeight: '500px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {selectedInvoiceId ? (
+            <InvoiceEditor
+              invoiceId={selectedInvoiceId}
+              onClose={() => onSelectInvoice(null)}
+              onSave={() => {
+                onInvoiceUpdated();
+                void loadInvoices();
+              }}
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                  <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
-                    <th className="px-4 py-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size === invoices.length && invoices.length > 0}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Proveedor
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Conceptos
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Total
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
-                      Estado
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formattedInvoices.map((invoice) => {
-                    const isActive = invoice.id === selectedInvoiceId;
-                    const isSelected = selectedIds.has(invoice.id);
-                    return (
-                      <tr
-                        key={invoice.id}
-                        className="transition-all duration-200"
-                        style={{
-                          background: isActive
-                            ? 'rgba(34, 197, 94, 0.2)'
-                            : isSelected
-                              ? 'rgba(34, 197, 94, 0.1)'
-                              : 'transparent',
-                          borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive && !isSelected) {
-                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive && !isSelected) {
-                            e.currentTarget.style.background = 'transparent';
-                          }
-                        }}
-                      >
-                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => handleSelectOne(invoice.id, e.target.checked)}
-                            className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                          />
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm text-white cursor-pointer"
-                          onClick={() => onSelectInvoice(invoice.id)}
-                        >
-                          {invoice.formattedDate}
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm font-medium text-white cursor-pointer"
-                          onClick={() => onSelectInvoice(invoice.id)}
-                        >
-                          {invoice.supplier_name}
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm text-green-200 cursor-pointer"
-                          onClick={() => onSelectInvoice(invoice.id)}
-                        >
-                          <span className="text-xs opacity-70">{invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}</span>
-                        </td>
-                        <td
-                          className="px-6 py-4 text-sm text-right font-semibold text-white cursor-pointer"
-                          onClick={() => onSelectInvoice(invoice.id)}
-                        >
-                          {invoice.formattedTotal}
-                        </td>
-                        <td
-                          className="px-6 py-4 text-center cursor-pointer"
-                          onClick={() => onSelectInvoice(invoice.id)}
-                        >
-                          <StatusBadge status={invoice.status} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex h-full items-center justify-center p-12 text-center text-green-200">
+              Selecciona un comprobante de la lista para abrir el editor.
             </div>
           )}
         </div>
       </div>
-
-      {/* Editor de Comprobante - Abajo */}
-      <div
-        className="rounded-2xl overflow-hidden shadow-2xl flex-1"
-        style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          minHeight: '500px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {selectedInvoiceId ? (
-          <InvoiceEditor
-            invoiceId={selectedInvoiceId}
-            onClose={() => onSelectInvoice(null)}
-            onSave={() => {
-              onInvoiceUpdated();
-              void loadInvoices();
-            }}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-12 text-center text-green-200">
-            Selecciona un comprobante de la lista para abrir el editor.
-          </div>
-        )}
-      </div>
-    </div>
     </>
   );
 }
