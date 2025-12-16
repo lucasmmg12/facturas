@@ -55,15 +55,15 @@ function validateMandatory(row: TangoExportRow, rowNum: number, errors: Diagnost
         errors.push({ row: rowNum, column: 'COND_COMPRA', value: row.COND_COMPRA, message: 'Debe ser 1 (Cta Cte) o 2 (Contado)', type: 'CRITICAL' });
     }
 
-    // 2.4 Tipo de operación ("O")
-    if (row.TIPO_OPERACION !== 'O') {
-        errors.push({ row: rowNum, column: 'TIPO_OPERACION', value: row.TIPO_OPERACION, message: 'Debe ser "O"', type: 'CRITICAL' });
-    }
+    // 2.4 Tipo de operación - DESHABILITADO: ahora se deja vacío
+    // if (row.TIPO_OPERACION !== 'O') {
+    //     errors.push({ row: rowNum, column: 'TIPO_OPERACION', value: row.TIPO_OPERACION, message: 'Debe ser "O"', type: 'CRITICAL' });
+    // }
 
-    // 2.5 Clasificación ("B")
-    if (row.COD_CLASIFICACION !== 'B') {
-        errors.push({ row: rowNum, column: 'COD_CLASIFICACION', value: row.COD_CLASIFICACION, message: 'Debe ser "B"', type: 'CRITICAL' });
-    }
+    // 2.5 Clasificación - DESHABILITADO: ahora se deja vacío
+    // if (row.COD_CLASIFICACION !== 'B') {
+    //     errors.push({ row: rowNum, column: 'COD_CLASIFICACION', value: row.COD_CLASIFICACION, message: 'Debe ser "B"', type: 'CRITICAL' });
+    // }
 
     // 2.6 Código comprobante AFIP (Numeric string)
     if (!/^\d+$/.test(row.COD_COMP_AFIP)) {
