@@ -175,8 +175,8 @@ export async function generateTangoExport(userId: string): Promise<{
       'Crédito fiscal no computable': Number(invoice.non_computable_tax_credit?.toFixed(2) || 0),
       'Código de gasto': invoice.expense_code || '',
       'Código de sector': sector,
-      'Código de clasificador': 'B', // 2.5 Siempre "B"
-      'Código de tipo de operación AFIP': 'O', // 2.4 Siempre "O"
+      'Código de clasificador': '', // Dejar vacío
+      'Código de tipo de operación AFIP': '', // Dejar vacío
       'Código de comprobante AFIP': afipCode,
       'Nro. de sucursal destino': invoice.destination_branch_number ? parseInt(invoice.destination_branch_number) : 0,
       'Observaciones': invoice.observations || '',
