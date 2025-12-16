@@ -1470,7 +1470,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <input
                     type="text"
-                    value={invoice.classifier_code || '0'}
+                    value={invoice.classifier_code || ''}
                     readOnly
                     className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
@@ -1479,7 +1479,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     }}
                   />
                   <p className="mt-1 text-xs text-gray-400">
-                    Siempre 0 (no editable)
+                    Vacío (no editable)
                   </p>
                 </div>
 
@@ -1492,7 +1492,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                   </label>
                   <input
                     type="text"
-                    value={invoice.afip_operation_type_code || 'O'}
+                    value={invoice.afip_operation_type_code || ''}
                     readOnly
                     className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
                     style={{
@@ -1501,7 +1501,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     }}
                   />
                   <p className="mt-1 text-xs text-gray-400">
-                    O = Compra estándar (no editable)
+                    Vacío (no editable)
                   </p>
                 </div>
 
