@@ -191,17 +191,32 @@ function buildPrompt(
   }
 
   return `
-Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido.
-${hasMultiplePages ? '\nEste comprobante tiene MÚLTIPLES PÁGINAS. Revisa todas para obtener totales e impuestos.\n' : ''}
+Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
+
+${hasMultiplePages ? '🚨 ESTE DOCUMENTO TIENE MÚLTIPLES PÁGINAS. Analiza todas para encontrar los totales finales e impuestos.\n' : ''}
 ${taxCodesSection}
 
-Estructura:
+REGLAS CRÍTICAS DE IDENTIFICACIÓN (ENTRENAMIENTO):
+1. RECEPTOR FIJO: El receptor de estas facturas es SIEMPRE "SANATORIO ARGENTINO S.R.L." con CUIT 30609926860.
+   - ❌ NUNCA tomes el CUIT 30609926860 como "supplierCuit".
+   - ❌ NUNCA tomes a Sanatorio Argentino como "supplierName".
+   - Si detectas estos datos, identifícalos como receptor y busca al EMISOR (el vendedor) en otra parte.
+
+2. IDENTIFICACIÓN DEL EMISOR (VENDEDOR):
+   - El Emisor suele estar en el encabezado (parte superior).
+   - Busca el nombre más grande, logotipos o la primera Razón Social mencionada.
+   - El CUIT del emisor suele estar cerca de la fecha y número de factura en la cabecera.
+   - En facturas AFIP estándar, el emisor está en el recuadro superior izquierdo.
+
+3. ESTRUCTURA JSON REQUERIDA:
 {
-  "supplierCuit": "string",
+  "supplierCuit": "string (Solo números)",
   "supplierName": "string",
-  "invoiceType": "string",
-  "pointOfSale": "string",
-  "invoiceNumber": "string",
+  "receiverCuit": "30609926860",
+  "receiverName": "SANATORIO ARGENTINO S.R.L.",
+  "invoiceType": "string (FACTURA_A, FACTURA_B, FACTURA_C, etc.)",
+  "pointOfSale": "string (5 dígitos)",
+  "invoiceNumber": "string (8 dígitos)",
   "issueDate": "YYYY-MM-DD",
   "netTaxed": number,
   "netUntaxed": number,
@@ -209,12 +224,14 @@ Estructura:
   "ivaAmount": number,
   "otherTaxesAmount": number,
   "totalAmount": number,
-  "caiCae": "string",
+  "caiCae": "string (cae/cai)",
   "caiCaeExpiration": "YYYY-MM-DD",
   "taxes": [
     { "taxCode": "string", "taxBase": number, "taxAmount": number, "rate": number }
   ]
 }
+
+Usa null si un dato no es encontrado. Asegúrate de que los montos sean números válidos.
 `;
 }
 

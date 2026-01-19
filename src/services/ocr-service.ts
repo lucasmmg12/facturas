@@ -14,6 +14,8 @@ import {
 import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
 import { createWorker, type Worker } from 'tesseract.js';
 
+const SANATORIO_ARGENTINO_CUIT = '30609926860';
+
 export interface OCRResult {
   supplierCuit: string | null;
   supplierName: string | null;
@@ -234,22 +236,33 @@ async function blobToDataURL(blob: Blob): Promise<string> {
 }
 
 function extractCUIT(text: string, type: 'proveedor' | 'receptor'): string | null {
-  const cuitPatterns = [
-    /CUIT[:\s]*(\d{2}[-\s]?\d{8}[-\s]?\d{1})/gi,
-    /(\d{2}[-\s]?\d{8}[-\s]?\d{1})/g,
-  ];
+  const cuitPattern = /(\d{2}[-\s]?\d{8}[-\s]?\d{1})/g;
+  const matches = text.match(cuitPattern);
 
-  for (const pattern of cuitPatterns) {
-    const matches = text.match(pattern);
-    if (matches && matches.length > 0) {
-      const cuit = matches[type === 'proveedor' ? 0 : 1]?.replace(/[^0-9]/g, '') || null;
-      if (cuit && validateCUIT(cuit)) {
-        return cuit;
-      }
+  if (!matches) return null;
+
+  // Limpiar y validar todos los CUITs encontrados
+  const validCuits = matches
+    .map(m => m.replace(/[^0-9]/g, ''))
+    .filter(c => validateCUIT(c));
+
+  if (validCuits.length === 0) return null;
+
+  // Identificar CUITs únicos para evitar duplicados por mala lectura
+  const uniqueCuits = Array.from(new Set(validCuits));
+
+  if (type === 'receptor') {
+    // El receptor suele ser el Sanatorio Argentino
+    if (uniqueCuits.includes(SANATORIO_ARGENTINO_CUIT)) {
+      return SANATORIO_ARGENTINO_CUIT;
     }
+    // Si no está el Sanatorio, pero hay un segundo CUIT, podría ser el receptor
+    return uniqueCuits.length > 1 ? uniqueCuits[1] : null;
+  } else {
+    // Para el PROVEEDOR, buscamos el primer CUIT que NO sea el del Sanatorio Argentino
+    const supplierCuit = uniqueCuits.find(c => c !== SANATORIO_ARGENTINO_CUIT);
+    return supplierCuit || uniqueCuits[0]; // Si solo está el Sanatorio (error), devolvemos el primero igualmente
   }
-
-  return null;
 }
 
 function extractSupplierName(text: string): string | null {
@@ -261,7 +274,26 @@ function extractSupplierName(text: string): string | null {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      const name = match[1].trim();
+      // Si el nombre detectado es el receptor, seguir buscando
+      if (name.toUpperCase().includes('SANATORIO ARGENTINO')) continue;
+      return name;
+    }
+  }
+
+  // Fallback: Si no hay etiquetas, el nombre suele estar en la primera o segunda línea
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+  for (let i = 0; i < Math.min(3, lines.length); i++) {
+    const candidate = lines[i];
+    // Ignorar líneas que parecen ser títulos de tipo de factura o receptor
+    if (candidate.toUpperCase().includes('FACTURA')) continue;
+    if (candidate.toUpperCase().includes('SANATORIO ARGENTINO')) continue;
+    if (candidate.toUpperCase().includes('ORIGINAL')) continue;
+    if (candidate.toUpperCase().includes('DUPLICADO')) continue;
+
+    // Si tiene letras, es un buen candidato
+    if (/[A-Z]{3,}/i.test(candidate)) {
+      return candidate;
     }
   }
 
@@ -269,9 +301,15 @@ function extractSupplierName(text: string): string | null {
 }
 
 function extractReceiverName(text: string): string | null {
+  // El receptor casi siempre es el Sanatorio Argentino
+  if (text.toUpperCase().includes('SANATORIO ARGENTINO')) {
+    return 'SANATORIO ARGENTINO S.R.L.';
+  }
+
   const patterns = [
     /Denominación del comprador[:\s]+([A-Za-z0-9\s,.]+)/i,
     /Comprador[:\s]+([A-Za-z0-9\s,.]+)/i,
+    /Señor\(es\)[:\s]+([A-Za-z0-9\s,.]+)/i,
   ];
 
   for (const pattern of patterns) {
