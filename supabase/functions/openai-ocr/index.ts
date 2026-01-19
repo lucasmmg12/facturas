@@ -1,7 +1,6 @@
-// Supabase Edge Function para procesar OCR con OpenAI
-// Actúa como proxy para evitar problemas de CORS y proteger la API key
+// Supabase Edge Function: openai-ocr
+// Version: Stable with Error Propagation (Always returns 200 to client to avoid opaque errors)
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -14,266 +13,170 @@ const corsHeaders = {
 };
 
 interface OCRRequest {
-  base64: string | string[]; // Puede ser una imagen o array de imágenes (múltiples páginas)
+  base64: string | string[];
   mimeType: string;
 }
 
-serve(async (req) => {
-  // Handle CORS preflight
+Deno.serve(async (req) => {
+  // 1. Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log('[Supabase Edge Function] Iniciando ejecución de la función...');
-
-    // Verificar autenticación
+    // 2. Auth Check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[Supabase Edge Function] Error: No authorization header');
-      throw new Error('No authorization header');
+      throw new Error('Falta el header de autorización');
     }
 
-    // Usar SERVICE_ROLE_KEY para operaciones de administración interna
+    // Usar Service Role solo si es absolutamente necesario, aquí usamos anon key + auth header para validar usuario
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verificar usuario (seguimos usando el header del usuario para seguridad)
-    const {
-      data: { user },
-      error: userError
-    } = await supabaseClient.auth.getUser();
-
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      console.error('[Supabase Edge Function] Error de autenticación:', userError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Sesión inválida o expirada. Por favor reingresa al sistema.' }),
-        { headers: corsHeaders, status: 401 }
+        JSON.stringify({ success: false, error: 'Sesión expirada o inválida. Recarga la página.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 to see error in client
       );
     }
 
-
-    // Verificar que tenemos la API key de OpenAI
     if (!OPENAI_API_KEY) {
-      console.error('[Supabase Edge Function] Error: OPENAI_API_KEY no configurada');
-      throw new Error('OPENAI_API_KEY no configurada en el servidor');
+      throw new Error('Configuración incompleta: Falta OPENAI_API_KEY en el servidor.');
     }
 
-    // Obtener el body
+    // 3. Parse Body
     let requestData: OCRRequest;
     try {
       requestData = await req.json();
-    } catch (e) {
-      console.error('[Supabase Edge Function] Error al parsear JSON del request:', e);
+    } catch {
       throw new Error('El cuerpo de la solicitud no es un JSON válido');
     }
 
     if (!requestData.base64 || !requestData.mimeType) {
-      throw new Error('Faltan parámetros: base64 y mimeType son requeridos');
+      throw new Error('Faltan datos de la imagen (base64 o mimeType)');
     }
 
-    // Normalizar: siempre trabajar con array
-    const base64Array = Array.isArray(requestData.base64)
-      ? requestData.base64
-      : [requestData.base64];
+    const base64Array = Array.isArray(requestData.base64) ? requestData.base64 : [requestData.base64];
 
-    const pagesCount = base64Array.length;
-    const mimeType = requestData.mimeType;
-
-    console.log('[Supabase Edge Function] Procesando OCR para usuario:', user.id);
-    console.log('[Supabase Edge Function] Cantidad de páginas:', pagesCount);
-
-    // Hardcode essential tax codes to simplify and avoid DB errors
+    // 4. Build Prompt (Hardcoded for stability)
     const taxCodesList = [
-      { code: '1', description: 'IVA TASA GENERAL (21%)', rate: 21, tax_type: 'IVA' },
-      { code: '2', description: 'IVA TASA REDUCIDA (10.5%)', rate: 10.5, tax_type: 'IVA' },
-      { code: 'IVA_27', description: 'IVA 27%', rate: 27, tax_type: 'IVA' },
-      { code: 'PERC_IIBB', description: 'PERCEPCIÓN IIBB', rate: null, tax_type: 'PERCEPCION_IIBB' },
-      { code: 'PERC_IVA', description: 'PERCEPCIÓN IVA', rate: null, tax_type: 'PERCEPCION_IVA' },
+      { code: '1', description: 'IVA TASA GENERAL (21%)', rate: 21 },
+      { code: '2', description: 'IVA TASA REDUCIDA (10.5%)', rate: 10.5 },
+      { code: 'IVA_27', description: 'IVA 27%', rate: 27 },
+      { code: 'PERC_IIBB', description: 'PERCEPCIÓN IIBB', rate: null },
+      { code: 'PERC_IVA', description: 'PERCEPCIÓN IVA', rate: null },
     ];
 
+    const prompt = `
+Extrae los datos de esta factura y responde SOLO con JSON.
 
-    const prompt = buildPrompt(pagesCount > 1, taxCodesList);
+IMPUESTOS DISPONIBLES (Úsalos en "taxCode" si coinciden):
+${taxCodesList.map(t => `- ${t.code}: ${t.description} ${t.rate ? `(${t.rate}%)` : ''}`).join('\n')}
 
-
-    // Construir el contenido con todas las imágenes
-    const imageContent = base64Array.map((imgBase64, index) => {
-      let cleanBase64 = imgBase64;
-      if (imgBase64.includes(',')) {
-        cleanBase64 = imgBase64.split(',')[1] || imgBase64;
-      }
-
-      if (!cleanBase64 || cleanBase64.length === 0) {
-        throw new Error(`La imagen de la página ${index + 1} está vacía`);
-      }
-
-      return {
-        type: 'image_url' as const,
-        image_url: {
-          url: `data:${mimeType};base64,${cleanBase64}`,
-        },
-      };
-    });
-
-    const requestBody = {
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            ...imageContent,
-          ],
-        },
-      ],
-      max_tokens: 6000,
-    };
-
-    console.log('[Supabase Edge Function] Enviando solicitud a OpenAI...');
-
-    const response = await fetch(OPENAI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Supabase Edge Function] Error de OpenAI:', errorText);
-      throw new Error(`OpenAI falló (${response.status}): ${errorText}`);
-    }
-
-    const data = await response.json();
-    let outputText = extractOutputText(data);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: outputText,
-        usage: data.usage,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    console.error('[Supabase Edge Function] Catch error:', error);
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Error interno desconocido',
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    );
-  }
-});
-
-function buildPrompt(
-  hasMultiplePages: boolean = false,
-  taxCodes: Array<{ code: string; description: string; rate: number | null; tax_type: string }> = []
-): string {
-  let taxCodesSection = '';
-  if (taxCodes.length > 0) {
-    taxCodesSection = `\n\nCÓDIGOS DE IMPUESTOS DISPONIBLES:\n`;
-    taxCodes.forEach((tc) => {
-      const rateInfo = tc.rate !== null ? ` (tasa: ${tc.rate}%)` : '';
-      taxCodesSection += `- Código "${tc.code}": ${tc.description}${rateInfo}\n`;
-    });
-  }
-
-  return `
-Extrae los datos del comprobante argentino adjunto y responde SOLO con JSON válido, sin texto adicional.
-
-${hasMultiplePages ? '🚨 ESTE DOCUMENTO TIENE MÚLTIPLES PÁGINAS. Analiza todas para encontrar los totales finales e impuestos.\n' : ''}
-${taxCodesSection}
-
-REGLAS CRÍTICAS DE IDENTIFICACIÓN (ENTRENAMIENTO):
-1. RECEPTOR FIJO (Sanatorio Argentino): 
-   - El CUIT 30609926860 (SANATORIO ARGENTINO S.R.L.) es SIEMPRE el RECEPTOR (vía "receiverCuit/receiverName").
-   - ❌ NUNCA lo identifiques como el emisor (vendedor).
-   - El receptor suele ser mencionado en el cuerpo de la factura bajo etiquetas como "RAZÓN SOCIAL:", "Señores:", etc.
-
-2. IDENTIFICACIÓN DEL EMISOR (VENDEDOR):
-   - El EMISOR es la entidad que vende el servicio o producto. Sus datos SIEMPRE están en la CABECERA (encabezado superior).
-   - PRIORIZA LOGOTIPOS: El nombre que aparece en el logo más grande (ej: "La Platense S.A.", "Naturgy", "Mundo Medico") es el "supplierName". Ignora descripciones largas que acompañan al logo (ej: "Industria Argentina de Gases...").
-   - PRIORIZA CABECERA SUPERIOR: El CUIT que acompaña al logo o que está en el recuadro superior derecho es el "supplierCuit".
-   - REGLA DE EXCLUSIÓN: Si hay varios CUITs y uno es 30609926860, el OTRO CUIT detectado es obligatoriamente el del emisor.
-
-
-3. CASOS DE ENTRENAMIENTO:
-   - "LA PLATENSE S.A." (CUIT 30503696890): Su logo está arriba a la izquierda y su CUIT arriba a la derecha. NO lo confundas con Sanatorio Argentino que aparece más abajo como receptor.
-
-
-3. ESTRUCTURA JSON REQUERIDA:
+ESTRUCTURA JSON ESPERADA:
 {
-  "supplierCuit": "string (Solo números)",
+  "supplierCuit": "string (solo números, ej: 30123456789)",
   "supplierName": "string",
-  "receiverCuit": "30609926860",
-  "receiverName": "SANATORIO ARGENTINO S.R.L.",
-  "invoiceType": "string (FACTURA_A, FACTURA_B, FACTURA_C, etc.)",
-  "pointOfSale": "string (5 dígitos)",
-  "invoiceNumber": "string (8 dígitos)",
-  "issueDate": "YYYY-MM-DD",
-  "netTaxed": number,
-  "netUntaxed": number,
-  "netExempt": number,
-  "ivaAmount": number,
-  "otherTaxesAmount": number,
-  "totalAmount": number,
-  "caiCae": "string (cae/cai)",
-  "caiCaeExpiration": "YYYY-MM-DD",
+  "invoiceType": "string (A, B, C, M, Nota de Credito A, etc)",
+  "invoiceTypeCode": "string (ej: 001, 006, 011)",
+  "pointOfSale": "string (ej: 00005)",
+  "invoiceNumber": "string (ej: 00000123. NO incluyas el punto de venta aquí)",
+  "issueDate": "string (YYYY-MM-DD)",
+  "receiverCuit": "string",
+  "receiverName": "string",
+  "netTaxed": number (Subtotal neto gravado),
+  "netUntaxed": number (Conceptos no gravados),
+  "netExempt": number (Exento),
+  "ivaAmount": number (Total IVA),
+  "otherTaxesAmount": number (Total otros tributos/percepciones),
+  "totalAmount": number (Total final),
+  "currency": "string (ARS o USD)",
+  "exchangeRate": number (1 si es ARS),
+  "caiCae": "string",
+  "caiCaeExpiration": "string (YYYY-MM-DD)",
   "taxes": [
     { 
-      "taxCode": "string (usa uno de los CÓDIGOS DE IMPUESTOS DISPONIBLES si coincide, sino deja null)", 
-      "description": "string (descripción tal cual aparece en la factura)",
-      "taxBase": number, 
-      "taxAmount": number, 
-      "rate": number 
+      "taxCode": "string o null", 
+      "description": "string (nombre real del impuesto en factura)",
+      "taxBase": number (base imponible), 
+      "taxAmount": number (monto del impuesto), 
+      "rate": number (alícuota, ej: 21, 10.5, 27)
     }
   ]
 }
 
-Asegúrate de extraer TODOS los impuestos (IVA, Percepciones de IIBB, Percepciones de IVA, etc.) que aparezcan detallados. 
-❌ NUNCA inventes datos, pero si el impuesto está en la factura, DEBE estar en el JSON.
-❌ Si las alícuotas de IVA son 21%, 10.5% o 27%, asegúrate de reflejarlas en "rate" y mapearlas al "taxCode" correspondiente si están en la lista arriba.
+REGLAS:
+1. Extrae TODOS los ítems de la sección "Liquidación de Impuestos", "Tributos" o "Detalle IVA".
+2. Si ves "Percepción IIBB" o "Ingresos Brutos", inclúyelo con taxCode "PERC_IIBB".
+3. Si el "Neto Gravado" no aparece explícitamente, calcúlalo sumando las bases de los impuestos IVA.
+4. Si el OCR falla en algún número, intenta inferirlo (ej: Total = Neto + IVA).
+5. Receptor: Si ves CUIT 30609926860 (Sanatorio Argentino), ese es el RECEPTOR, NO el emisor.
+`.trim();
 
-Usa null si un dato no es encontrado. Asegúrate de que los montos sean números válidos.
+    // 5. Call OpenAI
+    const imageContent = base64Array.map(b64 => ({
+      type: 'image_url',
+      image_url: { url: `data:${requestData.mimeType};base64,${b64}` }
+    }));
 
+    const response = await fetch(OPENAI_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              ...imageContent
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0,
+      })
+    });
 
-`;
-}
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('OpenAI Error:', errText);
+      return new Response(
+        JSON.stringify({ success: false, error: `Error de OpenAI (${response.status}): ${errText}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
-function extractOutputText(data: any): string {
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No se recibió contenido de OpenAI');
+    const aiData = await response.json();
+    const content = aiData.choices?.[0]?.message?.content || '';
 
-  let cleaned = content.trim();
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '');
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '');
+    // Clean JSON markdown
+    let cleanJson = content.replace(/```json\n?|```/g, '').trim();
+    // Sometimes there is text before/after
+    const firstBrace = cleanJson.indexOf('{');
+    const lastBrace = cleanJson.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, data: cleanJson, usage: aiData.usage }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
+
+  } catch (err) {
+    console.error('Edge Function Error:', err);
+    return new Response(
+      JSON.stringify({ success: false, error: err instanceof Error ? err.message : 'Error desconocido en el servidor' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Always 200 to allow client parsing
+    );
   }
-
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-  }
-
-  return cleaned;
-}
+});
