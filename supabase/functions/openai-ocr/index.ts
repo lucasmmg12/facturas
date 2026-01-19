@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o-mini';
+const OPENAI_MODEL = 'gpt-4o';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -119,7 +119,10 @@ EXTRAE SOLO JSON.
 
     const imageContent = base64Array.map(b64 => ({
       type: 'image_url',
-      image_url: { url: `data:${mimeType};base64,${b64}` }
+      image_url: {
+        url: `data:${mimeType};base64,${b64}`,
+        detail: "high" // Forzar análisis de alta resolución
+      }
     }));
 
     const response = await fetch(OPENAI_ENDPOINT, {
@@ -133,8 +136,9 @@ EXTRAE SOLO JSON.
         messages: [
           { role: 'user', content: [{ type: 'text', text: prompt }, ...imageContent] }
         ],
-        max_tokens: 2000,
+        max_tokens: 4000, // Aumentar tokens para respuestas detalladas
         temperature: 0,
+        response_format: { type: "json_object" } // Forzar JSON válido a nivel API
       })
     });
 
