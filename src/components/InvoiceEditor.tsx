@@ -3,7 +3,7 @@
 // Permite agregar conceptos, impuestos y marcar como listo para exportar.
 
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2, AlertCircle, CheckCircle, CheckCircle2 } from 'lucide-react';
+import { Save, X, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-service';
 import { autofillInvoiceFields } from '../services/invoice-autofill-service';
 import { supabase } from '../lib/supabase';
@@ -15,7 +15,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { ToastContainer } from './Toast';
 import { useToast } from '../hooks/useToast';
 import { INVOICE_TYPES_OPTIONS } from '../utils/invoice-types';
-import { formatCUIT } from '../utils/validators';
+// formatCUIT and validateCUIT were here but unused in this component
 import type { Database } from '../lib/database.types';
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
@@ -56,7 +56,6 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   const [selectedTaxCodeId, setSelectedTaxCodeId] = useState('');
   const [taxBase, setTaxBase] = useState('');
   const [taxAmount, setTaxAmount] = useState('');
-  const [autofillWarnings, setAutofillWarnings] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const toast = useToast();
@@ -156,8 +155,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             invoiceWithDefaults = {
               ...invoiceWithDefaults,
               // Solo actualizar supplier_id y supplier_name si no existen
-              supplier_id: invoiceWithDefaults.supplier_id || autofillResult.data.supplier_id,
-              supplier_name: invoiceWithDefaults.supplier_name || autofillResult.data.supplier_name,
+              supplier_id: invoiceWithDefaults.supplier_id || (autofillResult.data.supplier_id as string | null),
+              supplier_name: invoiceWithDefaults.supplier_name || (autofillResult.data.supplier_name as string),
               // NO sobrescribir tango_supplier_code si ya existe (viene de la factura)
               // Los demás campos del autofill se aplican normalmente
               ...Object.fromEntries(
@@ -168,15 +167,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 )
               ),
               // Asegurar que accounting_date se setee si no existe
-              accounting_date: invoiceWithDefaults.accounting_date || autofillResult.data.accounting_date,
+              accounting_date: invoiceWithDefaults.accounting_date || (autofillResult.data.accounting_date as string | null),
             };
 
-            // Guardar warnings si existen
-            if (autofillResult.data.warnings && autofillResult.data.warnings.length > 0) {
-              setAutofillWarnings(autofillResult.data.warnings);
-            }
-          } else if (autofillResult.errors) {
-            setAutofillWarnings(autofillResult.errors);
+            // Si hay resultados de autofill pero hubo errores o advertencias, podrías manejarlos aquí
+            // Por ahora solo actualizamos los campos
           }
         }
 
@@ -442,11 +437,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
 
     try {
-      const { error } = await supabase.from('invoice_concepts').insert({
+      const { error } = await supabase.from('invoice_concepts' as any).insert({
         invoice_id: invoice.id,
         tango_concept_id: selectedConceptId,
         amount: amount,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -476,12 +471,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
     try {
       const { data, error } = await supabase
-        .from('tango_concepts')
+        .from('tango_concepts' as any)
         .insert({
           tango_concept_code: newConceptCode,
           description: newConceptDesc,
           created_by: profile.id,
-        })
+        } as any)
         .select()
         .single();
 
@@ -540,12 +535,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     }
 
     try {
-      const { error } = await supabase.from('invoice_taxes').insert({
+      const { error } = await supabase.from('invoice_taxes' as any).insert({
         invoice_id: invoice.id,
         tax_code_id: selectedTaxCodeId,
         tax_base: base,
         tax_amount: amount,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -731,7 +726,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 border: '1px solid rgba(34, 197, 94, 0.3)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Información del Proveedor</h3>
+              <h3 className="font-semibold text-white mb-6 text-lg">Información del Proveedor (Emisor)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-green-300 mb-2">
@@ -762,13 +757,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    CUIT <span className="text-red-500">*</span>
+                    CUIT Emisor <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.supplier_cuit}
                     onChange={(e) => setInvoice({ ...invoice, supplier_cuit: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -778,16 +773,60 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
                 <div>
                   <label className="block text-sm font-medium text-green-300 mb-2">
-                    Razón Social <span className="text-red-500">*</span>
+                    Razón Social Emisor <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.supplier_name}
                     onChange={(e) => setInvoice({ ...invoice, supplier_name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="rounded-xl p-8 shadow-2xl"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(59, 130, 246, 0.3)', // Color distinto para el receptor
+              }}
+            >
+              <h3 className="font-semibold text-white mb-6 text-lg">Información del Receptor</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-blue-300 mb-2">
+                    CUIT Receptor
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.receiver_cuit || '30609926860'}
+                    onChange={(e) => setInvoice({ ...invoice, receiver_cuit: e.target.value })}
+                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-blue-500/20 focus:ring-blue-500/50 outline-none"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-blue-300 mb-2">
+                    Razón Social Receptor
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.receiver_name || 'SANATORIO ARGENTINO S.R.L.'}
+                    onChange={(e) => setInvoice({ ...invoice, receiver_name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-blue-500/20 focus:ring-blue-500/50 outline-none"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
                     }}
                   />
                 </div>
@@ -1143,7 +1182,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({ ...invoice, total_amount: parseFloat(value) || 0 });
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-bold text-lg"
+                    className="w-full px-4 py-3 rounded-lg text-white font-bold text-xl transition-all ring-2 ring-green-500/30 focus:ring-green-500 outline-none"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(34, 197, 94, 0.5)',
+                    }}
                   />
                 </div>
 
@@ -1237,7 +1280,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       placeholder="0.00"
                       value={taxAmount}
                       onChange={(e) => setTaxAmount(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                      }}
                     />
                     <button
                       onClick={handleAddTax}
@@ -1657,8 +1704,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         placeholder="0.00"
                         value={conceptAmount}
                         onChange={(e) => handleConceptAmountChange(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${conceptError ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                        className={`w-full px-4 py-3 rounded-lg text-white transition-all outline-none ${conceptError ? 'ring-2 ring-red-500/50' : 'ring-1 ring-green-500/20 focus:ring-green-500/50'}`}
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: `1px solid ${conceptError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.3)'}`,
+                        }}
                       />
                       {conceptError && (
                         <p className="text-xs text-red-600 mt-1">{conceptError}</p>
@@ -1823,7 +1873,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 value={invoice.notes || ''}
                 onChange={(e) => setInvoice({ ...invoice, notes: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
                 placeholder="Notas adicionales de uso interno..."
               />
             </div>
