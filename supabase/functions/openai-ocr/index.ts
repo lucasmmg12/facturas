@@ -80,8 +80,10 @@ FECHA (MUY IMPORTANTE):
 - IGNORA números de CUIT (ej: 30-12345678-9) o Ingresos Brutos para la fecha.
 
 EMISOR (PROVEEDOR):
-- Busca "Razón Social:" o el nombre en negrita arriba a la izquierda.
-- ❌ NO uses "Domicilio Comercial" ni la dirección como nombre.
+- 🎯 PRIORIDAD ABSOLUTA: Busca el texto que está INMEDIATAMENTE al lado de "Razón Social:". Ese es el nombre.
+- Si no está "Razón Social:", busca el texto más grande/negrita arriba a la izquierda.
+- ⛔ PROHIBIDO: NUNCA devuelvas "Domicilio Comercial" como nombre. "Domicilio Comercial" es una etiqueta de dirección, IGNÓRALA.
+- Si el nombre extraído es "Domicilio Comercial", BUSCA DE NUEVO.
 - El CUIT del emisor suele estar cerca de "CUIT:".
 - Si el CUIT es 30-60992686-0 (Sanatorio Argentino), ESE ES EL RECEPTOR, busca el OTRO CUIT.
 
