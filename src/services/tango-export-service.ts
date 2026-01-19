@@ -46,37 +46,6 @@ export interface TangoExportRow {
 // The user said "27 columnas exactas". I will use the previous headers but ensure strict values.
 // To satisfy the "TangoExportRow" interface used in diagnostics, I will use a mapping or just use the Spanish headers in the object.
 
-// Headers exactos según la plantilla de Tango (con marcadores de campos requeridos)
-const TANGO_HEADERS = [
-  'ID Comprobante (*)',
-  'Código de proveedor / CUIT (*)',
-  'Tipo de comprobante (*)',
-  'Nro. de comprobante (*)',
-  'Fecha de emisión (*)',
-  'Fecha contable (*)',
-  'Moneda CTE (*)',
-  'Cotización',
-  'Condición de compra',
-  'Subtotal gravado (*)',
-  'Subtotal no gravado',
-  'Anticipo o seña',
-  'Bonificación',
-  'Flete',
-  'Intereses',
-  'Total (*)',
-  'Es factura electrónica',
-  'CAI / CAE',
-  'Fecha de vencimiento del CAI / CAE',
-  'Crédito fiscal no computable',
-  'Código de gasto',
-  'Código de sector',
-  'Código de clasificador',
-  'Código de tipo de operación AFIP',
-  'Código de comprobante AFIP',
-  'Nro. de sucursal destino',
-  'Observaciones'
-];
-
 interface TaxRow {
   'ID Comprobante (*)': number;
   'Código (*)': string;
@@ -104,22 +73,23 @@ export async function generateTangoExport(userId: string): Promise<{
   const invoiceIds = invoices.map((inv) => inv.id);
 
   // Fetch Master Data
+  // Fetch Master Data
   const [taxesResults, conceptsResults, suppliersResult, taxCodesResult, tangoConceptsResult] = await Promise.all([
     Promise.all(invoiceIds.map((id) => supabase.from('invoice_taxes').select('*').eq('invoice_id', id))),
     Promise.all(invoiceIds.map((id) => supabase.from('invoice_concepts').select('*').eq('invoice_id', id))),
-    supabase.from('suppliers').select('*', { count: 'exact' }).range(0, 9999), // Cargar hasta 10,000 proveedores
+    supabase.from('suppliers').select('*', { count: 'exact' }).range(0, 9999),
     supabase.from('tax_codes').select('*'),
     supabase.from('tango_concepts').select('*'),
   ]);
 
-  const suppliers = suppliersResult.data || [];
-  const supplierMap = new Map(suppliers.map((s) => [s.cuit, s])); // Map by CUIT
+  const suppliers = (suppliersResult.data || []) as Database['public']['Tables']['suppliers']['Row'][];
+  const supplierMap = new Map(suppliers.map((s) => [s.cuit, s]));
 
-  const taxCodes = taxCodesResult.data || [];
-  const taxCodeMap = new Map(taxCodes.map((t) => [t.id, t])); // Map by ID to find Tango Code
+  const taxCodes = (taxCodesResult.data || []) as Database['public']['Tables']['tax_codes']['Row'][];
+  const taxCodeMap = new Map(taxCodes.map((t) => [t.id, t]));
 
-  const tangoConcepts = tangoConceptsResult.data || [];
-  const conceptMap = new Map(tangoConcepts.map((c) => [c.id, c])); // Map by ID
+  const tangoConcepts = (tangoConceptsResult.data || []) as Database['public']['Tables']['tango_concepts']['Row'][];
+  const conceptMap = new Map(tangoConcepts.map((c) => [c.id, c]));
 
   const headers: any[] = [];
   const taxes: TaxRow[] = [];
@@ -129,22 +99,19 @@ export async function generateTangoExport(userId: string): Promise<{
     // 2.1 Proveedor: Buscar CUIT -> Comparar con tabla Proveedores -> Exportar CODIGO
     const cleanCuit = invoice.supplier_cuit.replace(/[-\s]/g, '');
     const supplier = supplierMap.get(cleanCuit);
-    const supplierCode = supplier?.tango_supplier_code || invoice.supplier_cuit; // Fallback to CUIT if not found (or should we error?)
+    const supplierCode = supplier?.tango_supplier_code || invoice.supplier_cuit;
 
     // 2.6 Código comprobante AFIP
     const afipCode = mapInvoiceTypeToAfipCode(invoice.invoice_type);
 
     // 2.7 Moneda
-    const currency = invoice.currency_code || 'S'; // Siempre "S" por defecto
+    const currency = invoice.currency_code || 'S';
     const exchangeRate = invoice.exchange_rate || 1.0;
 
     // 2.2 Sector (1 or 10)
-    // Default to 1. If "reposición de gastos" -> 10. How to detect? 
-    // Maybe based on expense code or observation? For now default to 1 as per "Siempre 1" rule (with exception).
     const sector = 1;
 
     // 2.3 Condición de compra (1 -> Cta Cte, 2 -> Contado)
-    // Default to 1
     const condition = invoice.purchase_condition === 'CONTADO' ? 2 : 1;
 
     // Dates
@@ -156,7 +123,7 @@ export async function generateTangoExport(userId: string): Promise<{
       'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
       'Código de proveedor / CUIT (*)': supplierCode,
       'Tipo de comprobante (*)': mapInvoiceTypeToTango(invoice.invoice_type),
-      'Nro. de comprobante (*)': `${invoice.point_of_sale}-${invoice.invoice_number}`,
+      'Nro. de comprobante (*)': formatInvoiceNumberTango(invoice),
       'Fecha de emisión (*)': issueDate,
       'Fecha contable (*)': accountingDate,
       'Moneda CTE (*)': currency,
@@ -169,14 +136,14 @@ export async function generateTangoExport(userId: string): Promise<{
       'Flete': Number(invoice.freight?.toFixed(2) || 0),
       'Intereses': Number(invoice.interest?.toFixed(2) || 0),
       'Total (*)': Number(invoice.total_amount?.toFixed(2) || 0),
-      'Es factura electrónica': invoice.is_electronic ? 'SI' : 'NO',
+      'Es factura electrónica': invoice.is_electronic ? 'S' : 'N',
       'CAI / CAE': invoice.cai_cae || '',
       'Fecha de vencimiento del CAI / CAE': invoice.cai_cae_expiration ? formatDateForTango(invoice.cai_cae_expiration) : '',
       'Crédito fiscal no computable': Number(invoice.non_computable_tax_credit?.toFixed(2) || 0),
-      'Código de gasto': invoice.expense_code || '',
+      'Código de gasto': invoice.expense_code || 'S/C',
       'Código de sector': sector,
-      'Código de clasificador': '', // Dejar vacío
-      'Código de tipo de operación AFIP': '', // Dejar vacío
+      'Código de clasificador': '',
+      'Código de tipo de operación AFIP': '0',
       'Código de comprobante AFIP': afipCode,
       'Nro. de sucursal destino': invoice.destination_branch_number ? parseInt(invoice.destination_branch_number) : 0,
       'Observaciones': invoice.observations || '',
@@ -185,26 +152,30 @@ export async function generateTangoExport(userId: string): Promise<{
     headers.push(row);
 
     // Taxes
-    const invoiceTaxes = taxesResults[index].data || [];
+    const invoiceTaxesResult = taxesResults[index];
+    const invoiceTaxes = (invoiceTaxesResult.data || []) as Database['public']['Tables']['invoice_taxes']['Row'][];
+
     invoiceTaxes.forEach((tax) => {
       const taxDef = taxCodeMap.get(tax.tax_code_id);
       if (taxDef) {
         taxes.push({
           'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
-          'Código (*)': String(taxDef.tango_code), // 2.9 Use Tango Code as string
+          'Código (*)': String(taxDef.tango_code),
           'Importe (*)': Number(tax.tax_amount?.toFixed(2) || 0),
         });
       }
     });
 
     // Concepts
-    const invoiceConcepts = conceptsResults[index].data || [];
+    const invoiceConceptsResult = conceptsResults[index];
+    const invoiceConcepts = (invoiceConceptsResult.data || []) as Database['public']['Tables']['invoice_concepts']['Row'][];
+
     invoiceConcepts.forEach((concept) => {
       const conceptDef = conceptMap.get(concept.tango_concept_id);
       if (conceptDef) {
         concepts.push({
           'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
-          'Código de concepto (*)': String(conceptDef.tango_concept_code).padStart(3, '0'), // 2.8 Use code with leading zeros
+          'Código de concepto (*)': String(conceptDef.tango_concept_code).padStart(3, '0'),
           'Importe (*)': Number(concept.amount?.toFixed(2) || 0),
         });
       }
@@ -255,18 +226,20 @@ export async function generateTangoExport(userId: string): Promise<{
   // We will return the diagnostics and let the UI decide whether to download or show errors.
 
   if (diagnostics.valid) {
-    const { data: batch, error: batchError } = await supabase
+    const { data: batchData, error: batchError } = await supabase
       .from('export_batches')
       .insert({
         filename,
         invoice_count: invoices.length,
         total_amount: invoices.reduce((sum, inv) => sum + inv.total_amount, 0),
         generated_by: userId,
-      })
+      } as any)
       .select()
       .single();
 
-    if (!batchError) {
+    const batch = (batchData as unknown) as Database['public']['Tables']['export_batches']['Row'];
+
+    if (!batchError && batch) {
       await markInvoicesAsExported(invoiceIds, batch.id);
 
       // Registrar actividad de exportación
@@ -291,43 +264,62 @@ export async function generateTangoExport(userId: string): Promise<{
 
 function mapInvoiceTypeToTango(invoiceType: string): string {
   // Todas las facturas (A, B, C, M) → "FAC"
-  if (invoiceType.startsWith('FACTURA')) {
+  if (invoiceType.includes('FACTURA')) {
     return 'FAC';
   }
 
-  // Todas las notas de crédito (A, B, C) → "N/C"
-  if (invoiceType.startsWith('NOTA_CREDITO')) {
+  // Notas de crédito → "N/C"
+  if (invoiceType.includes('NOTA_CREDITO')) {
     return 'N/C';
   }
 
-  // Todas las notas de débito (A, B, C) → "N/D"
-  if (invoiceType.startsWith('NOTA_DEBITO')) {
+  // Notas de débito → "N/D"
+  if (invoiceType.includes('NOTA_DEBITO')) {
     return 'N/D';
   }
 
-  // Fallback por si hay algún tipo no contemplado
   return invoiceType;
 }
 
 function mapInvoiceTypeToAfipCode(invoiceType: string): string {
-  // 2.6 Código de comprobante AFIP
-  // Factura A/B/C -> 011 (Wait, 011 is Factura C usually. 001 is A, 006 is B. 
-  // Prompt says: "Factura A/B/C -> 011". This is weird but I MUST follow the prompt.)
-  // "Factura A/B/C 011"
-  // "Ticket / Factura ticket 081"
+  // Facturas
+  if (invoiceType === 'FACTURA_A') return '001';
+  if (invoiceType === 'FACTURA_B') return '006';
+  if (invoiceType === 'FACTURA_C') return '011';
+  if (invoiceType === 'FACTURA_M') return '051';
 
-  // I will follow the prompt literally.
-  if (invoiceType.includes('FACTURA')) return '011';
-  if (invoiceType.includes('TICKET')) return '081';
-
-  // "Nota de crédito buscar en tabla AFIP (pero dejar preparado)"
-  // I will use standard AFIP codes for NC if possible, or default to something.
-  // Standard: NC A=003, NC B=008, NC C=013.
+  // Notas de Crédito
   if (invoiceType === 'NOTA_CREDITO_A') return '003';
   if (invoiceType === 'NOTA_CREDITO_B') return '008';
   if (invoiceType === 'NOTA_CREDITO_C') return '013';
+  if (invoiceType === 'NOTA_CREDITO_M') return '053';
+
+  // Notas de Débito
+  if (invoiceType === 'NOTA_DEBITO_A') return '002';
+  if (invoiceType === 'NOTA_DEBITO_B') return '007';
+  if (invoiceType === 'NOTA_DEBITO_C') return '012';
+  if (invoiceType === 'NOTA_DEBITO_M') return '052';
+
+  // Tickets (Ejemplo: Tique Factura A = 081)
+  if (invoiceType.includes('TICKET')) return '081';
 
   return '000';
+}
+
+function getInvoiceLetter(invoiceType: string): string {
+  if (invoiceType.endsWith('_A')) return 'A';
+  if (invoiceType.endsWith('_B')) return 'B';
+  if (invoiceType.endsWith('_C')) return 'C';
+  if (invoiceType.endsWith('_M')) return 'M';
+  return 'X'; // Default
+}
+
+function formatInvoiceNumberTango(invoice: Invoice): string {
+  const letter = getInvoiceLetter(invoice.invoice_type);
+  const pos = (invoice.point_of_sale || '0').toString().padStart(5, '0'); // 5 dígitos para PV
+  const number = (invoice.invoice_number || '0').toString().padStart(8, '0'); // 8 dígitos para número
+  // Formato A0001300042470 (Letra + 5 PV + 8 Num)
+  return `${letter}${pos}${number}`;
 }
 
 function formatDateForTango(dateString: string): string {
@@ -339,7 +331,6 @@ function formatDateForTango(dateString: string): string {
 }
 
 function applyHeaderStyle(sheet: XLSX.WorkSheet, columnCount: number) {
-  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   for (let col = 0; col < columnCount; col++) {
     const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
     if (!sheet[cellAddress]) continue;
