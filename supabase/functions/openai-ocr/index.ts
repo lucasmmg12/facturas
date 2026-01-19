@@ -167,7 +167,15 @@ EXTRAE SOLO JSON.
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: content, usage: aiData.usage }),
+      JSON.stringify({
+        success: true,
+        data: content,
+        usage: aiData.usage,
+        meta: {
+          version: "v2025-01-19-FIX-NUMBERS",
+          timestamp: new Date().toISOString()
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

@@ -593,8 +593,35 @@ function normalizeNumber(value: any): number {
     return value;
   }
 
-  const sanitized = String(value).replace(/\s+/g, '').replace(/\./g, '').replace(',', '.');
-  const parsed = parseFloat(sanitized);
+  let str = String(value).trim();
+
+  // Detectar formato inglés (ej: "1234.56") -> Punto como decimal, sin comas (o comas como miles irrelevantes si hay un punto luego)
+  // Si tiene un solo punto y está cerca del final (1 o 2 dígitos después), es decimal.
+  if (/^\d+\.\d{1,2}$/.test(str)) {
+    return parseFloat(str);
+  }
+
+  // Si tiene formato "1.234,56" (Argentino) -> Eliminar puntos, cambiar coma por punto
+  // Si tiene comas, asumimos formato latino/europeo
+  if (str.includes(',')) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Si solo tiene puntos (ej: "1.234" o "123.45"), es ambiguo. 
+    // Si el punto divide grupos de 3, es miles. Si divide solo los ultimos 2, es decimal.
+    const parts = str.split('.');
+    if (parts.length > 1) {
+      const lastPart = parts[parts.length - 1];
+      if (lastPart.length === 2) {
+        // Asumimos decimal (ej: 123.45)
+        // No hacemos replace global de punto
+      } else {
+        // Asumimos miles (ej: 1.234)
+        str = str.replace(/\./g, '');
+      }
+    }
+  }
+
+  const parsed = parseFloat(str);
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
