@@ -42,6 +42,8 @@ interface UploadPageProps {
 export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
   const { profile } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [processedCount, setProcessedCount] = useState(0);
+  const [totalToProcess, setTotalToProcess] = useState(0);
   const [results, setResults] = useState<UploadResult[]>([]);
   const [balanceInfo, setBalanceInfo] = useState(getEstimatedRemainingBalance());
 
@@ -50,12 +52,26 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     setBalanceInfo(getEstimatedRemainingBalance());
   }, [results]);
 
+  // Prevenir cierre accidental de pestaña durante procesamiento
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (uploading) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [uploading]);
+
   const handleFilesSelected = async (files: File[]) => {
     if (!profile) return;
 
     console.log('[Upload] Procesando archivos:', files.map(f => ({ name: f.name, type: f.type, size: f.size })));
 
     setUploading(true);
+    setProcessedCount(0);
+    setTotalToProcess(files.length);
     const newResults: UploadResult[] = files.map((file) => ({
       filename: file.name,
       status: 'processing',
@@ -239,7 +255,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
-        if (onInvoiceCreated) onInvoiceCreated(invoice.id);
+        // if (onInvoiceCreated) onInvoiceCreated(invoice.id); // Removido del loop para evitar navegación prematura
 
       } catch (error: any) {
         console.error(`Error procesando ${file.name}:`, error);
@@ -256,13 +272,65 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           message: errorMessage,
         };
         setResults([...newResults]);
+      } finally {
+        setProcessedCount(prev => prev + 1);
       }
     }
     setUploading(false);
+
+    // Solo al finalizar TODO el lote, si hay al menos un éxito, notificamos al padre
+    // Usamos el ID de la última factura procesada exitosamente para la vista previa
+    const lastSuccess = [...newResults].reverse().find(r => r.status === 'success');
+    if (onInvoiceCreated && lastSuccess?.invoiceId) {
+      onInvoiceCreated(lastSuccess.invoiceId);
+    }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="relative space-y-8 animate-in fade-in duration-700">
+      {/* Overlay de Bloqueo durante Carga en Lote */}
+      {uploading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="max-w-md w-full p-8 glass-card border-grow-neon/30 text-center space-y-6">
+            <div className="relative w-24 h-24 mx-auto mb-8">
+              <div className="absolute inset-0 rounded-full border-4 border-grow-neon/10" />
+              <div
+                className="absolute inset-0 rounded-full border-4 border-grow-neon border-t-transparent animate-spin shadow-neon"
+                style={{ animationDuration: '2s' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xl font-black text-white">{Math.round((processedCount / totalToProcess) * 100)}%</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-lg font-black text-white tracking-widest uppercase">Procesamiento en Curso</h4>
+              <p className="text-grow-muted text-xs font-bold uppercase tracking-widest">
+                No cierres la ventana hasta finalizar la secuencia
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between text-[10px] font-black text-grow-neon uppercase tracking-[0.2em] mb-1">
+                <span>Progreso Global</span>
+                <span>{processedCount} / {totalToProcess} archivos</span>
+              </div>
+              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                <div
+                  className="h-full bg-grow-neon shadow-neon transition-all duration-500 ease-out"
+                  style={{ width: `${(processedCount / totalToProcess) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 flex items-center justify-center gap-3 text-grow-neon animate-pulse">
+              <Loader className="w-4 h-4 animate-spin" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Optimizando Data</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Panel de Control de Carga */}
         <div className="lg:col-span-2 space-y-6">
