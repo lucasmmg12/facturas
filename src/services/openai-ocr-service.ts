@@ -232,7 +232,32 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
       taxAmount: amounts.ivaAmount,
       rate: 21,
     });
+  } else if (taxes.length > 0 && amounts.ivaAmount === 0) {
+    // Si hay impuestos detallados pero IVA Total es 0, recalcularlo sumando SOLO los impuestos de IVA
+    const calculatedIva = taxes
+      .filter(t =>
+        (t.description && t.description.toLowerCase().includes('iva') && !t.description.toLowerCase().includes('percep')) ||
+        (t.rate !== null && t.rate > 0)
+      )
+      .reduce((sum, t) => sum + t.taxAmount, 0);
+
+    if (calculatedIva > 0) {
+      console.log('[OpenAI OCR] ⚠️ IVA Amount es 0 pero hay impuestos detallados. Recalculando IVA:', calculatedIva);
+      amounts.ivaAmount = Number(calculatedIva.toFixed(2));
+    }
+
+    const calculatedOther = taxes
+      .filter(t =>
+        (t.description && (t.description.toLowerCase().includes('percep') || t.description.toLowerCase().includes('ii')))
+      )
+      .reduce((sum, t) => sum + t.taxAmount, 0);
+
+    if (calculatedOther > 0 && amounts.otherTaxesAmount === 0) {
+      console.log('[OpenAI OCR] ⚠️ Other Taxes es 0 pero hay percepciones. Recalculando:', calculatedOther);
+      amounts.otherTaxesAmount = Number(calculatedOther.toFixed(2));
+    }
   }
+
 
   // Para NATURGY, aplicar lógica especial si es necesario
   const NATURGY_CUIT = '30681688540';
