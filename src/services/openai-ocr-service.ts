@@ -1,4 +1,4 @@
-// Este servicio delega el OCR y parsing de comprobantes a OpenAI usando el modelo gpt-4.1-mini.
+// Este servicio delega el OCR y parsing de comprobantes a OpenAI usando el modelo gpt-4o-mini.
 // Convierte el archivo a base64, envía la solicitud y normaliza la respuesta al formato OCRResult.
 
 import type { OCRResult } from './ocr-service';
@@ -37,13 +37,13 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   // Convertir archivo a base64 (puede ser string o array de strings para múltiples páginas)
   let base64: string | string[];
   let mimeType: string;
-  
+
   try {
     console.log('[OpenAI OCR] Convirtiendo archivo a base64...');
     const result = await fileToBase64(file);
     base64 = result.base64;
     mimeType = result.mimeType;
-    
+
     const isMultiplePages = Array.isArray(base64);
     console.log('[OpenAI OCR] Archivo convertido exitosamente', {
       mimeType,
@@ -58,7 +58,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
 
   // Obtener el token de sesión
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   if (!session) {
     throw new Error('No hay sesión activa. Por favor inicia sesión.');
   }
@@ -99,13 +99,34 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     throw new Error(`Error de conexión: ${error instanceof Error ? error.message : 'Error de red'}`);
   }
 
-  const data = await response.json();
+  let data: any;
+  try {
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('[OpenAI OCR] Error al parsear JSON de la Edge Function:', text);
+      if (response.status === 404) {
+        throw new Error('La función de Supabase no se encuentra (404). Asegúrate de haber desplegado la función "openai-ocr" al nuevo proyecto.');
+      }
+      throw new Error(`Error de la función (Status ${response.status}): ${text.substring(0, 100)}`);
+    }
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error('Error al leer la respuesta de la Edge Function');
+  }
 
   if (!response.ok || !data.success) {
     console.error('[OpenAI OCR] Error en Edge Function:', {
       status: response.status,
       data,
     });
+
+    // Error específico para falta de API Key
+    if (data.error?.includes('OPENAI_API_KEY')) {
+      throw new Error('Falta configurar la OPENAI_API_KEY como secreto en Supabase. Ejecuta el comando de configuración.');
+    }
+
     throw new Error(data.error || 'Error al procesar con OpenAI');
   }
 
@@ -113,7 +134,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
 
   const outputText = data.data;
   const usage = data.usage; // Información de tokens de OpenAI
-  
+
   // Calcular costo estimado si hay información de tokens
   let estimatedCost: number | undefined;
   if (usage) {
@@ -162,14 +183,14 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   // En su lugar, construir los impuestos desde el ivaAmount total
   console.log('[OpenAI OCR] Ignorando impuestos RAW de OpenAI (pueden tener taxBase incorrecto)');
   console.log('[OpenAI OCR] Construyendo impuestos desde ivaAmount total:', amounts.ivaAmount);
-  
+
   const taxes: ParsedTaxes = [];
-  
+
   // Si hay IVA, crear impuesto IVA 21% usando el ivaAmount total
   if (amounts.ivaAmount > 0) {
     // Calcular taxBase desde taxAmount: taxBase = taxAmount / 0.21
     const taxBase = amounts.ivaAmount / 0.21;
-    
+
     taxes.push({
       taxCode: '1', // IVA 21%
       description: 'IVA 21%',
@@ -177,7 +198,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
       taxAmount: amounts.ivaAmount,
       rate: 21,
     });
-    
+
     console.log('[OpenAI OCR] ✅ Impuesto IVA 21% creado desde ivaAmount:', {
       taxCode: '1',
       taxBase: taxBase,
@@ -186,16 +207,16 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
       formula: `taxBase = ${amounts.ivaAmount} / 0.21 = ${taxBase}`
     });
   }
-  
+
   // Para NATURGY, aplicar lógica especial si es necesario
   const NATURGY_CUIT = '30681688540';
   const cleanSupplierCuit = supplierCuit ? supplierCuit.replace(/[-\s]/g, '') : '';
   const isNaturgy = cleanSupplierCuit === NATURGY_CUIT;
-  
+
   if (isNaturgy && amounts.ivaAmount > 0) {
     // Para NATURGY, el IVA 27% se calcula como: (Total Energía + Ingresos Brutos) * 0.27
     console.log('[OpenAI OCR] 🔵 Detectado proveedor NATURGY - Aplicando cálculo especial para IVA 27%');
-    
+
     let totalEnergia = 0;
     let ingresosBrutos = 0;
 
@@ -210,9 +231,9 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     if (Array.isArray(parsed.taxes)) {
       const ingresosBrutosTax = parsed.taxes.find((t: any) => {
         const desc = (t.description || '').toLowerCase();
-        return desc.includes('ingresos brutos') && 
-               !desc.includes('percepción') && 
-               !desc.includes('percepcion');
+        return desc.includes('ingresos brutos') &&
+          !desc.includes('percepción') &&
+          !desc.includes('percepcion');
       });
       if (ingresosBrutosTax) {
         ingresosBrutos = normalizeNumber(ingresosBrutosTax.taxAmount || ingresosBrutosTax.taxBase || 0);
@@ -247,7 +268,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
       formula: `(${totalEnergia} + ${ingresosBrutos}) * 0.27 = ${naturgyTaxAmount}`
     });
   }
-  
+
   // Log de los impuestos finales
   console.log('[OpenAI OCR] Impuestos finales construidos:', taxes.map(t => ({
     taxCode: t.taxCode,
@@ -256,7 +277,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     taxAmount: t.taxAmount,
     rate: t.rate
   })));
-  
+
   const caiCae = normalizeString(parsed.caiCae ?? parsed.cae ?? parsed.cai);
   const caiCaeExpiration = normalizeString(parsed.caiCaeExpiration ?? parsed.caeExpiration ?? parsed.caiExpiration);
 
@@ -310,7 +331,7 @@ function fileToBase64(file: File): Promise<{ base64: string | string[]; mimeType
       try {
         const img = new Image();
         img.src = reader.result as string;
-        
+
         await new Promise((imgResolve, imgReject) => {
           img.onload = imgResolve;
           img.onerror = imgReject;
@@ -320,7 +341,7 @@ function fileToBase64(file: File): Promise<{ base64: string | string[]; mimeType
         const MAX_DIMENSION = 2048; // OpenAI recomienda máximo 2048px
         let width = img.width;
         let height = img.height;
-        
+
         if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
           const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
           width = Math.floor(width * ratio);
@@ -331,13 +352,13 @@ function fileToBase64(file: File): Promise<{ base64: string | string[]; mimeType
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        
+
         if (!ctx) {
           throw new Error('No se pudo obtener el contexto del canvas');
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Comprimir como JPEG con calidad 0.85
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         const base64 = dataUrl.split(',')[1] ?? '';
@@ -360,12 +381,12 @@ async function convertPdfToPngBase64(file: File): Promise<string[]> {
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-  
+
   const pages: string[] = [];
   const totalPages = pdf.numPages;
-  
+
   console.log(`[OpenAI OCR] Procesando PDF con ${totalPages} página(s)...`);
-  
+
   // Procesar TODAS las páginas del PDF
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     console.log(`[OpenAI OCR] Procesando página ${pageNum} de ${totalPages}...`);
@@ -373,9 +394,9 @@ async function convertPdfToPngBase64(file: File): Promise<string[]> {
     const imageBase64 = await renderPageToBase64(page);
     pages.push(imageBase64);
   }
-  
+
   console.log(`[OpenAI OCR] PDF procesado exitosamente: ${pages.length} página(s) convertida(s) a imágenes`);
-  
+
   return pages;
 }
 
@@ -407,11 +428,11 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
   // Calidad 0.75 sigue siendo suficiente para OCR pero reduce significativamente el tamaño
   const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
   const base64 = dataUrl.split(',')[1] ?? '';
-  
+
   // Log del tamaño para debugging
   const sizeKB = (base64.length * 3 / 4 / 1024).toFixed(2);
   console.log(`[OpenAI OCR] Imagen renderizada: ${viewport.width}x${viewport.height}px, tamaño: ${sizeKB}KB`);
-  
+
   return base64;
 }
 
@@ -420,33 +441,33 @@ function sanitizeCUIT(value: any): string | null {
     console.log('[OpenAI OCR] sanitizeCUIT: valor vacío o null');
     return null;
   }
-  
+
   const digits = String(value).replace(/\D/g, '');
   console.log('[OpenAI OCR] sanitizeCUIT: procesando', {
     original: value,
     digitsOnly: digits,
     length: digits.length,
   });
-  
+
   // Validar formato básico: debe tener 11 dígitos
   if (digits.length !== 11 || !/^\d+$/.test(digits)) {
     console.log('[OpenAI OCR] sanitizeCUIT: formato inválido (no tiene 11 dígitos)');
     return null;
   }
-  
+
   // Intentar validar con el algoritmo de dígito verificador
   const isValid = validateCUIT(digits);
   console.log('[OpenAI OCR] sanitizeCUIT: validación', {
     isValid,
     digits,
   });
-  
+
   // Si no pasa la validación del dígito verificador, pero tiene 11 dígitos,
   // lo aceptamos de todas formas (puede ser un CUIT válido que el algoritmo no reconoce)
   if (!isValid) {
     console.warn('[OpenAI OCR] sanitizeCUIT: CUIT no pasa validación de dígito verificador, pero se acepta por tener 11 dígitos:', digits);
   }
-  
+
   return digits;
 }
 
@@ -494,7 +515,7 @@ function normalizeNumber(value: any): number {
 }
 
 function normalizeTaxes(
-  taxes: any, 
+  taxes: any,
   amounts: { netTaxed: number; ivaAmount: number; totalAmount: number },
   supplierCuit?: string | null,
   parsedData?: any
@@ -520,7 +541,7 @@ function normalizeTaxes(
       // Para NATURGY, el IVA 27% se calcula como: (Total Energía + Ingresos Brutos) * 0.27
       if (isNaturgy && (taxCode === '100222' || taxCode === '3' || description.toLowerCase().includes('iva 27'))) {
         console.log('[OpenAI OCR] 🔵 Detectado proveedor NATURGY - Aplicando cálculo especial para IVA 27%');
-        
+
         // Buscar "Total Energía" y "Ingresos Brutos" en los datos extraídos
         let totalEnergia = 0;
         let ingresosBrutos = 0;
@@ -538,9 +559,9 @@ function normalizeTaxes(
           // Buscar "Ingresos Brutos" en los impuestos (NO es una percepción)
           const ingresosBrutosTax = taxes.find((t: any) => {
             const desc = (t.description || '').toLowerCase();
-            return desc.includes('ingresos brutos') && 
-                   !desc.includes('percepción') && 
-                   !desc.includes('percepcion');
+            return desc.includes('ingresos brutos') &&
+              !desc.includes('percepción') &&
+              !desc.includes('percepcion');
           });
           if (ingresosBrutosTax) {
             ingresosBrutos = normalizeNumber(ingresosBrutosTax.taxAmount || ingresosBrutosTax.taxBase || 0);
@@ -582,7 +603,7 @@ function normalizeTaxes(
         const calculatedTaxAmount = taxBase * (rate / 100);
         const currentDifference = Math.abs(taxAmount - calculatedTaxAmount);
         const tolerance = Math.max(calculatedTaxAmount * 0.01, 0.01); // 1% de tolerancia
-        
+
         // Verificar si el taxAmount actual coincide con el cálculo
         if (currentDifference <= tolerance) {
           taxAmountIsCorrect = true;
@@ -603,7 +624,7 @@ function normalizeTaxes(
           console.log('[OpenAI OCR] ✅ Corregido: taxAmount = taxBase * rate');
         }
       }
-      
+
       // CORRECCIÓN ESPECIAL PARA IVA: Solo corregir si hay un problema real
       // Si taxAmount = taxBase * rate está correcto, NO corregir aunque taxBase = netTaxed
       // (porque cuando hay una sola alícuota de IVA, taxBase puede ser igual a netTaxed)
@@ -611,11 +632,11 @@ function normalizeTaxes(
         // Es IVA 21% o IVA 10.5% y el taxAmount no está correcto
         const isIVA21 = taxCode === '1';
         const expectedRate = isIVA21 ? 21 : 10.5;
-        
+
         // DETECCIÓN: Si taxBase es igual o muy similar al netTaxed total
         const netTaxedDifference = amounts.netTaxed > 0 ? Math.abs((taxBase - amounts.netTaxed) / amounts.netTaxed) * 100 : 100;
         const isTaxBaseEqualToNetTaxed = netTaxedDifference < 1; // Menos del 1% de diferencia
-        
+
         if (isTaxBaseEqualToNetTaxed && amounts.netTaxed > 0) {
           console.warn('[OpenAI OCR] Detectado posible problema: taxBase igual a Neto Gravado y taxAmount incorrecto:', {
             taxCode,
@@ -625,7 +646,7 @@ function normalizeTaxes(
             netTaxed: amounts.netTaxed,
             expectedTaxAmount: taxBase * (expectedRate / 100),
           });
-          
+
           // Calcular el taxAmount correcto desde el taxBase
           const calculatedTaxAmount = taxBase * (expectedRate / 100);
           taxAmount = calculatedTaxAmount;
