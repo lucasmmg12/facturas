@@ -188,7 +188,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           newResults[i] = {
             ...newResults[i],
             status: 'duplicate',
-            message: 'Comprobante duplicado.',
+            message: 'Este comprobante ya existe en el sistema.',
           };
           setResults([...newResults]);
           continue;
@@ -241,10 +241,17 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
       } catch (error: any) {
         console.error(`Error procesando ${file.name}:`, error);
+
+        // Manejar error de duplicado de base de datos de forma profesional
+        let errorMessage = error.message || 'Error desconocido';
+        if (errorMessage.includes('UNIQUE_INVOICE_KEY') || errorMessage.includes('unique_invoice_key')) {
+          errorMessage = 'Este comprobante ya ha sido registrado previamente en el sistema.';
+        }
+
         newResults[i] = {
           ...newResults[i],
           status: 'error',
-          message: error.message || 'Error desconocido',
+          message: errorMessage,
         };
         setResults([...newResults]);
       }
