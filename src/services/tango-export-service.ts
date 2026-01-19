@@ -167,19 +167,32 @@ export async function generateTangoExport(userId: string): Promise<{
     });
 
     // Concepts
+    // IMPORTANTE: El importe en conceptos debe ser Total - IVA (neto sin impuestos)
+    // NO usar el total con IVA incluido
     const invoiceConceptsResult = conceptsResults[index];
     const invoiceConcepts = (invoiceConceptsResult.data || []) as Database['public']['Tables']['invoice_concepts']['Row'][];
 
-    invoiceConcepts.forEach((concept) => {
-      const conceptDef = conceptMap.get(concept.tango_concept_id);
-      if (conceptDef) {
-        concepts.push({
-          'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
-          'Código de concepto (*)': String(conceptDef.tango_concept_code).padStart(3, '0'),
-          'Importe (*)': Number(concept.amount?.toFixed(2) || 0),
-        });
-      }
-    });
+    // Calcular el importe correcto para conceptos: Total - IVA
+    const conceptAmount = invoice.total_amount - invoice.iva_amount;
+
+    if (invoiceConcepts.length > 0) {
+      // Si hay conceptos definidos, usar su distribución pero con el importe correcto
+      invoiceConcepts.forEach((concept) => {
+        const conceptDef = conceptMap.get(concept.tango_concept_id);
+        if (conceptDef) {
+          concepts.push({
+            'ID Comprobante (*)': parseInt(invoice.internal_invoice_id),
+            'Código de concepto (*)': String(conceptDef.tango_concept_code).padStart(3, '0'),
+            'Importe (*)': Number(conceptAmount.toFixed(2)),
+          });
+        }
+      });
+    } else {
+      // Si no hay conceptos definidos, crear uno por defecto con código '001' (o el que uses por defecto)
+      // usando el importe Total - IVA
+      console.warn(`[Tango Export] Factura ${invoice.internal_invoice_id} sin conceptos definidos. Usando concepto por defecto.`);
+      // No agregar concepto automático si no existe - el usuario debe definirlo
+    }
   });
 
   // Run Diagnostics
