@@ -78,7 +78,12 @@ FECHA (MUY IMPORTANTE):
 - Busca explícitamente "Fecha" o "Fecha Emisión".
 - Formato esperado: YYYY-MM-DD.
 - IGNORA números de CUIT (ej: 30-12345678-9) o Ingresos Brutos para la fecha.
-- Si ves "05/08/2025", devuelve "2025-08-05".
+
+EMISOR (PROVEEDOR):
+- Busca "Razón Social:" o el nombre en negrita arriba a la izquierda.
+- ❌ NO uses "Domicilio Comercial" ni la dirección como nombre.
+- El CUIT del emisor suele estar cerca de "CUIT:".
+- Si el CUIT es 30-60992686-0 (Sanatorio Argentino), ESE ES EL RECEPTOR, busca el OTRO CUIT.
 
 ESTRUCTURA JSON:
 {
