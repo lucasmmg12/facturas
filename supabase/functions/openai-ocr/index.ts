@@ -232,11 +232,19 @@ REGLAS CRÍTICAS DE IDENTIFICACIÓN (ENTRENAMIENTO):
   "caiCae": "string (cae/cai)",
   "caiCaeExpiration": "YYYY-MM-DD",
   "taxes": [
-    { "taxCode": "string", "taxBase": number, "taxAmount": number, "rate": number }
+    { 
+      "taxCode": "string (usa uno de los CÓDIGOS DE IMPUESTOS DISPONIBLES si coincide, sino deja null)", 
+      "description": "string (descripción tal cual aparece en la factura)",
+      "taxBase": number, 
+      "taxAmount": number, 
+      "rate": number 
+    }
   ]
 }
 
+Asegúrate de extraer TODOS los impuestos (IVA, Percepciones de IIBB, Percepciones de IVA, etc.) que aparezcan detallados.
 Usa null si un dato no es encontrado. Asegúrate de que los montos sean números válidos.
+
 `;
 }
 

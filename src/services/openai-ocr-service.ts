@@ -181,32 +181,37 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     totalAmount: normalizeNumber(parsed.totalAmount),
   };
 
-  // NO usar los impuestos RAW de OpenAI porque están generando problemas
-  // En su lugar, construir los impuestos desde el ivaAmount total
-  console.log('[OpenAI OCR] Ignorando impuestos RAW de OpenAI (pueden tener taxBase incorrecto)');
-  console.log('[OpenAI OCR] Construyendo impuestos desde ivaAmount total:', amounts.ivaAmount);
-
+  // Usar los impuestos extraídos por OpenAI
   const taxes: ParsedTaxes = [];
 
-  // Si hay IVA, crear impuesto IVA 21% usando el ivaAmount total
-  if (amounts.ivaAmount > 0) {
-    // Calcular taxBase desde taxAmount: taxBase = taxAmount / 0.21
-    const taxBase = amounts.ivaAmount / 0.21;
+  if (Array.isArray(parsed.taxes) && parsed.taxes.length > 0) {
+    console.log(`[OpenAI OCR] Procesando ${parsed.taxes.length} impuestos desde OpenAI`);
+    parsed.taxes.forEach((t: any) => {
+      const taxAmount = normalizeNumber(t.taxAmount);
+      const taxBase = normalizeNumber(t.taxBase);
 
-    taxes.push({
-      taxCode: '1', // IVA 21%
-      description: 'IVA 21%',
-      taxBase: taxBase,
-      taxAmount: amounts.ivaAmount,
-      rate: 21,
+      if (taxAmount > 0 || taxBase > 0) {
+        taxes.push({
+          taxCode: t.taxCode || null,
+          description: t.description || (t.rate ? `IVA ${t.rate}%` : 'Impuesto'),
+          taxBase: taxBase,
+          taxAmount: taxAmount,
+          rate: t.rate !== undefined ? normalizeNumber(t.rate) : null,
+        });
+      }
     });
+  }
 
-    console.log('[OpenAI OCR] ✅ Impuesto IVA 21% creado desde ivaAmount:', {
-      taxCode: '1',
+  // Si no se detectaron impuestos detallados pero hay un monto de IVA total, agregar IVA 21% como fallback
+  if (taxes.length === 0 && amounts.ivaAmount > 0) {
+    console.log('[OpenAI OCR] Sin impuestos detallados, creando IVA 21% desde monto total');
+    const taxBase = amounts.ivaAmount / 0.21;
+    taxes.push({
+      taxCode: '1', // Tasa general por defecto
+      description: 'IVA 21% (Auto-detectado)',
       taxBase: taxBase,
       taxAmount: amounts.ivaAmount,
       rate: 21,
-      formula: `taxBase = ${amounts.ivaAmount} / 0.21 = ${taxBase}`
     });
   }
 

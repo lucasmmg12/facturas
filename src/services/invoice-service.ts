@@ -284,6 +284,27 @@ export async function createInvoiceTaxesFromOCR(
       descriptionLower.includes('sircreb')
     ) {
       taxCodeToMap = 'PERC_IIBB';
+    } else if (
+      descriptionLower.includes('percepción iva') ||
+      descriptionLower.includes('percepcion iva') ||
+      descriptionLower.includes('percep iva')
+    ) {
+      taxCodeToMap = 'PERC_IVA';
+    }
+
+    // Mapeo de IVA por tasa o descripción si el código no es claro
+    if (!taxCodeToMap || taxCodeToMap === 'null') {
+      if (descriptionLower.includes('iva')) {
+        if (descriptionLower.includes('21')) taxCodeToMap = '1';
+        else if (descriptionLower.includes('10.5') || descriptionLower.includes('10,5')) taxCodeToMap = '2';
+        else if (descriptionLower.includes('27')) taxCodeToMap = 'IVA_27';
+      } else if (tax.rate === 21) {
+        taxCodeToMap = '1';
+      } else if (tax.rate === 10.5) {
+        taxCodeToMap = '2';
+      } else if (tax.rate === 27) {
+        taxCodeToMap = 'IVA_27';
+      }
     }
 
     if (taxCodeToMap === '100222' || (descriptionLower.includes('iva') && descriptionLower.includes('27'))) {
