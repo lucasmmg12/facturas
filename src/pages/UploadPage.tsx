@@ -92,7 +92,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
             confidence: ocrResult.confidence,
             tokens: ocrResult.tokens,
           });
-          
+
           // Guardar información de tokens en el resultado y registrar el uso
           if (ocrResult.tokens) {
             newResults[i] = {
@@ -100,7 +100,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
               tokens: ocrResult.tokens,
             };
             setResults([...newResults]);
-            
+
             // Registrar el uso para tracking de saldo
             if (ocrResult.tokens.estimatedCost !== undefined) {
               recordTokenUsage(ocrResult.tokens.total_tokens, ocrResult.tokens.estimatedCost);
@@ -164,7 +164,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         if (!ocrResult.supplierCuit) missingCriticalData.push('CUIT del proveedor');
         if (!ocrResult.invoiceType) missingCriticalData.push('Tipo de comprobante');
         if (!ocrResult.invoiceNumber) missingCriticalData.push('Número de factura');
-        
+
         if (missingCriticalData.length > 0) {
           console.warn('[Upload] Algunos datos críticos no se pudieron extraer:', {
             missing: missingCriticalData,
@@ -246,7 +246,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           const expectedIvaAmount = ocrResult.taxes
             .filter(t => t.taxCode === '1' || t.taxCode === '2')
             .reduce((sum, tax) => sum + tax.taxAmount, 0);
-          
+
           // Verificar que el IVA calculado coincida aproximadamente con el IVA total
           if (expectedIvaAmount > 0 && ocrResult.ivaAmount > 0) {
             const difference = Math.abs(expectedIvaAmount - ocrResult.ivaAmount);
@@ -325,15 +325,32 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
+        // 9. Normalizar CUIT y buscar proveedor en la base de datos para asociación automática
+        const cleanOcrCuit = ocrResult.supplierCuit ? ocrResult.supplierCuit.replace(/[-\s]/g, '') : '';
+        let dbSupplier = null;
+
+        if (cleanOcrCuit) {
+          try {
+            const { getSupplierByCuit } = await import('../services/invoice-service');
+            dbSupplier = await getSupplierByCuit(cleanOcrCuit);
+            if (dbSupplier) {
+              console.log(`[Upload] Proveedor encontrado en BD: ${dbSupplier.razon_social} (ID: ${dbSupplier.id})`);
+            }
+          } catch (suppError) {
+            console.error('[Upload] Error al buscar proveedor en BD:', suppError);
+          }
+        }
+
         // Solo verificar duplicados si tenemos los datos mínimos necesarios
         let duplicate = false;
-        if (ocrResult.supplierCuit && ocrResult.invoiceType && ocrResult.invoiceNumber) {
-          duplicate = await checkDuplicateInvoice(
-            ocrResult.supplierCuit,
+        if (cleanOcrCuit && ocrResult.invoiceType && ocrResult.invoiceNumber) {
+          const duplicateInvoice = await checkDuplicateInvoice(
+            cleanOcrCuit,
             ocrResult.invoiceType,
             ocrResult.pointOfSale || '00000',
             ocrResult.invoiceNumber
           );
+          duplicate = !!duplicateInvoice;
         } else {
           console.log('[Upload] No se puede verificar duplicados: faltan datos críticos');
           validations.warnings.push('⚠️ No se pudo verificar duplicados porque faltan datos. Verifica manualmente si esta factura ya existe.');
@@ -356,26 +373,24 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         setResults([...newResults]);
 
         // Crear factura con valores por defecto temporales para campos NOT NULL faltantes
-        // El usuario podrá completarlos después en el editor
-        // NOTA: Estos campos tienen restricción NOT NULL en la BD, por lo que usamos valores temporales
         const today = new Date().toISOString().split('T')[0];
-        
+
         const invoice = await createInvoice({
-          supplier_cuit: ocrResult.supplierCuit || '00000000000', // Valor temporal, usuario debe corregir
-          supplier_name: ocrResult.supplierName || 'PROVEEDOR SIN NOMBRE - COMPLETAR', // Valor temporal
-          invoice_type: (ocrResult.invoiceType || 'FACTURA_A') as InvoiceType, // Valor temporal (FACTURA_A = enum válido), usuario debe corregir
-          point_of_sale: ocrResult.pointOfSale || '00000', // Valor temporal
-          invoice_number: ocrResult.invoiceNumber || '00000000', // Valor temporal, usuario debe corregir
-          issue_date: ocrResult.issueDate || today, // Usar fecha actual como temporal
+          supplier_id: dbSupplier?.id || null,
+          supplier_cuit: cleanOcrCuit || '00000000000',
+          supplier_name: dbSupplier?.razon_social || ocrResult.supplierName || 'PROVEEDOR SIN NOMBRE - COMPLETAR',
+          invoice_type: (ocrResult.invoiceType || 'FACTURA_A') as InvoiceType,
+          point_of_sale: ocrResult.pointOfSale || '00000',
+          invoice_number: ocrResult.invoiceNumber || '00000000',
+          issue_date: ocrResult.issueDate || today,
           net_taxed: ocrResult.netTaxed || 0,
           net_untaxed: ocrResult.netUntaxed || 0,
           net_exempt: ocrResult.netExempt || 0,
           iva_amount: ocrResult.ivaAmount || 0,
           other_taxes_amount: ocrResult.otherTaxesAmount || 0,
           total_amount: ocrResult.totalAmount || 0,
-          // Si faltan datos críticos, marcar como PENDING_REVIEW para que el usuario los complete
-          status: (ocrResult.confidence >= 0.7 && ocrResult.supplierCuit && ocrResult.invoiceType && ocrResult.invoiceNumber) 
-            ? 'PROCESSED' 
+          status: (ocrResult.confidence >= 0.7 && cleanOcrCuit && ocrResult.invoiceType && ocrResult.invoiceNumber)
+            ? 'PROCESSED'
             : 'PENDING_REVIEW',
           ocr_confidence: ocrResult.confidence,
           created_by: profile.id,
@@ -399,7 +414,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         const hasCriticalErrors = validations.errors.length > 0;
         const hasWarnings = validations.warnings.length > 0;
         const hasMissingData = !ocrResult.supplierCuit || !ocrResult.invoiceType || !ocrResult.invoiceNumber;
-        
+
         let finalMessage = `Comprobante procesado con ${ocrMethod}`;
         if (hasMissingData) {
           finalMessage += '. ⚠️ La factura se creó pero faltan datos críticos que deberás completar manualmente antes de exportar.';
@@ -408,7 +423,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         } else {
           finalMessage += ' exitosamente. ✅ La factura está lista para revisar.';
         }
-        
+
         newResults[i] = {
           ...newResults[i],
           status: hasCriticalErrors ? 'error' : 'success',
@@ -418,7 +433,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           validations,
         };
         setResults([...newResults]);
-        
+
         // Registrar actividad de subida de archivo
         if (profile && invoice.id) {
           try {
@@ -428,7 +443,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
             // No interrumpir el flujo si falla el registro de actividad
           }
         }
-        
+
         if (onInvoiceCreated) {
           onInvoiceCreated(invoice.id);
         }
@@ -458,7 +473,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <FileUploader onFilesSelected={handleFilesSelected} disabled={uploading} />
-        
+
         {/* Reglas e información importante */}
         <div className="mt-4 border-t pt-4">
           <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
@@ -545,19 +560,18 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{result.filename}</p>
                   <p
-                    className={`text-sm mt-1 ${
-                      result.status === 'success'
-                        ? 'text-green-600'
-                        : result.status === 'duplicate'
+                    className={`text-sm mt-1 ${result.status === 'success'
+                      ? 'text-green-600'
+                      : result.status === 'duplicate'
                         ? 'text-yellow-600'
                         : result.status === 'error'
-                        ? 'text-red-600'
-                        : 'text-gray-600'
-                    }`}
+                          ? 'text-red-600'
+                          : 'text-gray-600'
+                      }`}
                   >
                     {result.message}
                   </p>
-                  
+
                   {/* Botón de advertencia especial para NATURGY */}
                   {result.supplierCuit && result.supplierCuit.replace(/[-\s]/g, '') === '30681688540' && (
                     <div className="mt-3 mb-2">
@@ -572,7 +586,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                       </button>
                     </div>
                   )}
-                  
+
                   {result.tokens && (
                     <div className="mt-2 text-xs text-gray-500 space-y-1">
                       <div className="flex items-center gap-2">
@@ -606,30 +620,26 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                         </div>
                       )}
                       {result.validations.warnings.length > 0 && (
-                        <div className={`border rounded-md p-3 ${
-                          result.status === 'processing' 
-                            ? 'bg-blue-50 border-blue-200' 
-                            : 'bg-yellow-50 border-yellow-200'
-                        }`}>
+                        <div className={`border rounded-md p-3 ${result.status === 'processing'
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-yellow-50 border-yellow-200'
+                          }`}>
                           <div className="flex items-start">
-                            <AlertTriangle className={`h-5 w-5 mt-0.5 mr-2 flex-shrink-0 ${
-                              result.status === 'processing' 
-                                ? 'text-blue-600' 
-                                : 'text-yellow-600'
-                            }`} />
+                            <AlertTriangle className={`h-5 w-5 mt-0.5 mr-2 flex-shrink-0 ${result.status === 'processing'
+                              ? 'text-blue-600'
+                              : 'text-yellow-600'
+                              }`} />
                             <div className="flex-1">
-                              <h4 className={`text-sm font-medium mb-1 ${
-                                result.status === 'processing' 
-                                  ? 'text-blue-800' 
-                                  : 'text-yellow-800'
-                              }`}>
+                              <h4 className={`text-sm font-medium mb-1 ${result.status === 'processing'
+                                ? 'text-blue-800'
+                                : 'text-yellow-800'
+                                }`}>
                                 {result.status === 'processing' ? 'Validaciones y advertencias:' : 'Advertencias:'}
                               </h4>
-                              <ul className={`list-disc list-inside text-xs space-y-1 ${
-                                result.status === 'processing' 
-                                  ? 'text-blue-700' 
-                                  : 'text-yellow-700'
-                              }`}>
+                              <ul className={`list-disc list-inside text-xs space-y-1 ${result.status === 'processing'
+                                ? 'text-blue-700'
+                                : 'text-yellow-700'
+                                }`}>
                                 {result.validations.warnings.map((warning, idx) => (
                                   <li key={idx}>{warning}</li>
                                 ))}

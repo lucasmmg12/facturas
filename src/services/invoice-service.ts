@@ -103,6 +103,18 @@ export async function checkDuplicateInvoice(
   return data;
 }
 
+export async function getSupplierByCuit(cuit: string) {
+  const cleanCuit = cuit.replace(/[-\s]/g, '');
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select('*')
+    .eq('cuit', cleanCuit)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<Invoice> {
   return updateInvoice(id, { status });
 }
@@ -234,9 +246,10 @@ export async function createInvoiceTaxesFromOCR(
   const taxRecords = [];
   for (const tax of taxes) {
     let taxCodeToMap = tax.taxCode;
-    
+
     // Normalizar percepciones de IIBB/Ingresos Brutos al código 52
     // Esto asegura que cualquier variación (incluyendo "59" si OpenAI se confunde) se mapee correctamente
+    // Normalizar percepciones de IIBB/Ingresos Brutos al código PERC_IIBB
     const descriptionLower = tax.description?.toLowerCase() || '';
     if (
       descriptionLower.includes('percepción iibb') ||
@@ -245,33 +258,16 @@ export async function createInvoiceTaxesFromOCR(
       descriptionLower.includes('percepcion ingresos brutos') ||
       descriptionLower.includes('percep i.b.') ||
       descriptionLower.includes('percep ib') ||
-      descriptionLower.includes('sircreb') ||
-      taxCodeToMap === '59' // Si por error OpenAI devuelve 59 para una percepción de IIBB
+      descriptionLower.includes('sircreb')
     ) {
-      // Verificar que realmente sea una percepción de IIBB y no otro impuesto
-      if (descriptionLower.includes('iibb') || descriptionLower.includes('ingresos brutos') || descriptionLower.includes('sircreb')) {
-        console.log(`[Invoice Service] Normalizando percepción de IIBB: "${tax.taxCode}" → "52"`);
-        taxCodeToMap = '52';
-      }
+      console.log(`[Invoice Service] Normalizando percepción de IIBB: "${tax.taxCode}" → "PERC_IIBB"`);
+      taxCodeToMap = 'PERC_IIBB';
     }
 
-    // Mapear código especial 100222 (NATURGY - IVA 27%) a '3' o 'IVA_27' si no existe
-    if (taxCodeToMap === '100222') {
-      // Intentar primero con '3' (código estándar para IVA 27%)
-      const code3Exists = await mapTaxCodeToId('3');
-      if (code3Exists) {
-        console.log(`[Invoice Service] Mapeando código especial NATURGY 100222 → 3 (IVA 27%)`);
-        taxCodeToMap = '3';
-      } else {
-        // Si '3' no existe, intentar con 'IVA_27'
-        const codeIva27Exists = await mapTaxCodeToId('IVA_27');
-        if (codeIva27Exists) {
-          console.log(`[Invoice Service] Mapeando código especial NATURGY 100222 → IVA_27`);
-          taxCodeToMap = 'IVA_27';
-        } else {
-          console.warn(`[Invoice Service] Código 100222 (NATURGY) no se pudo mapear. Se intentará usar directamente.`);
-        }
-      }
+    // Mapear código especial NATURGY (IVA 27%) a 'IVA_27'
+    if (taxCodeToMap === '100222' || (descriptionLower.includes('iva') && descriptionLower.includes('27'))) {
+      console.log(`[Invoice Service] Mapeando IVA 27% → IVA_27`);
+      taxCodeToMap = 'IVA_27';
     }
 
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
@@ -280,7 +276,7 @@ export async function createInvoiceTaxesFromOCR(
       // Usar siempre el taxAmount que viene del OCR (ya está corregido en normalizeTaxes)
       // No usar taxBase como taxAmount, ya que eso causaría que se guarde el subtotal en lugar del IVA
       const finalTaxAmount = tax.taxAmount;
-      
+
       // Solo registrar warning si no hay importe pero hay base (para debugging)
       if (finalTaxAmount === 0 && tax.taxBase > 0) {
         console.warn(`[Invoice Service] Advertencia: ${tax.taxCode} (${tax.description}) tiene base (${tax.taxBase}) pero no tiene importe. Se guardará con importe 0.`);
