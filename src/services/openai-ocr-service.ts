@@ -91,46 +91,44 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   if (invokeError) {
     console.error('[OpenAI OCR] Error al invocar Edge Function:', invokeError);
 
-    // Intentar extraer el mensaje de error del cuerpo si está disponible
-    interface InvokeErrorBody {
-      success: boolean;
-      error?: string;
-    }
-
     let detailedError = invokeError.message;
 
-    // Si es un error de HTTP, intentamos obtener más contexto
+    // Intentar extraer el mensaje de error del cuerpo si está disponible (contexto de Supabase)
     if (invokeError instanceof Error && (invokeError as any).context) {
       try {
-        const body = (invokeError as any).context as InvokeErrorBody;
-        if (body && body.error) {
+        const body = (invokeError as any).context;
+        if (typeof body === 'object' && body.error) {
           detailedError = body.error;
+        } else if (typeof body === 'string' && body.startsWith('{')) {
+          const parsed = JSON.parse(body);
+          detailedError = parsed.error || detailedError;
         }
       } catch (e) {
-        console.warn('[OpenAI OCR] No se pudo parsear el contexto del error:', e);
+        console.warn('[OpenAI OCR] No se pudo extraer detalle del error:', e);
       }
     }
 
-    // Manejar errores específicos de Supabase
+    // Traducir y profesionalizar errores de infraestructura
     if (detailedError?.includes('401') || detailedError?.toLowerCase().includes('authorized')) {
-      throw new Error('Sesión de Supabase inválida o expirada (401). Por favor, intenta cerrar sesión y volver a entrar.');
+      throw new Error('Sesión de Supabase inválida o expirada (401). El servidor no autorizó la operación.');
     }
     if (detailedError?.includes('404')) {
-      throw new Error('La función "openai-ocr" no se encuentra (404). Verifica que esté desplegada en el proyecto correcto.');
+      throw new Error('Servicio no disponible (404). El motor de análisis no responde en este momento.');
     }
 
-    throw new Error(`Error en la comunicación con la IA: ${detailedError}`);
+    throw new Error(`Error en el motor de análisis: ${detailedError}`);
   }
 
-  if (!responseData.success) {
-    console.error('[OpenAI OCR] Error retornado por la función:', responseData.error);
+  if (!responseData?.success) {
+    console.error('[OpenAI OCR] Error retornado por la función:', responseData?.error);
 
-    // Error específico para falta de API Key (debe estar en .env y cargada en Supabase Secrets)
-    if (responseData.error?.includes('OPENAI_API_KEY')) {
-      throw new Error('La OPENAI_API_KEY no está configurada. Asegúrate de que el valor definido en tu archivo .env (VITE_OPENAI_API_KEY) haya sido cargado correctamente en los Secrets de Supabase.');
+    const errorMessage = responseData?.error || 'Respuesta inesperada del motor de análisis';
+
+    if (errorMessage.includes('OPENAI_API_KEY')) {
+      throw new Error('Falta de configuración: La clave de API de OpenAI no ha sido establecida en el servidor.');
     }
 
-    throw new Error(responseData.error || 'Error al procesar con OpenAI');
+    throw new Error(errorMessage);
   }
 
   console.log('[OpenAI OCR] Respuesta exitosa de Edge Function');
