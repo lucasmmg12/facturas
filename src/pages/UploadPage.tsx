@@ -284,7 +284,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           {results.length > 0 && (
             <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-500">
               <h3 className="text-sm font-black text-grow-muted tracking-[0.3em] uppercase ml-2">Monitor de Procesamiento</h3>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {results.map((result, index) => (
                   <div
                     key={index}
