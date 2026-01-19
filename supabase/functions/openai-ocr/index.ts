@@ -114,6 +114,14 @@ ESTRUCTURA JSON:
 IMPUESTOS (Solo si están explícitos en la factura):
 ${JSON.stringify(taxCodesList)}
 
+MONTOS Y NÚMEROS (CRÍTICO):
+- ⚠️ CUIDADO con los puntos y comas.
+- Si ves '325077.96', interpreta que el punto es DECIMAL => 325077.96.
+- Si ves '325.077,96', interpreta que la coma es DECIMAL => 325077.96.
+- Regla de oro: Si los últimos 2 dígitos están separados por un punto o coma, ES DECIMAL.
+- NO conviertas '325077.96' en 32 millones.
+- Devuelve SIEMPRE números (number), no strings.
+
 EXTRAE SOLO JSON.
 `.trim();
 
