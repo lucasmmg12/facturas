@@ -44,6 +44,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
   const [uploading, setUploading] = useState(false);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalToProcess, setTotalToProcess] = useState(0);
+  const [currentAction, setCurrentAction] = useState<{
+    label: string;
+    detail?: string;
+    amount?: number;
+    supplier?: string;
+  } | null>(null);
   const [results, setResults] = useState<UploadResult[]>([]);
   const [balanceInfo, setBalanceInfo] = useState(getEstimatedRemainingBalance());
 
@@ -72,6 +78,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     setUploading(true);
     setProcessedCount(0);
     setTotalToProcess(files.length);
+    setCurrentAction({ label: 'Iniciando lote', detail: `${files.length} archivos detectados` });
     const newResults: UploadResult[] = files.map((file) => ({
       filename: file.name,
       status: 'processing',
@@ -81,6 +88,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      setCurrentAction({ label: 'Analizando archivo', detail: file.name });
       try {
         const isImage = isImageFile(file);
         let fileToProcess = file;
@@ -95,10 +103,19 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
             message: 'Analizando comprobante con OpenAI...',
           };
           setResults([...newResults]);
+          setCurrentAction({ label: 'IA en Proceso', detail: `Leyendo ${file.name}...` });
 
           console.log(`[Upload] Iniciando OCR con OpenAI for: ${file.name}`);
           ocrResult = await extractDataWithOpenAI(file);
           ocrMethod = 'OpenAI';
+
+          if (ocrResult) {
+            setCurrentAction({
+              label: 'OCR Completado',
+              supplier: ocrResult.supplierName,
+              amount: ocrResult.totalAmount
+            });
+          }
 
           // Guardar información de tokens
           if (ocrResult.tokens) {
@@ -265,6 +282,11 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         };
         setResults([...newResults]);
 
+        setCurrentAction({
+          label: 'Guardado',
+          detail: `Comprobante ${ocrResult.invoiceNumber || ''} registrado`
+        });
+
         // if (onInvoiceCreated) onInvoiceCreated(invoice.id); // Removido del loop para evitar navegación prematura
 
       } catch (error: any) {
@@ -275,6 +297,8 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         if (errorMessage.includes('UNIQUE_INVOICE_KEY') || errorMessage.includes('unique_invoice_key')) {
           errorMessage = 'Este comprobante ya ha sido registrado previamente en el sistema.';
         }
+
+        setCurrentAction({ label: 'Error detectado', detail: file.name });
 
         newResults[i] = {
           ...newResults[i],
@@ -287,6 +311,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
       }
     }
     setUploading(false);
+    setCurrentAction(null);
 
     // Solo al finalizar TODO el lote, si hay al menos un éxito, notificamos al padre
     // Usamos el ID de la última factura procesada exitosamente para la vista previa
@@ -335,8 +360,34 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
             <div className="pt-4 flex items-center justify-center gap-3 text-grow-neon animate-pulse">
               <Loader className="w-4 h-4 animate-spin" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Optimizando Data</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">{currentAction?.label || 'Optimizando Data'}</span>
             </div>
+
+            {currentAction && (currentAction.supplier || currentAction.detail) && (
+              <div className="mt-4 p-4 bg-black/40 border border-grow-neon/20 rounded-2xl animate-in zoom-in-95 duration-300">
+                <div className="flex flex-col gap-2 text-left">
+                  {currentAction.supplier && (
+                    <div className="flex justify-between items-center bg-grow-neon/5 p-2 rounded-lg border border-grow-neon/10">
+                      <span className="text-[9px] font-black text-grow-muted uppercase">Emisor Detectado</span>
+                      <span className="text-[10px] font-black text-white truncate max-w-[150px]">{currentAction.supplier}</span>
+                    </div>
+                  )}
+                  {currentAction.amount !== undefined && (
+                    <div className="flex justify-between items-center bg-grow-neon/5 p-2 rounded-lg border border-grow-neon/10">
+                      <span className="text-[9px] font-black text-grow-muted uppercase">Importe Total</span>
+                      <span className="text-[10px] font-black text-grow-neon">
+                        {currentAction.amount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                      </span>
+                    </div>
+                  )}
+                  {currentAction.detail && !currentAction.supplier && (
+                    <div className="text-center italic opacity-70">
+                      <span className="text-[10px] font-bold text-white/50">{currentAction.detail}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
