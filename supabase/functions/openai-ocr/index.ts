@@ -90,18 +90,18 @@ serve(async (req) => {
     console.log('[Supabase Edge Function] Procesando OCR para usuario:', user.id);
     console.log('[Supabase Edge Function] Cantidad de páginas:', pagesCount);
 
-    // Obtener tax_codes activos de la base de datos
-    const { data: taxCodes, error: taxCodesError } = await supabaseClient
-      .from('tax_codes')
-      .select('code, description, rate, tax_type')
-      .eq('active', true)
-      .order('code');
+    // Hardcode essential tax codes to simplify and avoid DB errors
+    const taxCodesList = [
+      { code: '1', description: 'IVA TASA GENERAL (21%)', rate: 21, tax_type: 'IVA' },
+      { code: '2', description: 'IVA TASA REDUCIDA (10.5%)', rate: 10.5, tax_type: 'IVA' },
+      { code: 'IVA_27', description: 'IVA 27%', rate: 27, tax_type: 'IVA' },
+      { code: 'PERC_IIBB', description: 'PERCEPCIÓN IIBB', rate: null, tax_type: 'PERCEPCION_IIBB' },
+      { code: 'PERC_IVA', description: 'PERCEPCIÓN IVA', rate: null, tax_type: 'PERCEPCION_IVA' },
+    ];
 
-    if (taxCodesError) {
-      console.warn('[Supabase Edge Function] Error al obtener tax_codes:', taxCodesError);
-    }
 
-    const prompt = buildPrompt(pagesCount > 1, taxCodes || []);
+    const prompt = buildPrompt(pagesCount > 1, taxCodesList);
+
 
     // Construir el contenido con todas las imágenes
     const imageContent = base64Array.map((imgBase64, index) => {
