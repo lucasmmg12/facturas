@@ -507,13 +507,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     // Buscar el tax code seleccionado
     const selectedTax = taxCodes.find(tc => tc.id === taxCodeId);
 
-    if (selectedTax && selectedTax.rate && invoice.net_taxed > 0) {
-      // Auto-calcular base imponible y monto si tenemos alícuota
-      const baseAmount = invoice.net_taxed;
+    if (selectedTax && selectedTax.rate && (invoice.net_taxed > 0 || invoice.total_amount > 0)) {
+      // Auto-calcular base imponible y monto
+      const baseAmount = invoice.net_taxed > 0
+        ? invoice.net_taxed
+        : invoice.total_amount / (1 + selectedTax.rate / 100);
+
       const calculatedTaxAmount = baseAmount * (selectedTax.rate / 100);
 
       setTaxBase(baseAmount.toFixed(2));
       setTaxAmount(calculatedTaxAmount.toFixed(2));
+
 
       console.log('[InvoiceEditor] Auto-calculado impuesto:', {
         taxCode: selectedTax.tango_code,

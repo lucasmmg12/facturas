@@ -181,6 +181,25 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     totalAmount: normalizeNumber(parsed.totalAmount),
   };
 
+  // INFERENCIA DE VALORES si faltan campos críticos pero hay un Total
+  if (amounts.totalAmount > 0 && amounts.netTaxed === 0 && amounts.ivaAmount === 0 && amounts.netUntaxed === 0 && amounts.netExempt === 0) {
+    console.log('[OpenAI OCR] ⚠️ Campos de base detectados en 0. Intentando inferir desde Total...');
+    // Asunción conservadora: Es IVA 21%
+    const total = amounts.totalAmount;
+    const net = total / 1.21;
+    const iva = total - net;
+
+    amounts.netTaxed = Number(net.toFixed(2));
+    amounts.ivaAmount = Number(iva.toFixed(2));
+
+    console.log('[OpenAI OCR] 🪄 Inferencia completada (Asunción IVA 21%):', { net: amounts.netTaxed, iva: amounts.ivaAmount });
+  } else if (amounts.netTaxed > 0 && amounts.ivaAmount === 0 && amounts.totalAmount > amounts.netTaxed) {
+    // Si hay neto y total pero no IVA, el IVA es la diferencia
+    amounts.ivaAmount = Number((amounts.totalAmount - amounts.netTaxed - amounts.netUntaxed - amounts.netExempt - amounts.otherTaxesAmount).toFixed(2));
+    console.log('[OpenAI OCR] 🪄 Inferencia de IVA completada (Diferencia):', amounts.ivaAmount);
+  }
+
+
   // Usar los impuestos extraídos por OpenAI
   const taxes: ParsedTaxes = [];
 

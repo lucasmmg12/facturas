@@ -34,9 +34,10 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
+    // Usar SERVICE_ROLE_KEY para operaciones de administración interna
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
           headers: { Authorization: authHeader },
@@ -44,6 +45,7 @@ serve(async (req) => {
       }
     );
 
+    // Verificar usuario (seguimos usando el header del usuario para seguridad)
     const {
       data: { user },
       error: userError
@@ -51,8 +53,12 @@ serve(async (req) => {
 
     if (userError || !user) {
       console.error('[Supabase Edge Function] Error de autenticación:', userError);
-      throw new Error('Usuario no autenticado o sesión inválida');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Sesión inválida o expirada. Por favor reingresa al sistema.' }),
+        { headers: corsHeaders, status: 401 }
+      );
     }
+
 
     // Verificar que tenemos la API key de OpenAI
     if (!OPENAI_API_KEY) {
@@ -242,8 +248,12 @@ REGLAS CRÍTICAS DE IDENTIFICACIÓN (ENTRENAMIENTO):
   ]
 }
 
-Asegúrate de extraer TODOS los impuestos (IVA, Percepciones de IIBB, Percepciones de IVA, etc.) que aparezcan detallados.
+Asegúrate de extraer TODOS los impuestos (IVA, Percepciones de IIBB, Percepciones de IVA, etc.) que aparezcan detallados. 
+❌ NUNCA inventes datos, pero si el impuesto está en la factura, DEBE estar en el JSON.
+❌ Si las alícuotas de IVA son 21%, 10.5% o 27%, asegúrate de reflejarlas en "rate" y mapearlas al "taxCode" correspondiente si están en la lista arriba.
+
 Usa null si un dato no es encontrado. Asegúrate de que los montos sean números válidos.
+
 
 `;
 }
