@@ -139,10 +139,37 @@ export async function checkDuplicateInvoice(
 
 export async function getSupplierByCuit(cuit: string): Promise<Supplier | null> {
   const cleanCuit = cuit.replace(/[-\s]/g, '');
-  const { data, error } = await (supabase
+
+  // 1. Intentar búsqueda por CUIT limpio (solo números)
+  let { data, error } = await (supabase
     .from('suppliers') as any)
     .select('*')
     .eq('cuit', cleanCuit)
+    .maybeSingle();
+
+  // 2. Si no encuentra, intentar con formato estándar XX-XXXXXXXX-X
+  if (!data && !error && cleanCuit.length === 11) {
+    const formattedCuit = `${cleanCuit.slice(0, 2)}-${cleanCuit.slice(2, 10)}-${cleanCuit.slice(10)}`;
+    const res = await (supabase
+      .from('suppliers') as any)
+      .select('*')
+      .eq('cuit', formattedCuit)
+      .maybeSingle();
+    data = res.data;
+    error = res.error;
+  }
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data as Supplier | null;
+}
+
+export async function getSupplierByName(name: string): Promise<Supplier | null> {
+  if (!name) return null;
+  const { data, error } = await (supabase
+    .from('suppliers') as any)
+    .select('*')
+    .ilike('razon_social', `%${name}%`)
+    .limit(1)
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') throw error;

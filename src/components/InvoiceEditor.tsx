@@ -113,26 +113,34 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
           expense_code: invoiceData.invoice.expense_code || 'S/C',
         };
 
-        // BUSCAR PROVEEDOR EN LA TABLA DE PROVEEDORES si hay supplier_cuit pero no supplier_id
-        // Solo actualizar supplier_id y supplier_name, NO tocar otros campos de la factura
-        if (invoiceWithDefaults.supplier_cuit && !invoiceWithDefaults.supplier_id) {
-          const cleanCuit = invoiceWithDefaults.supplier_cuit.replace(/[-\s]/g, '');
-          const foundSupplier = allSuppliers.find(s => s.cuit.replace(/[-\s]/g, '') === cleanCuit);
+        // BUSCAR PROVEEDOR EN LA TABLA DE PROVEEDORES si hay supplier_cuit o name pero no supplier_id
+        if (!invoiceWithDefaults.supplier_id) {
+          const cleanCuit = invoiceWithDefaults.supplier_cuit?.replace(/[-\s]/g, '') || '';
+
+          // 1. Intentar por CUIT
+          let foundSupplier = cleanCuit ? allSuppliers.find(s => s.cuit.replace(/[-\s]/g, '') === cleanCuit) : null;
+
+          // 2. Fallback por Nombre (Normalizado)
+          if (!foundSupplier && invoiceWithDefaults.supplier_name) {
+            const normalize = (str: string) =>
+              str.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+                .replace(/[^a-z0-9]/g, ''); // Solo letras y números
+
+            const targetName = normalize(invoiceWithDefaults.supplier_name);
+            foundSupplier = allSuppliers.find(s => normalize(s.razon_social).includes(targetName) || targetName.includes(normalize(s.razon_social)));
+          }
 
           if (foundSupplier) {
-            console.log('[InvoiceEditor] Proveedor encontrado en tabla de proveedores:', {
+            console.log('[InvoiceEditor] Proveedor mapeado automáticamente:', {
               razon_social: foundSupplier.razon_social,
-              tango_supplier_code: foundSupplier.tango_supplier_code,
+              method: cleanCuit && foundSupplier.cuit.replace(/[-\s]/g, '') === cleanCuit ? 'CUIT' : 'NAME'
             });
-            // Solo actualizar supplier_id y supplier_name, preservar todos los demás campos de la factura
             invoiceWithDefaults = {
               ...invoiceWithDefaults,
               supplier_id: foundSupplier.id,
               supplier_name: foundSupplier.razon_social,
-              // NO actualizar tango_supplier_code ni ningún otro campo
             };
-          } else {
-            console.log('[InvoiceEditor] Proveedor no encontrado en tabla de proveedores para CUIT:', cleanCuit);
           }
         }
 

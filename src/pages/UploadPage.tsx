@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { FileUploader } from '../components/FileUploader';
 import { extractDataFromPDF } from '../services/ocr-service';
 import { extractDataWithOpenAI } from '../services/openai-ocr-service';
-import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR, getSupplierByCuit } from '../services/invoice-service';
+import { createInvoice, checkDuplicateInvoice, createInvoiceTaxesFromOCR, getSupplierByCuit, getSupplierByName } from '../services/invoice-service';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, AlertCircle, Loader, AlertTriangle } from 'lucide-react';
 import { convertImageToPDF, isImageFile } from '../utils/file-converter';
@@ -192,7 +192,17 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           try {
             dbSupplier = await getSupplierByCuit(cleanOcrCuit);
           } catch (e) {
-            console.error('Error buscando proveedor:', e);
+            console.error('Error buscando proveedor por CUIT:', e);
+          }
+        }
+
+        // Fallback: buscar por nombre si no se encontró por CUIT
+        if (!dbSupplier && ocrResult.supplierName) {
+          try {
+            console.log(`[Upload] CUIT no encontrado (${cleanOcrCuit}), intentando por nombre: ${ocrResult.supplierName}`);
+            dbSupplier = await getSupplierByName(ocrResult.supplierName);
+          } catch (e) {
+            console.error('Error buscando proveedor por nombre:', e);
           }
         }
 
