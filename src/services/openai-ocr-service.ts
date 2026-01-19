@@ -91,15 +91,35 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   if (invokeError) {
     console.error('[OpenAI OCR] Error al invocar Edge Function:', invokeError);
 
+    // Intentar extraer el mensaje de error del cuerpo si está disponible
+    interface InvokeErrorBody {
+      success: boolean;
+      error?: string;
+    }
+
+    let detailedError = invokeError.message;
+
+    // Si es un error de HTTP, intentamos obtener más contexto
+    if (invokeError instanceof Error && (invokeError as any).context) {
+      try {
+        const body = (invokeError as any).context as InvokeErrorBody;
+        if (body && body.error) {
+          detailedError = body.error;
+        }
+      } catch (e) {
+        console.warn('[OpenAI OCR] No se pudo parsear el contexto del error:', e);
+      }
+    }
+
     // Manejar errores específicos de Supabase
-    if (invokeError.message?.includes('401')) {
+    if (detailedError?.includes('401') || detailedError?.toLowerCase().includes('authorized')) {
       throw new Error('Sesión de Supabase inválida o expirada (401). Por favor, intenta cerrar sesión y volver a entrar.');
     }
-    if (invokeError.message?.includes('404')) {
+    if (detailedError?.includes('404')) {
       throw new Error('La función "openai-ocr" no se encuentra (404). Verifica que esté desplegada en el proyecto correcto.');
     }
 
-    throw new Error(`Error en la comunicación con la IA: ${invokeError.message}`);
+    throw new Error(`Error en la comunicación con la IA: ${detailedError}`);
   }
 
   if (!responseData.success) {
