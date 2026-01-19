@@ -475,3 +475,9 @@ export interface Database {
     };
   };
 }
+
+export type Supplier = Database['public']['Tables']['suppliers']['Row'];
+export type Invoice = Database['public']['Tables']['invoices']['Row'];
+export type User = Database['public']['Tables']['users']['Row'];
+export type TaxCode = Database['public']['Tables']['tax_codes']['Row'];
+export type InvoiceTax = Database['public']['Tables']['invoice_taxes']['Row'];

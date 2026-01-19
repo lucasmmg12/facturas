@@ -10,11 +10,12 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const colorClasses = getStatusColor(status);
-  
+
   return (
-    <span 
-      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${colorClasses}`}
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${colorClasses}`}
     >
+      <span className={`w-1 h-1 rounded-full ${status === 'ERROR' ? 'bg-black' : 'bg-current'}`} />
       {getStatusLabel(status)}
     </span>
   );

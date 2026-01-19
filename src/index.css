@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-black text-white antialiased;
+    background-image: 
+      radial-gradient(circle at 0% 0%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(30, 58, 138, 0.1) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden;
+  }
+  
+  .neon-button {
+    @apply rounded-full px-6 py-3 font-bold transition-all duration-300 hover:scale-105 active:scale-95 shadow-neon hover:shadow-neon-hover bg-grow-neon-gradient text-black;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-grow-neon/20 rounded-full hover:bg-grow-neon/40 transition-colors;
+}

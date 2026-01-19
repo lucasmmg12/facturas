@@ -20,7 +20,6 @@ import {
   Instagram,
   MessageCircle,
   Globe,
-  Linkedin,
   Stethoscope,
 } from 'lucide-react';
 
@@ -76,21 +75,10 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
-      <div className="space-y-8">
-        <section
-          className="rounded-3xl overflow-hidden shadow-2xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
-          }}
-        >
+      <div className="space-y-8 animate-in fade-in duration-700">
+        <section className="glass-card">
           <div
-            className="flex flex-wrap items-center gap-3 px-6 py-5"
-            style={{
-              borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
-            }}
+            className="flex flex-wrap items-center gap-3 px-6 py-5 bg-black/40 border-b border-grow-border"
           >
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
@@ -99,21 +87,10 @@ export function DashboardPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${isActive
-                    ? 'text-white shadow-lg'
-                    : 'text-green-300 hover:text-white'
+                  className={`rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 ${isActive
+                    ? 'bg-grow-neon text-black shadow-neon'
+                    : 'text-grow-muted hover:text-white hover:bg-white/5'
                     }`}
-                  style={
-                    isActive
-                      ? {
-                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                        boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-                      }
-                      : {
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
-                      }
-                  }
                 >
                   {tab.label}
                 </button>
@@ -162,89 +139,73 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 text-white py-12 mt-16 rounded-3xl shadow-xl">
+        <footer className="glass-card mt-16 py-12">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <div className="grid md:grid-cols-2 gap-12 mb-8">
               <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <img
-                    src="/logogrow.png"
-                    alt="Grow Labs Logo"
-                    className="h-12 w-12 object-contain bg-white rounded-full p-1"
-                  />
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="bg-white rounded-full p-2 shadow-neon w-fit">
+                    <img
+                      src="/logogrow.png"
+                      alt="Grow Labs Logo"
+                      className="h-10 w-10 object-contain"
+                    />
+                  </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-white">Grow Labs</h3>
-                    <p className="text-blue-400 text-sm font-medium">Donde tus ideas crecen</p>
+                    <h3 className="text-2xl font-black text-white tracking-tight">GROW LABS</h3>
+                    <p className="text-grow-neon text-sm font-bold uppercase tracking-widest">Innovation Powered</p>
                   </div>
                 </div>
-                <p className="text-gray-300 mb-4 leading-relaxed">
-                  Startup tecnológica especializada en inteligencia artificial y automatización de procesos.
-                  Transformamos ideas en soluciones innovadoras para gestión documental y trazabilidad financiera.
+                <p className="text-grow-muted mb-6 leading-relaxed max-w-md">
+                  Startup tecnológica impulsada por inteligencia artificial. Transformamos la gestión documental con automatización de vanguardia y trazabilidad financiera inteligente.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <a
                     href="https://www.instagram.com/growsanjuan/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-gradient-to-br from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
+                    className="flex items-center gap-2 bg-gradient-to-br from-pink-500/20 to-orange-500/20 hover:from-pink-500/40 hover:to-orange-500/40 border border-white/10 text-white px-5 py-2.5 rounded-full transition-all"
                   >
-                    <Instagram className="w-5 h-5" />
-                    <span className="text-sm font-medium">Instagram</span>
+                    <Instagram className="w-4 h-4 text-pink-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Instagram</span>
                   </a>
                   <a
-                    href="https://api.whatsapp.com/send/?phone=5492643229503&text&type=phone_number&app_absent=0"
+                    href="https://api.whatsapp.com/send/?phone=5492643229503"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
+                    className="flex items-center gap-2 bg-grow-neon/10 hover:bg-grow-neon/20 border border-grow-neon/20 text-grow-neon px-5 py-2.5 rounded-full transition-all"
                   >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="text-sm font-medium">WhatsApp</span>
-                  </a>
-                </div>
-                <div className="flex flex-wrap gap-3 mt-3">
-                  <a
-                    href="https://www.growsanjuan.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    <Globe className="w-5 h-5" />
-                    <span className="text-sm font-medium">Sitio Web</span>
-                  </a>
-                  <a
-                    href="https://www.linkedin.com/in/lucas-marinero-182521308/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
-                  >
-                    <Linkedin className="w-5 h-5" />
-                    <span className="text-sm font-medium">LinkedIn</span>
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">WhatsApp</span>
                   </a>
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
-                <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                  <Stethoscope className="w-6 h-6 text-blue-400" />
-                  Cliente Exclusivo
+              <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 relative overflow-hidden group">
+                <div className="absolute -right-8 -top-8 w-24 h-24 bg-grow-neon/10 blur-3xl rounded-full group-hover:bg-grow-neon/20 transition-all duration-700" />
+                <h4 className="text-xl font-black text-white mb-4 flex items-center gap-3">
+                  <Stethoscope className="w-6 h-6 text-grow-neon" />
+                  CLIENTE EXCLUSIVO
                 </h4>
-                <div className="space-y-2">
-                  <p className="text-gray-300 text-sm">
-                    Esta plataforma fue desarrollada a medida para automatizar la importación de comprobantes en:
+                <div className="space-y-4">
+                  <p className="text-grow-muted text-sm leading-relaxed">
+                    Plataforma desarrollada a medida para la automatización de procesos críticos de importación en:
                   </p>
-                  <p className="text-xl font-bold text-blue-400">Sanatorio Argentino</p>
-                  <p className="text-gray-400 text-sm">San Juan, Argentina</p>
-                  <div className="mt-4 pt-4 border-t border-gray-600">
-                    <p className="text-xs text-gray-400">
-                      Sistema de gestión y exportación de comprobantes con integración a Tango Gestión y motores de IA.
+                  <div>
+                    <p className="text-2xl font-black text-white tracking-tight group-hover:text-grow-neon transition-colors">Sanatorio Argentino</p>
+                    <p className="text-grow-muted text-xs font-bold uppercase tracking-widest mt-1">San Juan, Argentina</p>
+                  </div>
+                  <div className="pt-4 border-t border-white/10">
+                    <p className="text-[10px] text-grow-muted uppercase tracking-[0.2em] font-bold">
+                      Tango Gestión · AI Integration · Financial Automation
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="border-t border-gray-700 pt-6 text-center">
-              <p className="text-gray-400 text-sm">
-                © 2025 Grow Labs. Todos los derechos reservados. | Powered by IA & Automatización financiera
+            <div className="border-t border-white/10 pt-8 mt-4 text-center">
+              <p className="text-grow-muted text-[10px] font-bold uppercase tracking-[0.3em]">
+                © 2025 GROW LABS · SISTEMA OPERATIVO INTELIGENTE
               </p>
             </div>
           </div>
@@ -383,28 +344,15 @@ function ReviewPanel({
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
       <div className="flex flex-col gap-8">
         {/* Comprobantes recientes - Arriba */}
-        <div
-          className="rounded-2xl overflow-hidden shadow-2xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            maxHeight: '400px',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div className=" glass-card flex-1">
           <div
-            className="px-6 py-5 flex-shrink-0"
-            style={{
-              borderBottom: '1px solid rgba(34, 197, 94, 0.2)',
-            }}
+            className="px-6 py-5 flex-shrink-0 bg-black/20 border-b border-grow-border"
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-white mb-1">Comprobantes recientes</h2>
-                <p className="text-sm text-green-200">
-                  Selecciona un comprobante para revisarlo y editar sus datos.
+                <h2 className="text-xl font-black text-white tracking-tight">COMPROBANTES RECIENTES</h2>
+                <p className="text-xs text-grow-muted font-bold uppercase tracking-widest mt-1">
+                  Gestión y Auditoría en tiempo real
                 </p>
               </div>
               {selectedIds.size > 0 && (
@@ -412,115 +360,89 @@ function ReviewPanel({
                   type="button"
                   onClick={handleDeleteClick}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-full text-xs font-black uppercase tracking-widest transition-all"
                 >
-                  {deleting ? 'Eliminando...' : `Eliminar ${selectedIds.size} seleccionado(s)`}
+                  {deleting ? 'ELIMINANDO...' : `ELIMINAR ${selectedIds.size}`}
                 </button>
               )}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-6 text-sm text-green-200">Cargando comprobantes...</div>
+              <div className="p-12 text-center">
+                <div className="inline-block w-8 h-8 border-2 border-grow-neon/20 border-t-grow-neon rounded-full animate-spin mb-4" />
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-grow-muted">Cargando datos...</p>
+              </div>
             ) : error ? (
-              <div className="p-6 text-sm text-red-300">{error}</div>
+              <div className="p-12 text-center text-red-400 text-sm font-bold uppercase tracking-widest">{error}</div>
             ) : formattedInvoices.length === 0 ? (
-              <div className="p-6 text-sm text-green-200">
-                Todavía no hay comprobantes en el sistema.
+              <div className="p-12 text-center text-grow-muted text-sm font-bold uppercase tracking-widest">
+                No hay comprobantes pendientes
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full">
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                    <tr style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                  <thead>
+                    <tr className="bg-black/40 border-b border-grow-border">
                       <th className="px-4 py-4 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.size === invoices.length && invoices.length > 0}
                           onChange={(e) => handleSelectAll(e.target.checked)}
-                          className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                          className="w-4 h-4 rounded border-grow-border bg-black/40 text-grow-neon focus:ring-grow-neon focus:ring-offset-0 cursor-pointer"
                         />
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">
                         Fecha
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">
                         Proveedor
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-green-300">
-                        Conceptos
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">
+                        Detalles
                       </th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-green-300">
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">
                         Total
                       </th>
-                      <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-green-300">
+                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">
                         Estado
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-white/5">
                     {formattedInvoices.map((invoice) => {
                       const isActive = invoice.id === selectedInvoiceId;
                       const isSelected = selectedIds.has(invoice.id);
                       return (
                         <tr
                           key={invoice.id}
-                          className="transition-all duration-200"
-                          style={{
-                            background: isActive
-                              ? 'rgba(34, 197, 94, 0.2)'
-                              : isSelected
-                                ? 'rgba(34, 197, 94, 0.1)'
-                                : 'transparent',
-                            borderBottom: '1px solid rgba(34, 197, 94, 0.1)',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isActive && !isSelected) {
-                              e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isActive && !isSelected) {
-                              e.currentTarget.style.background = 'transparent';
-                            }
-                          }}
+                          className={`group transition-all duration-300 cursor-pointer ${isActive ? 'bg-grow-neon/10' : 'hover:bg-white/5'
+                            }`}
+                          onClick={() => onSelectInvoice(invoice.id)}
                         >
                           <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={(e) => handleSelectOne(invoice.id, e.target.checked)}
-                              className="w-4 h-4 rounded border-green-500 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                              className="w-4 h-4 rounded border-grow-border bg-black/40 text-grow-neon focus:ring-grow-neon focus:ring-offset-0 cursor-pointer"
                             />
                           </td>
-                          <td
-                            className="px-6 py-4 text-sm text-white cursor-pointer"
-                            onClick={() => onSelectInvoice(invoice.id)}
-                          >
+                          <td className="px-6 py-4 text-sm font-bold text-white/70 group-hover:text-white transition-colors">
                             {invoice.formattedDate}
                           </td>
-                          <td
-                            className="px-6 py-4 text-sm font-medium text-white cursor-pointer"
-                            onClick={() => onSelectInvoice(invoice.id)}
-                          >
+                          <td className="px-6 py-4 text-sm font-black text-white group-hover:text-grow-neon transition-colors">
                             {invoice.supplier_name}
                           </td>
-                          <td
-                            className="px-6 py-4 text-sm text-green-200 cursor-pointer"
-                            onClick={() => onSelectInvoice(invoice.id)}
-                          >
-                            <span className="text-xs opacity-70">{invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}</span>
+                          <td className="px-6 py-4">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-grow-muted group-hover:text-white/60">
+                              {invoice.invoice_type} · {invoice.point_of_sale}-{invoice.invoice_number}
+                            </div>
                           </td>
-                          <td
-                            className="px-6 py-4 text-sm text-right font-semibold text-white cursor-pointer"
-                            onClick={() => onSelectInvoice(invoice.id)}
-                          >
+                          <td className="px-6 py-4 text-sm text-right font-black text-white">
                             {invoice.formattedTotal}
                           </td>
-                          <td
-                            className="px-6 py-4 text-center cursor-pointer"
-                            onClick={() => onSelectInvoice(invoice.id)}
-                          >
+                          <td className="px-6 py-4 text-center">
                             <StatusBadge status={invoice.status} />
                           </td>
                         </tr>
@@ -534,17 +456,7 @@ function ReviewPanel({
         </div>
 
         {/* Editor de Comprobante - Abajo */}
-        <div
-          className="rounded-2xl overflow-hidden shadow-2xl flex-1"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            minHeight: '500px',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div className="glass-card flex-1 min-h-[500px] flex flex-col">
           {selectedInvoiceId ? (
             <InvoiceEditor
               invoiceId={selectedInvoiceId}
@@ -555,8 +467,14 @@ function ReviewPanel({
               }}
             />
           ) : (
-            <div className="flex h-full items-center justify-center p-12 text-center text-green-200">
-              Selecciona un comprobante de la lista para abrir el editor.
+            <div className="flex h-full flex-col items-center justify-center p-12 text-center">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
+                <Globe className="w-8 h-8 text-grow-neon opacity-50" />
+              </div>
+              <h3 className="text-lg font-black text-white tracking-tight uppercase">Editor de Comprobante</h3>
+              <p className="text-xs text-grow-muted font-bold uppercase tracking-widest mt-2 max-w-xs leading-relaxed">
+                Selecciona un elemento de la lista superior para inspeccionar y auditar sus campos.
+              </p>
             </div>
           )}
         </div>
@@ -635,69 +553,39 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
 
   return (
     <div className="space-y-8">
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-        }}
-      >
-        <h3 className="text-xl font-semibold text-white">Exportación a Tango Gestión</h3>
-        <p className="mt-2 text-sm text-green-200">
-          Genera un archivo compatible con Tango que incluye encabezados, impuestos y conceptos para cada comprobante.
+      <div className="rounded-3xl p-8 bg-grow-neon/10 border border-grow-neon/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-grow-neon/5 blur-[100px] -mr-32 -mt-32" />
+        <h3 className="text-2xl font-black text-white tracking-tight uppercase flex items-center gap-3">
+          <Globe className="w-8 h-8 text-grow-neon" />
+          Exportación a Tango Gestión
+        </h3>
+        <p className="mt-2 text-sm text-grow-muted font-medium max-w-2xl leading-relaxed">
+          Generación optimizada de paquetes de datos compatibles con Tango. Proceso automatizado de encabezados, regímenes impositivos y apertura de conceptos.
         </p>
       </div>
 
       {error && (
-        <div
-          className="rounded-xl px-4 py-3 text-sm"
-          style={{
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            color: '#fca5a5',
-          }}
-        >
+        <div className="rounded-2xl px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold uppercase tracking-widest">
           {error}
         </div>
       )}
 
       {message && (
-        <div
-          className="rounded-xl px-4 py-3 text-sm"
-          style={{
-            background: 'rgba(34, 197, 94, 0.2)',
-            border: '1px solid rgba(34, 197, 94, 0.4)',
-            color: '#86efac',
-          }}
-        >
+        <div className="rounded-2xl px-6 py-4 bg-grow-neon/10 border border-grow-neon/20 text-grow-neon text-sm font-bold uppercase tracking-widest">
           {message}
         </div>
       )}
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <div
-          className="rounded-xl p-6 shadow-2xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-          }}
-        >
-          <p className="text-sm font-medium text-green-300">Comprobantes listos</p>
-          <p className="mt-2 text-4xl font-bold text-white">
+        <div className="glass-card p-8 group hover:border-grow-neon/30 transition-all">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-grow-muted group-hover:text-grow-neon transition-colors">Comprobantes Listos</p>
+          <p className="mt-4 text-6xl font-black text-white tracking-tighter">
             {loading ? '...' : readyInvoices.length}
           </p>
         </div>
-        <div
-          className="rounded-xl p-6 shadow-2xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-          }}
-        >
-          <p className="text-sm font-medium text-green-300">Total acumulado</p>
-          <p className="mt-2 text-3xl font-bold text-white">
+        <div className="glass-card p-8 group hover:border-grow-neon/30 transition-all">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-grow-muted group-hover:text-grow-neon transition-colors">Monto Proyectado</p>
+          <p className="mt-4 text-4xl font-black text-white tracking-tighter">
             {loading
               ? '...'
               : totalAmount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
@@ -709,19 +597,17 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
         type="button"
         onClick={handleExport}
         disabled={exporting || readyInvoices.length === 0}
-        className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-        style={{
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
-        }}
+        className="neon-button uppercase tracking-[0.2em] text-xs font-black w-full sm:w-auto"
       >
-        {exporting ? 'Generando archivo...' : 'Exportar a Tango Gestión'}
+        {exporting ? 'GENERANDO PAQUETE...' : 'INICIAR EXPORTACIÓN TANGO'}
       </button>
 
-      <p className="text-sm text-green-200">
-        El archivo se descargará en formato <span className="font-semibold text-white">Excel (.xlsx)</span> con tres hojas:
-        Encabezados, IVA y Otros Impuestos, y Conceptos, siguiendo el formato oficial de importación de Tango Gestión.
-      </p>
+      <div className="glass-card p-6 bg-white/[0.02]">
+        <p className="text-[10px] text-grow-muted font-bold uppercase tracking-[0.15em] leading-relaxed">
+          El motor generará un archivo dinámico <span className="text-white">Excel (.xlsx)</span> estructurado en tres matrices de datos:
+          Encabezados Core, Segmentación Impositiva y Distribución de Conceptos, cumpliendo estrictamente con el esquema de importación de Tango Gestión.
+        </p>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -14,104 +14,70 @@ export function DashboardLayout({ title, children }: DashboardLayoutProps) {
       await signOut();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-      alert('Error al cerrar sesión');
     }
   };
 
   return (
-    <div 
-      className="min-h-screen relative overflow-hidden"
-      style={{
-        backgroundImage: 'url(/fondogrow.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      {/* Overlay oscuro para mejorar contraste */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-      
-      {/* Efectos de luz verde */}
-      <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1000ms' }}></div>
-      <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2000ms' }}></div>
+    <div className="min-h-screen relative bg-black text-white font-sans selection:bg-grow-neon/30">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-grow-neon/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
 
-      {/* Header con glassmorphism */}
-      <header 
-        className="relative z-10"
-        style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(34, 197, 94, 0.3)',
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4">
-              <img 
-                src="/logogrow.png" 
-                alt="Grow Labs" 
-                className="h-10 w-auto"
-                style={{
-                  filter: 'drop-shadow(0 0 10px rgba(34, 197, 94, 0.5))'
-                }}
+      {/* Navigation Header */}
+      <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-screen-2xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="relative group">
+              <div className="absolute -inset-2 bg-grow-neon/20 blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-full" />
+              <img
+                src="/logogrow.png"
+                alt="Grow Labs"
+                className="h-10 w-auto relative grayscale group-hover:grayscale-0 transition-all duration-500"
               />
-              <h1 className="text-xl font-bold text-white">
-                <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                  {title}
-                </span>
-              </h1>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <div 
-                className="flex items-center space-x-2 text-sm text-white px-4 py-2 rounded-lg"
-                style={{
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
-              >
-                <User className="h-4 w-4 text-green-400" />
-                <span>{profile?.full_name}</span>
-                <span 
-                  className="text-xs px-2 py-1 rounded"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    color: '#86efac',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
-                  }}
-                >
-                  {profile?.role}
-                </span>
+            <div className="h-8 w-[1px] bg-white/10 hidden sm:block" />
+            <h1 className="text-sm font-black uppercase tracking-[0.3em] text-white/50 hidden sm:block">
+              {title}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-5 py-2 group hover:border-grow-neon/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-grow-neon/10 flex items-center justify-center border border-grow-neon/20">
+                <User className="h-4 w-4 text-grow-neon" />
               </div>
-              
-              <button
-                onClick={handleSignOut}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-white rounded-lg transition-all duration-300 hover:scale-105"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Cerrar Sesión</span>
-              </button>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-white leading-none tracking-tight">{profile?.full_name}</span>
+                <span className="text-[9px] font-bold text-grow-neon uppercase tracking-widest mt-0.5">{profile?.role}</span>
+              </div>
             </div>
+
+            <button
+              onClick={handleSignOut}
+              className="p-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-500 rounded-full transition-all group"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content Area */}
+      <main className="relative z-10 max-w-screen-2xl mx-auto px-6 py-12">
+        <div className="flex items-center gap-4 mb-12">
+          <div className="p-3 bg-grow-neon/10 border border-grow-neon/20 rounded-2xl">
+            <LayoutGrid className="w-6 h-6 text-grow-neon" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">{title.split('·')[0]}</h2>
+            <p className="text-xs font-bold text-grow-muted uppercase tracking-[0.4em] mt-1">SISTEMA OPERATIVO INTELIGENTE</p>
+          </div>
+        </div>
         {children}
-      </div>
+      </main>
     </div>
   );
 }

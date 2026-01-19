@@ -49,7 +49,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
       mimeType,
       isMultiplePages,
       pagesCount: isMultiplePages ? base64.length : 1,
-      base64Length: isMultiplePages ? base64.map(b => b.length).join(', ') : base64.length
+      base64Length: Array.isArray(base64) ? base64.map(b => b.length).join(', ') : base64.length
     });
   } catch (error) {
     console.error('[OpenAI OCR] Error al convertir archivo:', error);
@@ -80,58 +80,42 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     mimeType: mimeType
   });
 
-  // Llamar a la Edge Function
-  let response: Response;
-  try {
-    response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        base64: isMultiplePages ? base64 : [base64], // Siempre enviar como array
-        mimeType,
-      }),
-    });
-  } catch (error) {
-    console.error('[OpenAI OCR] Error de red al conectar con Edge Function:', error);
-    throw new Error(`Error de conexión: ${error instanceof Error ? error.message : 'Error de red'}`);
-  }
+  // Llamar a la Edge Function usando el cliente de Supabase
+  const { data: responseData, error: invokeError } = await supabase.functions.invoke('openai-ocr', {
+    body: {
+      base64: isMultiplePages ? base64 : [base64], // Siempre enviar como array
+      mimeType,
+    },
+  });
 
-  let data: any;
-  try {
-    const text = await response.text();
-    try {
-      data = JSON.parse(text);
-    } catch (parseError) {
-      console.error('[OpenAI OCR] Error al parsear JSON de la Edge Function:', text);
-      if (response.status === 404) {
-        throw new Error('La función de Supabase no se encuentra (404). Asegúrate de haber desplegado la función "openai-ocr" al nuevo proyecto.');
-      }
-      throw new Error(`Error de la función (Status ${response.status}): ${text.substring(0, 100)}`);
+  if (invokeError) {
+    console.error('[OpenAI OCR] Error al invocar Edge Function:', invokeError);
+
+    // Manejar errores específicos de Supabase
+    if (invokeError.message?.includes('401')) {
+      throw new Error('Sesión de Supabase inválida o expirada (401). Por favor, intenta cerrar sesión y volver a entrar.');
     }
-  } catch (error) {
-    if (error instanceof Error) throw error;
-    throw new Error('Error al leer la respuesta de la Edge Function');
-  }
-
-  if (!response.ok || !data.success) {
-    console.error('[OpenAI OCR] Error en Edge Function:', {
-      status: response.status,
-      data,
-    });
-
-    // Error específico para falta de API Key
-    if (data.error?.includes('OPENAI_API_KEY')) {
-      throw new Error('Falta configurar la OPENAI_API_KEY como secreto en Supabase. Ejecuta el comando de configuración.');
+    if (invokeError.message?.includes('404')) {
+      throw new Error('La función "openai-ocr" no se encuentra (404). Verifica que esté desplegada en el proyecto correcto.');
     }
 
-    throw new Error(data.error || 'Error al procesar con OpenAI');
+    throw new Error(`Error en la comunicación con la IA: ${invokeError.message}`);
+  }
+
+  if (!responseData.success) {
+    console.error('[OpenAI OCR] Error retornado por la función:', responseData.error);
+
+    // Error específico para falta de API Key (debe estar en .env y cargada en Supabase Secrets)
+    if (responseData.error?.includes('OPENAI_API_KEY')) {
+      throw new Error('La OPENAI_API_KEY no está configurada. Asegúrate de que el valor definido en tu archivo .env (VITE_OPENAI_API_KEY) haya sido cargado correctamente en los Secrets de Supabase.');
+    }
+
+    throw new Error(responseData.error || 'Error al procesar con OpenAI');
   }
 
   console.log('[OpenAI OCR] Respuesta exitosa de Edge Function');
 
+  const data = responseData;
   const outputText = data.data;
   const usage = data.usage; // Información de tokens de OpenAI
 
@@ -514,156 +498,6 @@ function normalizeNumber(value: any): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function normalizeTaxes(
-  taxes: any,
-  amounts: { netTaxed: number; ivaAmount: number; totalAmount: number },
-  supplierCuit?: string | null,
-  parsedData?: any
-): ParsedTaxes {
-  if (!Array.isArray(taxes)) {
-    return [];
-  }
-
-  // CUIT de NATURGY SAN JUAN S.A.
-  const NATURGY_CUIT = '30681688540';
-  const cleanSupplierCuit = supplierCuit ? supplierCuit.replace(/[-\s]/g, '') : '';
-  const isNaturgy = cleanSupplierCuit === NATURGY_CUIT;
-
-  return taxes
-    .map((tax: any) => {
-      const taxCode = typeof tax?.taxCode === 'string' ? tax.taxCode : (typeof tax?.taxType === 'string' ? tax.taxType : 'OTRO');
-      const description = typeof tax?.description === 'string' ? tax.description : '';
-      let taxBase = normalizeNumber(tax?.taxBase);
-      let taxAmount = normalizeNumber(tax?.taxAmount);
-      const rate = typeof tax?.rate === 'number' ? tax.rate : null;
-
-      // LÓGICA ESPECIAL PARA NATURGY - IVA 27% (código 100222 o 3)
-      // Para NATURGY, el IVA 27% se calcula como: (Total Energía + Ingresos Brutos) * 0.27
-      if (isNaturgy && (taxCode === '100222' || taxCode === '3' || description.toLowerCase().includes('iva 27'))) {
-        console.log('[OpenAI OCR] 🔵 Detectado proveedor NATURGY - Aplicando cálculo especial para IVA 27%');
-
-        // Buscar "Total Energía" y "Ingresos Brutos" en los datos extraídos
-        let totalEnergia = 0;
-        let ingresosBrutos = 0;
-
-        // Intentar extraer "Total Energía" del texto raw o de parsedData
-        if (parsedData) {
-          // Buscar en el texto raw si está disponible
-          const rawText = parsedData.rawText || '';
-          const totalEnergiaMatch = rawText.match(/Total Energ[íi]a[:\s]+\$?\s*([\d.,]+)/i);
-          if (totalEnergiaMatch) {
-            totalEnergia = normalizeNumber(totalEnergiaMatch[1]);
-            console.log('[OpenAI OCR] NATURGY - Total Energía encontrado:', totalEnergia);
-          }
-
-          // Buscar "Ingresos Brutos" en los impuestos (NO es una percepción)
-          const ingresosBrutosTax = taxes.find((t: any) => {
-            const desc = (t.description || '').toLowerCase();
-            return desc.includes('ingresos brutos') &&
-              !desc.includes('percepción') &&
-              !desc.includes('percepcion');
-          });
-          if (ingresosBrutosTax) {
-            ingresosBrutos = normalizeNumber(ingresosBrutosTax.taxAmount || ingresosBrutosTax.taxBase || 0);
-            console.log('[OpenAI OCR] NATURGY - Ingresos Brutos encontrado:', ingresosBrutos);
-          }
-        }
-
-        // Si no encontramos "Total Energía", usar netTaxed como aproximación
-        if (totalEnergia === 0) {
-          totalEnergia = amounts.netTaxed;
-          console.warn('[OpenAI OCR] NATURGY - No se encontró "Total Energía", usando netTaxed como aproximación:', totalEnergia);
-        }
-
-        // Calcular taxBase y taxAmount según la fórmula especial de NATURGY
-        taxBase = totalEnergia + ingresosBrutos;
-        taxAmount = taxBase * 0.27;
-
-        console.log('[OpenAI OCR] ✅ NATURGY - IVA 27% calculado:', {
-          totalEnergia,
-          ingresosBrutos,
-          taxBase: taxBase,
-          taxAmount: taxAmount,
-          formula: `(${totalEnergia} + ${ingresosBrutos}) * 0.27 = ${taxAmount}`
-        });
-
-        return {
-          taxCode: '100222', // Código especial para NATURGY - IVA 27% (si no existe en BD, se mostrará warning pero continuará)
-          description: description || 'IVA 27% Responsable Inscripto',
-          taxBase,
-          taxAmount,
-          rate: 27,
-        };
-      }
-
-      // REGLA FUNDAMENTAL: taxAmount = taxBase * rate
-      // Siempre calcular taxAmount correctamente, especialmente para IVA
-      let taxAmountIsCorrect = false;
-      if (rate !== null && rate > 0 && taxBase > 0) {
-        const calculatedTaxAmount = taxBase * (rate / 100);
-        const currentDifference = Math.abs(taxAmount - calculatedTaxAmount);
-        const tolerance = Math.max(calculatedTaxAmount * 0.01, 0.01); // 1% de tolerancia
-
-        // Verificar si el taxAmount actual coincide con el cálculo
-        if (currentDifference <= tolerance) {
-          taxAmountIsCorrect = true;
-          // No hacer nada, está correcto
-        } else {
-          // Si el taxAmount actual no coincide con el cálculo, corregirlo
-          console.warn('[OpenAI OCR] taxAmount no coincide con cálculo, corrigiendo:', {
-            taxCode,
-            description,
-            taxBase,
-            taxAmountOriginal: taxAmount,
-            calculatedTaxAmount,
-            rate,
-            difference: currentDifference,
-          });
-          taxAmount = calculatedTaxAmount;
-          taxAmountIsCorrect = true; // Ahora está correcto después de la corrección
-          console.log('[OpenAI OCR] ✅ Corregido: taxAmount = taxBase * rate');
-        }
-      }
-
-      // CORRECCIÓN ESPECIAL PARA IVA: Solo corregir si hay un problema real
-      // Si taxAmount = taxBase * rate está correcto, NO corregir aunque taxBase = netTaxed
-      // (porque cuando hay una sola alícuota de IVA, taxBase puede ser igual a netTaxed)
-      if ((taxCode === '1' || taxCode === '2') && !taxAmountIsCorrect) {
-        // Es IVA 21% o IVA 10.5% y el taxAmount no está correcto
-        const isIVA21 = taxCode === '1';
-        const expectedRate = isIVA21 ? 21 : 10.5;
-
-        // DETECCIÓN: Si taxBase es igual o muy similar al netTaxed total
-        const netTaxedDifference = amounts.netTaxed > 0 ? Math.abs((taxBase - amounts.netTaxed) / amounts.netTaxed) * 100 : 100;
-        const isTaxBaseEqualToNetTaxed = netTaxedDifference < 1; // Menos del 1% de diferencia
-
-        if (isTaxBaseEqualToNetTaxed && amounts.netTaxed > 0) {
-          console.warn('[OpenAI OCR] Detectado posible problema: taxBase igual a Neto Gravado y taxAmount incorrecto:', {
-            taxCode,
-            description,
-            taxBase,
-            taxAmount,
-            netTaxed: amounts.netTaxed,
-            expectedTaxAmount: taxBase * (expectedRate / 100),
-          });
-
-          // Calcular el taxAmount correcto desde el taxBase
-          const calculatedTaxAmount = taxBase * (expectedRate / 100);
-          taxAmount = calculatedTaxAmount;
-          console.log('[OpenAI OCR] ✅ Corregido: taxAmount = taxBase * rate');
-        }
-      }
-
-      return {
-        taxCode,
-        description,
-        taxBase,
-        taxAmount,
-        rate,
-      };
-    })
-    .filter((tax) => tax.taxAmount !== 0 || tax.taxBase !== 0);
-}
 
 function calculateConfidence(data: {
   supplierCuit: string | null;

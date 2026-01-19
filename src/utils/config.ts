@@ -4,6 +4,7 @@ interface Config {
     anonKey: string;
   };
   openai: {
+    // La API Key de OpenAI se obtiene del archivo .env (VITE_OPENAI_API_KEY)
     apiKey: string | null;
     enabled: boolean;
   };

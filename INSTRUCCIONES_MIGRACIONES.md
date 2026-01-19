@@ -96,7 +96,21 @@ VALUES (
 ## Alternativa Rápida (Todo en Uno)
 Si prefieres ejecutar todo de una vez, puedes copiar el contenido de todos los archivos en un solo query, pero es más seguro hacerlo paso a paso para detectar errores.
 
+### Paso 5: Configurar OpenAI (OCR Inteligente)
+Para que el análisis de facturas con IA funcione, debes configurar la API Key de OpenAI como un "Secret" en Supabase:
+
+1. Ve a **Settings** → **Edge Functions**.
+2. Haz clic en **Add Secret**.
+3. Name: `OPENAI_API_KEY`.
+4. Value: (Copia el valor de `VITE_OPENAI_API_KEY` de tu archivo `.env`).
+
+O vía CLI:
+```bash
+npx supabase secrets set OPENAI_API_KEY=tu_clave_aqui
+```
+
 ## Notas Importantes
 - Las migraciones usan `CREATE TABLE IF NOT EXISTS`, así que son seguras de ejecutar múltiples veces
 - Si alguna migración falla, revisa el error y corrígelo antes de continuar
 - Algunas migraciones dependen de las anteriores, por eso el orden es importante
+- **API Key:** El sistema utiliza la clave configurada en el archivo `.env` localmente, pero para las Edge Functions de Supabase (producción), es obligatorio el Paso 5.

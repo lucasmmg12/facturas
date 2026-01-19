@@ -1,8 +1,7 @@
 import { supabase } from '../lib/supabase';
-import type { Database, InvoiceStatus, InvoiceType } from '../lib/database.types';
+import type { Database, InvoiceStatus, InvoiceType, Supplier, Invoice } from '../lib/database.types';
 import { validateInvoiceTotals } from '../utils/validators';
 
-type Invoice = Database['public']['Tables']['invoices']['Row'];
 type InvoiceInsert = Database['public']['Tables']['invoices']['Insert'];
 type InvoiceUpdate = Database['public']['Tables']['invoices']['Update'];
 
@@ -28,7 +27,7 @@ export async function createInvoice(data: InvoiceInsert): Promise<Invoice> {
     .single();
 
   if (error) throw error;
-  return invoice;
+  return invoice as Invoice;
 }
 
 export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<Invoice> {
@@ -40,7 +39,7 @@ export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<In
     .single();
 
   if (error) throw error;
-  return invoice;
+  return invoice as Invoice;
 }
 
 export async function getInvoiceById(id: string): Promise<Invoice | null> {
@@ -51,7 +50,7 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data as Invoice | null;
 }
 
 export async function getInvoices(filters?: {
@@ -81,7 +80,7 @@ export async function getInvoices(filters?: {
   const { data, error } = await query;
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as Invoice[];
 }
 
 export async function checkDuplicateInvoice(
@@ -100,10 +99,10 @@ export async function checkDuplicateInvoice(
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data as Invoice | null;
 }
 
-export async function getSupplierByCuit(cuit: string) {
+export async function getSupplierByCuit(cuit: string): Promise<Supplier | null> {
   const cleanCuit = cuit.replace(/[-\s]/g, '');
   const { data, error } = await supabase
     .from('suppliers')
@@ -112,7 +111,7 @@ export async function getSupplierByCuit(cuit: string) {
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') throw error;
-  return data;
+  return data as Supplier | null;
 }
 
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<Invoice> {
@@ -129,8 +128,6 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
-  // Buscar facturas con status READY_FOR_EXPORT
-  // donde exported sea false, null, o no esté definido
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
@@ -139,66 +136,44 @@ export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
     .order('issue_date', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as Invoice[];
 }
 
-export async function markInvoicesAsExported(
-  invoiceIds: string[],
-  exportBatchId: string
-): Promise<void> {
+export async function markInvoicesAsExported(ids: string[], batchId: string): Promise<void> {
   const { error } = await supabase
     .from('invoices')
     .update({
       exported: true,
-      export_batch_id: exportBatchId,
-      status: 'EXPORTED',
+      export_batch_id: batchId,
+      status: 'EXPORTED'
     })
-    .in('id', invoiceIds);
+    .in('id', ids);
 
   if (error) throw error;
 }
 
-export async function getInvoiceWithDetails(id: string) {
-  const { data: invoice, error: invoiceError } = await supabase
+export async function resetExportStatus(ids: string[]): Promise<void> {
+  const { error } = await supabase
     .from('invoices')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+    .update({
+      exported: false,
+      export_batch_id: null,
+      status: 'READY_FOR_EXPORT'
+    })
+    .in('id', ids);
 
-  if (invoiceError) throw invoiceError;
-  if (!invoice) return null;
-
-  const { data: taxes, error: taxesError } = await supabase
-    .from('invoice_taxes')
-    .select('*, tax_codes(*)')
-    .eq('invoice_id', id);
-
-  if (taxesError) throw taxesError;
-
-  const { data: concepts, error: conceptsError } = await supabase
-    .from('invoice_concepts')
-    .select('*, tango_concepts(*)')
-    .eq('invoice_id', id);
-
-  if (conceptsError) throw conceptsError;
-
-  const { data: supplier, error: supplierError } = invoice.supplier_id
-    ? await supabase.from('suppliers').select('*').eq('id', invoice.supplier_id).maybeSingle()
-    : { data: null, error: null };
-
-  if (supplierError) throw supplierError;
-
-  return {
-    invoice,
-    taxes: taxes || [],
-    concepts: concepts || [],
-    supplier,
-  };
+  if (error) throw error;
 }
 
-/**
- * Mapea un taxCode del OCR al ID de tax_codes en la base de datos
- */
+export async function updateInvoiceSupplier(invoiceId: string, supplierId: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ supplier_id: supplierId })
+    .eq('id', invoiceId);
+
+  if (error) throw error;
+}
+
 export async function mapTaxCodeToId(taxCode: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('tax_codes')
@@ -215,9 +190,6 @@ export async function mapTaxCodeToId(taxCode: string): Promise<string | null> {
   return data?.id || null;
 }
 
-/**
- * Crea automáticamente los registros de invoice_taxes desde los impuestos detectados por OCR
- */
 export async function createInvoiceTaxesFromOCR(
   invoiceId: string,
   taxes: Array<{
@@ -234,23 +206,12 @@ export async function createInvoiceTaxesFromOCR(
   }
 
   console.log('[Invoice Service] Creando impuestos automáticamente:', taxes);
-  console.log('[Invoice Service] Detalles de impuestos recibidos:', taxes.map(t => ({
-    taxCode: t.taxCode,
-    description: t.description,
-    taxBase: t.taxBase,
-    taxAmount: t.taxAmount,
-    rate: t.rate
-  })));
 
-  // Mapear cada taxCode a su ID en la base de datos
   const taxRecords = [];
   for (const tax of taxes) {
     let taxCodeToMap = tax.taxCode;
-
-    // Normalizar percepciones de IIBB/Ingresos Brutos al código 52
-    // Esto asegura que cualquier variación (incluyendo "59" si OpenAI se confunde) se mapee correctamente
-    // Normalizar percepciones de IIBB/Ingresos Brutos al código PERC_IIBB
     const descriptionLower = tax.description?.toLowerCase() || '';
+
     if (
       descriptionLower.includes('percepción iibb') ||
       descriptionLower.includes('percepcion iibb') ||
@@ -260,50 +221,33 @@ export async function createInvoiceTaxesFromOCR(
       descriptionLower.includes('percep ib') ||
       descriptionLower.includes('sircreb')
     ) {
-      console.log(`[Invoice Service] Normalizando percepción de IIBB: "${tax.taxCode}" → "PERC_IIBB"`);
       taxCodeToMap = 'PERC_IIBB';
     }
 
-    // Mapear código especial NATURGY (IVA 27%) a 'IVA_27'
     if (taxCodeToMap === '100222' || (descriptionLower.includes('iva') && descriptionLower.includes('27'))) {
-      console.log(`[Invoice Service] Mapeando IVA 27% → IVA_27`);
       taxCodeToMap = 'IVA_27';
     }
 
     const taxCodeId = await mapTaxCodeToId(taxCodeToMap);
 
     if (taxCodeId) {
-      // Usar siempre el taxAmount que viene del OCR (ya está corregido en normalizeTaxes)
-      // No usar taxBase como taxAmount, ya que eso causaría que se guarde el subtotal en lugar del IVA
-      const finalTaxAmount = tax.taxAmount;
-
-      // Solo registrar warning si no hay importe pero hay base (para debugging)
-      if (finalTaxAmount === 0 && tax.taxBase > 0) {
-        console.warn(`[Invoice Service] Advertencia: ${tax.taxCode} (${tax.description}) tiene base (${tax.taxBase}) pero no tiene importe. Se guardará con importe 0.`);
-      }
-
       taxRecords.push({
         invoice_id: invoiceId,
         tax_code_id: taxCodeId,
         tax_base: tax.taxBase,
-        tax_amount: finalTaxAmount,
+        tax_amount: tax.taxAmount,
       });
-      console.log(`[Invoice Service] Mapeado ${tax.taxCode} (${tax.description}) → ${taxCodeId}, Base: ${tax.taxBase}, Importe: ${finalTaxAmount}`);
-    } else {
-      console.warn(`[Invoice Service] No se encontró tax_code para: ${tax.taxCode} (intentó mapear: ${taxCodeToMap})`);
     }
   }
 
   if (taxRecords.length > 0) {
     const { error } = await supabase
       .from('invoice_taxes')
-      .insert(taxRecords);
+      .insert(taxRecords as any);
 
     if (error) {
       console.error('[Invoice Service] Error al crear invoice_taxes:', error);
       throw error;
     }
-
-    console.log(`[Invoice Service] ${taxRecords.length} impuestos creados exitosamente`);
   }
 }
