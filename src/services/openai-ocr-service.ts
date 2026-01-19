@@ -182,7 +182,8 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   };
 
   // INFERENCIA DE VALORES si faltan campos críticos pero hay un Total
-  if (amounts.totalAmount > 0 && amounts.netTaxed === 0 && amounts.ivaAmount === 0 && amounts.netUntaxed === 0 && amounts.netExempt === 0) {
+  const isFacturaC = invoiceTypeCode === '011' || invoiceType === 'FACTURA_C';
+  if (!isFacturaC && amounts.totalAmount > 0 && amounts.netTaxed === 0 && amounts.ivaAmount === 0 && amounts.netUntaxed === 0 && amounts.netExempt === 0) {
     console.log('[OpenAI OCR] ⚠️ Campos de base detectados en 0. Intentando inferir desde Total...');
     // Asunción conservadora: Es IVA 21%
     const total = amounts.totalAmount;
