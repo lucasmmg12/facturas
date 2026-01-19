@@ -17,8 +17,8 @@ export async function createInvoice(data: InvoiceInsert): Promise<Invoice> {
 
   const validationErrors = validationResult.valid ? null : { errors: validationResult.errors };
 
-  const { data: invoice, error } = await supabase
-    .from('invoices')
+  const { data: invoice, error } = await (supabase
+    .from('invoices') as any)
     .insert({
       ...data,
       validation_errors: validationErrors,
@@ -31,8 +31,8 @@ export async function createInvoice(data: InvoiceInsert): Promise<Invoice> {
 }
 
 export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<Invoice> {
-  const { data: invoice, error } = await supabase
-    .from('invoices')
+  const { data: invoice, error } = await (supabase
+    .from('invoices') as any)
     .update(data)
     .eq('id', id)
     .select()
@@ -43,8 +43,8 @@ export async function updateInvoice(id: string, data: InvoiceUpdate): Promise<In
 }
 
 export async function getInvoiceById(id: string): Promise<Invoice | null> {
-  const { data, error } = await supabase
-    .from('invoices')
+  const { data, error } = await (supabase
+    .from('invoices') as any)
     .select('*')
     .eq('id', id)
     .maybeSingle();
@@ -53,13 +53,48 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
   return data as Invoice | null;
 }
 
+export async function getInvoiceWithDetails(id: string): Promise<{
+  invoice: Invoice;
+  taxes: any[];
+  concepts: any[];
+} | null> {
+  const { data: invoice, error: invoiceError } = await (supabase
+    .from('invoices') as any)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (invoiceError) throw invoiceError;
+  if (!invoice) return null;
+
+  const [taxesResponse, conceptsResponse] = await Promise.all([
+    (supabase
+      .from('invoice_taxes') as any)
+      .select('*, tax_codes(*)')
+      .eq('invoice_id', id),
+    (supabase
+      .from('invoice_concepts') as any)
+      .select('*, tango_concepts(*)')
+      .eq('invoice_id', id),
+  ]);
+
+  if (taxesResponse.error) throw taxesResponse.error;
+  if (conceptsResponse.error) throw conceptsResponse.error;
+
+  return {
+    invoice: invoice as Invoice,
+    taxes: taxesResponse.data || [],
+    concepts: conceptsResponse.data || [],
+  };
+}
+
 export async function getInvoices(filters?: {
   status?: InvoiceStatus;
   supplierId?: string;
   fromDate?: string;
   toDate?: string;
 }): Promise<Invoice[]> {
-  let query = supabase.from('invoices').select('*').order('created_at', { ascending: false });
+  let query = (supabase.from('invoices') as any).select('*').order('created_at', { ascending: false });
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -89,8 +124,8 @@ export async function checkDuplicateInvoice(
   pointOfSale: string,
   invoiceNumber: string
 ): Promise<Invoice | null> {
-  const { data, error } = await supabase
-    .from('invoices')
+  const { data, error } = await (supabase
+    .from('invoices') as any)
     .select('*')
     .eq('supplier_cuit', supplierCuit)
     .eq('invoice_type', invoiceType)
@@ -104,8 +139,8 @@ export async function checkDuplicateInvoice(
 
 export async function getSupplierByCuit(cuit: string): Promise<Supplier | null> {
   const cleanCuit = cuit.replace(/[-\s]/g, '');
-  const { data, error } = await supabase
-    .from('suppliers')
+  const { data, error } = await (supabase
+    .from('suppliers') as any)
     .select('*')
     .eq('cuit', cleanCuit)
     .maybeSingle();
@@ -119,8 +154,8 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus): Pr
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('invoices')
+  const { error } = await (supabase
+    .from('invoices') as any)
     .delete()
     .eq('id', id);
 
@@ -128,8 +163,8 @@ export async function deleteInvoice(id: string): Promise<void> {
 }
 
 export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
-  const { data, error } = await supabase
-    .from('invoices')
+  const { data, error } = await (supabase
+    .from('invoices') as any)
     .select('*')
     .eq('status', 'READY_FOR_EXPORT')
     .or('exported.is.null,exported.eq.false')
@@ -140,8 +175,8 @@ export async function getInvoicesReadyForExport(): Promise<Invoice[]> {
 }
 
 export async function markInvoicesAsExported(ids: string[], batchId: string): Promise<void> {
-  const { error } = await supabase
-    .from('invoices')
+  const { error } = await (supabase
+    .from('invoices') as any)
     .update({
       exported: true,
       export_batch_id: batchId,
@@ -153,8 +188,8 @@ export async function markInvoicesAsExported(ids: string[], batchId: string): Pr
 }
 
 export async function resetExportStatus(ids: string[]): Promise<void> {
-  const { error } = await supabase
-    .from('invoices')
+  const { error } = await (supabase
+    .from('invoices') as any)
     .update({
       exported: false,
       export_batch_id: null,
@@ -166,8 +201,8 @@ export async function resetExportStatus(ids: string[]): Promise<void> {
 }
 
 export async function updateInvoiceSupplier(invoiceId: string, supplierId: string): Promise<void> {
-  const { error } = await supabase
-    .from('invoices')
+  const { error } = await (supabase
+    .from('invoices') as any)
     .update({ supplier_id: supplierId })
     .eq('id', invoiceId);
 
@@ -175,8 +210,8 @@ export async function updateInvoiceSupplier(invoiceId: string, supplierId: strin
 }
 
 export async function mapTaxCodeToId(taxCode: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('tax_codes')
+  const { data, error } = await (supabase
+    .from('tax_codes') as any)
     .select('id')
     .eq('code', taxCode)
     .eq('active', true)
@@ -241,9 +276,9 @@ export async function createInvoiceTaxesFromOCR(
   }
 
   if (taxRecords.length > 0) {
-    const { error } = await supabase
-      .from('invoice_taxes')
-      .insert(taxRecords as any);
+    const { error } = await (supabase
+      .from('invoice_taxes') as any)
+      .insert(taxRecords);
 
     if (error) {
       console.error('[Invoice Service] Error al crear invoice_taxes:', error);
