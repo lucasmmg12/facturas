@@ -259,9 +259,10 @@ function extractCUIT(text: string, type: 'proveedor' | 'receptor'): string | nul
     // Si no está el Sanatorio, pero hay un segundo CUIT, podría ser el receptor
     return uniqueCuits.length > 1 ? uniqueCuits[1] : null;
   } else {
-    // Para el PROVEEDOR, buscamos el primer CUIT que NO sea el del Sanatorio Argentino
+    // PRIORIDAD: Buscar CUIT que esté cerca de etiquetas de emisor o en la parte superior
+    // Pero la forma más robusta es la exclusión del Sanatorio
     const supplierCuit = uniqueCuits.find(c => c !== SANATORIO_ARGENTINO_CUIT);
-    return supplierCuit || uniqueCuits[0]; // Si solo está el Sanatorio (error), devolvemos el primero igualmente
+    return supplierCuit || uniqueCuits[0];
   }
 }
 
@@ -280,6 +281,13 @@ function extractSupplierName(text: string): string | null {
       return name;
     }
   }
+
+  // Búsqueda proactiva de nombres conocidos
+  const nameUpper = text.toUpperCase();
+  if (nameUpper.includes('LA PLATENSE')) return 'LA PLATENSE S.A.';
+  if (nameUpper.includes('NATURGY')) return 'NATURGY BAN S.A.';
+  if (nameUpper.includes('MUNDO MEDICO')) return 'MUNDO MEDICO S.R.L.';
+  if (nameUpper.includes('CAFÉ AMÉRICA') || nameUpper.includes('CAFE AMERICA')) return 'CAFÉ AMÉRICA S.A.';
 
   // Fallback: Si no hay etiquetas, el nombre suele estar en la primera o segunda línea
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);

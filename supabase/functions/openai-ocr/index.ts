@@ -197,16 +197,21 @@ ${hasMultiplePages ? '🚨 ESTE DOCUMENTO TIENE MÚLTIPLES PÁGINAS. Analiza tod
 ${taxCodesSection}
 
 REGLAS CRÍTICAS DE IDENTIFICACIÓN (ENTRENAMIENTO):
-1. RECEPTOR FIJO: El receptor de estas facturas es SIEMPRE "SANATORIO ARGENTINO S.R.L." con CUIT 30609926860.
-   - ❌ NUNCA tomes el CUIT 30609926860 como "supplierCuit".
-   - ❌ NUNCA tomes a Sanatorio Argentino como "supplierName".
-   - Si detectas estos datos, identifícalos como receptor y busca al EMISOR (el vendedor) en otra parte.
+1. RECEPTOR FIJO (Sanatorio Argentino): 
+   - El CUIT 30609926860 (SANATORIO ARGENTINO S.R.L.) es SIEMPRE el RECEPTOR (vía "receiverCuit/receiverName").
+   - ❌ NUNCA lo identifiques como el emisor (vendedor).
+   - El receptor suele ser mencionado en el cuerpo de la factura bajo etiquetas como "RAZÓN SOCIAL:", "Señores:", etc.
 
 2. IDENTIFICACIÓN DEL EMISOR (VENDEDOR):
-   - El Emisor suele estar en el encabezado (parte superior).
-   - Busca el nombre más grande, logotipos o la primera Razón Social mencionada.
-   - El CUIT del emisor suele estar cerca de la fecha y número de factura en la cabecera.
-   - En facturas AFIP estándar, el emisor está en el recuadro superior izquierdo.
+   - El EMISOR es la entidad que vende el servicio o producto. Sus datos SIEMPRE están en la CABECERA (encabezado superior).
+   - PRIORIZA LOGOTIPOS: El nombre que aparece en el logo más grande (ej: "La Platense S.A.", "Naturgy", "Mundo Medico") es el "supplierName". Ignora descripciones largas que acompañan al logo (ej: "Industria Argentina de Gases...").
+   - PRIORIZA CABECERA SUPERIOR: El CUIT que acompaña al logo o que está en el recuadro superior derecho es el "supplierCuit".
+   - REGLA DE EXCLUSIÓN: Si hay varios CUITs y uno es 30609926860, el OTRO CUIT detectado es obligatoriamente el del emisor.
+
+
+3. CASOS DE ENTRENAMIENTO:
+   - "LA PLATENSE S.A." (CUIT 30503696890): Su logo está arriba a la izquierda y su CUIT arriba a la derecha. NO lo confundas con Sanatorio Argentino que aparece más abajo como receptor.
+
 
 3. ESTRUCTURA JSON REQUERIDA:
 {
