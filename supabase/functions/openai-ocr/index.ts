@@ -166,13 +166,56 @@ EXTRAE SOLO JSON.
       content = content.substring(firstBrace, lastBrace + 1);
     }
 
+    let parsedData: any = {};
+    try {
+      parsedData = JSON.parse(content);
+
+      // 🛡️ SELF-CORRECTION LOGIC (Server Side)
+      // Corregir error de "Millones" si la IA leyó mal el punto decimal
+      const parseNum = (n: any) => typeof n === 'number' ? n : parseFloat(String(n).replace(/,/g, '.') || '0');
+
+      const netTaxed = parseNum(parsedData.netTaxed || 0);
+      const netUntaxed = parseNum(parsedData.netUntaxed || 0);
+      const netExempt = parseNum(parsedData.netExempt || 0);
+      const iva = parseNum(parsedData.ivaAmount || 0);
+      const other = parseNum(parsedData.otherTaxesAmount || 0);
+      const totalExtracted = parseNum(parsedData.totalAmount || 0);
+
+      const calculatedSum = netTaxed + netUntaxed + netExempt + iva + other;
+
+      // Si la diferencia es masiva (ej: 32.000.000 vs 325.000), usamos la suma
+      // Factor de error > 5 (ej: se comió un punto decimal de miles vs centavos, factor 100)
+      if (totalExtracted > 0 && calculatedSum > 0) {
+        const ratio = totalExtracted / calculatedSum;
+        if (ratio > 5 || ratio < 0.2) {
+          console.log(`[OCR AUTO-CORRECT] Total Extracted (${totalExtracted}) vs Calculated (${calculatedSum}). Ratio: ${ratio}. FIXING...`);
+          parsedData.totalAmount = Number(calculatedSum.toFixed(2));
+          parsedData._autoCorrected = "Yes, total fixed by math validation";
+        }
+      }
+
+      // Ensure strictly numbers for amounts
+      parsedData.netTaxed = netTaxed;
+      parsedData.netUntaxed = netUntaxed;
+      parsedData.netExempt = netExempt;
+      parsedData.ivaAmount = iva;
+      parsedData.otherTaxesAmount = other;
+      parsedData.totalAmount = typeof parsedData.totalAmount === 'number' ? parsedData.totalAmount : parseNum(parsedData.totalAmount);
+
+      content = JSON.stringify(parsedData);
+
+    } catch (e) {
+      console.error("Error parsing/correcting AI JSON:", e);
+      // Fallback to original content if parse fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         data: content,
         usage: aiData.usage,
         meta: {
-          version: "v2025-01-19-FIX-NUMBERS",
+          version: "v2025-01-19-MATH-VALIDATION",
           timestamp: new Date().toISOString()
         }
       }),
