@@ -170,7 +170,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
   const invoiceType = invoiceTypeCode ? getInvoiceTypeFromCode(invoiceTypeCode) : null;
   const pointOfSale = normalizeString(parsed.pointOfSale);
   const invoiceNumber = normalizeString(parsed.invoiceNumber);
-  const issueDate = normalizeString(parsed.issueDate);
+  const issueDate = normalizeDate(parsed.issueDate);
 
   const amounts = {
     netTaxed: normalizeNumber(parsed.netTaxed),
@@ -548,10 +548,42 @@ function normalizeInvoiceTypeCode(value: any): string | null {
   return mapping[normalized] ?? null;
 }
 
-function normalizeString(value: any): string | null {
-  if (!value) return null;
-  const trimmed = String(value).trim();
-  return trimmed.length > 0 ? trimmed : null;
+// Helper para validar fechas YYYY-MM-DD
+function isValidDate(dateString: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day &&
+    year > 2000 && year < 2100; // Rango razonable
+}
+
+function normalizeDate(value: any): string | null {
+  if (!value || typeof value !== 'string') return null;
+  const clean = value.trim();
+  if (isValidDate(clean)) return clean;
+
+  // Convertir DD/MM/YYYY a YYYY-MM-DD si es necesario
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) {
+    const [d, m, y] = clean.split('/');
+    const iso = `${y}-${m}-${d}`;
+    if (isValidDate(iso)) return iso;
+  }
+
+  // Convertir DD-MM-YYYY a YYYY-MM-DD
+  if (/^\d{2}-\d{2}-\d{4}$/.test(clean)) {
+    const [d, m, y] = clean.split('-');
+    const iso = `${y}-${m}-${d}`;
+    if (isValidDate(iso)) return iso;
+  }
+
+  return null;
+}
+
+function normalizeString(value: any): string {
+  if (!value) return '';
+  return String(value).trim();
 }
 
 function normalizeNumber(value: any): number {

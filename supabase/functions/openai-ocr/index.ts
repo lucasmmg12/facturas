@@ -63,17 +63,22 @@ Analiza la imagen de la factura argentina y devuelve un JSON.
 
 REGLAS CRÍTICAS - TIPO DE FACTURA:
 1. Mira la letra en el recuadro superior (A, B, C, M).
-2. Si es "C" (Factura C):
+2. "TIQUE FACTURA A" o "TIQUE FACTURA B" son válidos.
+3. Si es "C" o "TIQUE FACTURA C":
    - El "invoiceType" es "FACTURA_C".
    - El "invoiceTypeCode" es "011".
    - NO HAY IVA DISCRIMINADO. "ivaAmount" DEBE SER 0.
-   - Todo el monto suele ser "Subtotal", ponlo en "totalAmount".
-   - NO intentes calcular IVA del total.
-   - Si dice "Responsable Monotributo", confirma que es Tipo C.
-
-3. Si es "A" (Factura A):
+   - Todo el monto suele ser "Subtotal", ponlo en "netUntaxed" o "totalAmount".
+   - Si dice "Responsable Monotributo", es Tipo C.
+4. Si es "A" o "TIQUE FACTURA A":
    - El "invoiceType" es "FACTURA_A".
    - Busca IVA discriminado (21%, 10.5%, 27%).
+
+FECHA (MUY IMPORTANTE):
+- Busca explícitamente "Fecha" o "Fecha Emisión".
+- Formato esperado: YYYY-MM-DD.
+- IGNORA números de CUIT (ej: 30-12345678-9) o Ingresos Brutos para la fecha.
+- Si ves "05/08/2025", devuelve "2025-08-05".
 
 ESTRUCTURA JSON:
 {
