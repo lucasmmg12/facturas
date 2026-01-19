@@ -204,6 +204,8 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           point_of_sale: ocrResult.pointOfSale || '00000',
           invoice_number: ocrResult.invoiceNumber || '00000000',
           issue_date: ocrResult.issueDate || today,
+          receiver_cuit: ocrResult.receiverCuit || '30609926860',
+          receiver_name: ocrResult.receiverName || 'SANATORIO ARGENTINO S.R.L.',
           net_taxed: ocrResult.netTaxed || 0,
           net_untaxed: ocrResult.netUntaxed || 0,
           net_exempt: ocrResult.netExempt || 0,
