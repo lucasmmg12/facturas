@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UploadPage } from './UploadPage';
 import { ActivityLogPage } from './ActivityLogPage';
 import { ChangelogPage } from './ChangelogPage';
+import { UserManualPage } from './UserManualPage';
 import { SuppliersPage } from './SuppliersPage';
 import { TaxCodesPage } from './TaxCodesPage';
 import { MasterDataPage } from './MasterDataPage';
@@ -34,19 +35,20 @@ interface ReviewPanelProps {
 
 export function DashboardPage() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog' | 'manual'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const tabs = useMemo(
     () => {
-      const baseTabs: Array<{ id: 'upload' | 'review' | 'export' | 'users' | 'maestros' | 'suppliers' | 'tax_codes' | 'activity' | 'changelog'; label: string }> = [
+      const baseTabs: Array<{ id: 'upload' | 'review' | 'export' | 'users' | 'maestros' | 'suppliers' | 'tax_codes' | 'activity' | 'changelog' | 'manual'; label: string }> = [
         { id: 'upload', label: 'Carga automática' },
         { id: 'review', label: 'Revisión y edición' },
         { id: 'export', label: 'Exportar a Tango' },
         { id: 'maestros', label: 'Maestros' },
         { id: 'suppliers', label: 'Proveedores' },
         { id: 'tax_codes', label: 'Códigos Impuestos' },
+        { id: 'manual', label: 'Manual de Uso' },
         { id: 'activity', label: 'Mi Historial' },
         { id: 'changelog', label: 'Actualizaciones' },
       ];
@@ -134,6 +136,8 @@ export function DashboardPage() {
             {activeTab === 'tax_codes' && <TaxCodesPage />}
 
             {activeTab === 'activity' && <ActivityLogPage />}
+
+            {activeTab === 'manual' && <UserManualPage />}
 
             {activeTab === 'changelog' && <ChangelogPage />}
           </div>

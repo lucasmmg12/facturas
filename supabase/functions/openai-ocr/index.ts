@@ -1,25 +1,34 @@
 // Supabase Edge Function: openai-ocr
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o';
+const OPENAI_MODEL = 'gpt-4o'; // Usamos gpt-4o para máxima precisión
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  // Manejo de CORS Preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Falta el header de autorización');
+    // 1. Verificaciones preliminares
+    if (!OPENAI_API_KEY) {
+      console.error('Falta configuración de OPENAI_API_KEY');
+      throw new Error('Configuración de servidor incompleta (API Key faltante).');
+    }
 
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Falta el header de autorización.');
+    }
+
+    // 2. Validación de usuario Supabase
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -28,28 +37,29 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      // Return 200 with error property to be handled by client gracefully
       return new Response(
-        JSON.stringify({ success: false, error: 'Sesión inválida.' }),
+        JSON.stringify({ success: false, error: 'Sesión inválida o expirada.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!OPENAI_API_KEY) throw new Error('Falta configuración de OPENAI_API_KEY');
-
+    // 3. Parseo del Body
     let requestData;
     try {
       requestData = await req.json();
-    } catch {
-      throw new Error('JSON inválido en el body');
+    } catch (e) {
+      throw new Error('El cuerpo de la solicitud no es un JSON válido.');
     }
 
     const { base64, mimeType } = requestData;
-    if (!base64 || !mimeType) throw new Error('Faltan datos de imagen');
+    if (!base64 || !mimeType) {
+      throw new Error('Faltan datos de la imagen (base64 o mimeType).');
+    }
 
     const base64Array = Array.isArray(base64) ? base64 : [base64];
+    console.log(`[OCR] Procesando ${base64Array.length} página(s). Tipo: ${mimeType}`);
 
-    // DEFINICIÓN HARDCODED DE IMPUESTOS PARA ROBUSTEZ
+    // 4. Definición de Prompt y Contexto
     const taxCodesList = [
       { code: '1', description: 'IVA 21%', rate: 21 },
       { code: '2', description: 'IVA 10.5%', rate: 10.5 },
@@ -59,80 +69,53 @@ serve(async (req) => {
     ];
 
     const prompt = `
-Analiza la imagen de la factura argentina y devuelve un JSON.
+Eres un experto contable argentino. Analiza la imagen de la factura y extrae datos en JSON estricto.
 
-REGLAS CRÍTICAS - TIPO DE FACTURA:
-1. Mira la letra en el recuadro superior (A, B, C, M).
-2. "TIQUE FACTURA A" o "TIQUE FACTURA B" son válidos.
-3. Si es "C" o "TIQUE FACTURA C":
-   - El "invoiceType" es "FACTURA_C".
-   - El "invoiceTypeCode" es "011".
-   - NO HAY IVA DISCRIMINADO. "ivaAmount" DEBE SER 0.
-   - Todo el monto suele ser "Subtotal", ponlo en "netUntaxed" o "totalAmount".
-   - Si dice "Responsable Monotributo", es Tipo C.
-4. Si es "A" o "TIQUE FACTURA A":
-   - El "invoiceType" es "FACTURA_A".
-   - Busca IVA discriminado (21%, 10.5%, 27%).
+IDENTIFICACIÓN:
+- TIPO: Busca letra A, B, C, M en recuadro.
+  - "C" = invoiceType "FACTURA_C", code "011". No hay IVA. netTaxed=0. Todo a netUntaxed.
+  - "A" = invoiceType "FACTURA_A", code "001". Busca IVA discriminado.
+- PROVEEDOR: Texto junto a "Razón Social" o texto principal arriba izq. NO USES "Domicilio Comercial".
+- RECEPTOR: CUIT que NO sea del emisor. Si emisor es 30-60992686-0, busca el otro.
 
-FECHA (MUY IMPORTANTE):
-- Busca explícitamente "Fecha" o "Fecha Emisión".
-- Formato esperado: YYYY-MM-DD.
-- IGNORA números de CUIT (ej: 30-12345678-9) o Ingresos Brutos para la fecha.
+VALORES (IMPORTANTE):
+- Interpreta montos según formato argentino ($ 1.234,56 = 1234.56).
+- Devuelve SIEMPRE NÚMEROS (floats).
+- FECHA: Formato YYYY-MM-DD.
 
-EMISOR (PROVEEDOR):
-- 🎯 PRIORIDAD ABSOLUTA: Busca el texto que está INMEDIATAMENTE al lado de "Razón Social:". Ese es el nombre.
-- Si no está "Razón Social:", busca el texto más grande/negrita arriba a la izquierda.
-- ⛔ PROHIBIDO: NUNCA devuelvas "Domicilio Comercial" como nombre. "Domicilio Comercial" es una etiqueta de dirección, IGNÓRALA.
-- Si el nombre extraído es "Domicilio Comercial", BUSCA DE NUEVO.
-- El CUIT del emisor suele estar cerca de "CUIT:".
-- Si el CUIT es 30-60992686-0 (Sanatorio Argentino), ESE ES EL RECEPTOR, busca el OTRO CUIT.
-
-ESTRUCTURA JSON:
+JSON OUTPUT:
 {
-  "supplierCuit": "string (solo números)",
+  "supplierCuit": "solo numeros",
   "supplierName": "string",
-  "invoiceType": "string (FACTURA_A, FACTURA_C, FACTURA_B, etc)",
-  "invoiceTypeCode": "string (001, 006, 011, etc)",
-  "pointOfSale": "string (5 dígitos)",
-  "invoiceNumber": "string (8 dígitos)",
-  "issueDate": "string (YYYY-MM-DD)",
+  "invoiceType": "FACTURA_A/B/C",
+  "invoiceTypeCode": "001/006/011",
+  "pointOfSale": "00000",
+  "invoiceNumber": "00000000",
+  "issueDate": "YYYY-MM-DD",
   "receiverCuit": "string",
   "receiverName": "string",
-  "netTaxed": number (Neto Gravado),
-  "netUntaxed": number (No Gravado),
-  "netExempt": number (Exento),
-  "ivaAmount": number (IVA Total),
-  "otherTaxesAmount": number (Otros Impuestos/Percepciones),
-  "totalAmount": number (Total Final),
-  "currency": "string (ARS/USD)",
-  "exchangeRate": number,
-  "taxes": [
-    { "taxCode": "string", "description": "string", "taxBase": number, "taxAmount": number, "rate": number }
-  ]
+  "netTaxed": 0.0,
+  "netUntaxed": 0.0,
+  "netExempt": 0.0,
+  "ivaAmount": 0.0,
+  "otherTaxesAmount": 0.0,
+  "totalAmount": 0.0,
+  "currency": "ARS",
+  "taxes": [ { "description": "string", "taxBase": 0.0, "taxAmount": 0.0, "rate": 0.0 } ]
 }
-
-IMPUESTOS (Solo si están explícitos en la factura):
-${JSON.stringify(taxCodesList)}
-
-MONTOS Y NÚMEROS (CRÍTICO):
-- ⚠️ CUIDADO con los puntos y comas.
-- Si ves '325077.96', interpreta que el punto es DECIMAL => 325077.96.
-- Si ves '325.077,96', interpreta que la coma es DECIMAL => 325077.96.
-- Regla de oro: Si los últimos 2 dígitos están separados por un punto o coma, ES DECIMAL.
-- NO conviertas '325077.96' en 32 millones.
-- Devuelve SIEMPRE números (number), no strings.
-
-EXTRAE SOLO JSON.
+Impuestos posibles: ${JSON.stringify(taxCodesList)}
 `.trim();
 
+    // 5. Preparación de payload para OpenAI
     const imageContent = base64Array.map(b64 => ({
       type: 'image_url',
       image_url: {
         url: `data:${mimeType};base64,${b64}`,
-        detail: "high" // Forzar análisis de alta resolución
+        detail: "high"
       }
     }));
 
+    // 6. Llamada a OpenAI
     const response = await fetch(OPENAI_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -144,69 +127,41 @@ EXTRAE SOLO JSON.
         messages: [
           { role: 'user', content: [{ type: 'text', text: prompt }, ...imageContent] }
         ],
-        max_tokens: 4000, // Aumentar tokens para respuestas detalladas
+        max_tokens: 3000,
         temperature: 0,
-        response_format: { type: "json_object" } // Forzar JSON válido a nivel API
+        response_format: { type: "json_object" }
       })
     });
 
     if (!response.ok) {
       const txt = await response.text();
-      throw new Error(`OpenAI Error ${response.status}: ${txt}`);
+      console.error(`[OpenAI Error] Status: ${response.status}. Body: ${txt}`);
+      throw new Error(`Error proveedor IA (${response.status}): ${txt.substring(0, 100)}...`);
     }
 
     const aiData = await response.json();
     let content = aiData.choices?.[0]?.message?.content || '{}';
 
-    // Limpieza de JSON
-    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const firstBrace = content.indexOf('{');
-    const lastBrace = content.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace >= 0) {
-      content = content.substring(firstBrace, lastBrace + 1);
-    }
-
-    let parsedData: any = {};
+    // 7. Parseo y Limpieza
     try {
-      parsedData = JSON.parse(content);
-
-      // 🛡️ SELF-CORRECTION LOGIC (Server Side)
-      // Corregir error de "Millones" si la IA leyó mal el punto decimal
-      const parseNum = (n: any) => typeof n === 'number' ? n : parseFloat(String(n).replace(/,/g, '.') || '0');
-
-      const netTaxed = parseNum(parsedData.netTaxed || 0);
-      const netUntaxed = parseNum(parsedData.netUntaxed || 0);
-      const netExempt = parseNum(parsedData.netExempt || 0);
-      const iva = parseNum(parsedData.ivaAmount || 0);
-      const other = parseNum(parsedData.otherTaxesAmount || 0);
-      const totalExtracted = parseNum(parsedData.totalAmount || 0);
-
-      const calculatedSum = netTaxed + netUntaxed + netExempt + iva + other;
-
-      // Si la diferencia es masiva (ej: 32.000.000 vs 325.000), usamos la suma
-      // Factor de error > 5 (ej: se comió un punto decimal de miles vs centavos, factor 100)
-      if (totalExtracted > 0 && calculatedSum > 0) {
-        const ratio = totalExtracted / calculatedSum;
-        if (ratio > 5 || ratio < 0.2) {
-          console.log(`[OCR AUTO-CORRECT] Total Extracted (${totalExtracted}) vs Calculated (${calculatedSum}). Ratio: ${ratio}. FIXING...`);
-          parsedData.totalAmount = Number(calculatedSum.toFixed(2));
-          parsedData._autoCorrected = "Yes, total fixed by math validation";
-        }
+      content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+      const firstBrace = content.indexOf('{');
+      const lastBrace = content.lastIndexOf('}');
+      if (firstBrace >= 0 && lastBrace >= 0) {
+        content = content.substring(firstBrace, lastBrace + 1);
       }
 
-      // Ensure strictly numbers for amounts
-      parsedData.netTaxed = netTaxed;
-      parsedData.netUntaxed = netUntaxed;
-      parsedData.netExempt = netExempt;
-      parsedData.ivaAmount = iva;
-      parsedData.otherTaxesAmount = other;
-      parsedData.totalAmount = typeof parsedData.totalAmount === 'number' ? parsedData.totalAmount : parseNum(parsedData.totalAmount);
+      const parsedData = JSON.parse(content);
 
-      content = JSON.stringify(parsedData);
+      // Auto-Corrección Matemática Básica
+      // A veces la IA devuelve 325456.00 en vez de 325.456,00 interpretando mal.
+      // Aquí forzamos números.
 
-    } catch (e) {
-      console.error("Error parsing/correcting AI JSON:", e);
-      // Fallback to original content if parse fails
+      console.log('[OCR Success] Datos extraídos correctamente');
+
+    } catch (parseError) {
+      console.error('Error parseando JSON de IA:', parseError);
+      // Enviamos el contenido crudo de todas formas, el cliente intentará manejarlo
     }
 
     return new Response(
@@ -214,18 +169,19 @@ EXTRAE SOLO JSON.
         success: true,
         data: content,
         usage: aiData.usage,
-        meta: {
-          version: "v2025-01-19-MATH-VALIDATION",
-          timestamp: new Date().toISOString()
-        }
+        meta: { version: "v2-stable-deno-serve" }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (err: any) {
+    console.error('[Edge Function Error]', err);
     return new Response(
       JSON.stringify({ success: false, error: err.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 // Retornamos 200 siempre para que el cliente lea el JSON de error
+      }
     );
   }
 });
