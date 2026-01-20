@@ -1,5 +1,6 @@
-// Página que muestra las actualizaciones y mejoras del sistema
-import { Sparkles, Bug, Zap, Plus, CheckCircle } from 'lucide-react';
+// Página que muestra las actualizaciones y mejoras del sistema con estética GrowLabs
+import React from 'react';
+import { Sparkles, Bug, Zap, Plus, CheckCircle, Calendar, Clock } from 'lucide-react';
 
 interface ChangelogEntry {
   version: string;
@@ -7,62 +8,77 @@ interface ChangelogEntry {
   changes: {
     type: 'feature' | 'fix' | 'improvement';
     description: string;
+    time?: string;
   }[];
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    version: '2.0.0',
+    date: 'Enero 2026',
+    changes: [
+      {
+        type: 'feature',
+        description: 'Nuevo Manual de Usuario interactivo con soporte de video tutorial integrado para optimizar el flujo de trabajo.',
+        time: '2026-01-20 10:12'
+      },
+      {
+        type: 'improvement',
+        description: 'Implementación del sistema de diseño GrowLabs: Interfaz Dark Futuristic, Glassmorphism y acentos Spring Green (#00FF88).',
+        time: '2026-01-19 16:25'
+      },
+      {
+        type: 'feature',
+        description: 'Actualización a GPT-4o con Vision High-Definition para el motor de OCR, mejorando drásticamente la precisión en facturas complejas.',
+        time: '2026-01-19 19:56'
+      },
+      {
+        type: 'feature',
+        description: 'Soporte para carga de carpetas completas y sistema de feedback en tiempo real durante el procesamiento por lotes.',
+        time: '2026-01-19 16:50'
+      },
+      {
+        type: 'improvement',
+        description: 'Refactorización total de la página de carga y editor de comprobantes para una experiencia de usuario fluida y eficiente.',
+        time: '2026-01-19 17:24'
+      },
+      {
+        type: 'improvement',
+        description: 'Mapeo inteligente de proveedores mediante CUIT y algoritmos de normalización de nombres para reducir errores manuales.',
+        time: '2026-01-19 18:17'
+      },
+      {
+        type: 'fix',
+        description: 'Manejo de errores profesionalizado en Edge Functions y sistema de auto-corrección matemática para discrepancias en totales.',
+        time: '2026-01-20 09:19'
+      },
+      {
+        type: 'fix',
+        description: 'Optimización del formato de exportación XLSX para Tango Gestión, cumpliendo con los estándares estrictos del sistema contable.',
+        time: '2026-01-19 15:42'
+      }
+    ],
+  },
   {
     version: '1.7.0',
     date: '30 de Noviembre, 2024',
     changes: [
       {
         type: 'improvement',
-        description: 'Sistema de impuestos mejorado: ahora se construyen desde el ivaAmount total en lugar de usar datos RAW de OpenAI, eliminando problemas de taxBase incorrecto',
+        description: 'Sistema de impuestos mejorado: construcción desde ivaAmount total eliminando problemas de taxBase incorrecto.',
       },
       {
         type: 'feature',
-        description: 'Lógica especial para NATURGY SAN JUAN S.A.: cálculo automático de IVA 27% usando fórmula (Total Energía + Ingresos Brutos) * 0.27',
-      },
-      {
-        type: 'feature',
-        description: 'Botón de advertencia destacado para facturas de NATURGY que alerta sobre la complejidad y fórmula especial de cálculo',
+        description: 'Lógica especial para NATURGY SAN JUAN S.A.: cálculo automático de IVA 27%.',
       },
       {
         type: 'improvement',
-        description: 'Sistema más permisivo: permite crear facturas con datos faltantes usando valores temporales, el usuario puede completarlos después',
-      },
-      {
-        type: 'improvement',
-        description: 'Reglas importantes visibles en el área de carga de archivos antes de procesar, mejorando la prevención de errores',
-      },
-      {
-        type: 'improvement',
-        description: 'Validaciones mejoradas durante el procesamiento: se muestran en tiempo real mientras se carga el archivo',
-      },
-      {
-        type: 'improvement',
-        description: 'Prompt de OpenAI mejorado con instrucciones detalladas paso a paso para extraer taxBase correctamente de tablas de IVA',
-      },
-      {
-        type: 'improvement',
-        description: 'Nuevos colores de estado: Amarillo (Procesado), Rojo (Pendiente de Revisión), Azul (Listo para Exportar), Verde (Exportado), Negro (Error)',
+        description: 'Sistema más permisivo: permite crear facturas con datos faltantes usando valores temporales.',
       },
       {
         type: 'fix',
-        description: 'Corregido problema donde facturas con datos faltantes no se podían crear debido a restricciones NOT NULL en la base de datos',
-      },
-      {
-        type: 'fix',
-        description: 'Solucionado error de enum al usar código "001" como temporal, ahora usa "FACTURA_A" correctamente',
-      },
-      {
-        type: 'improvement',
-        description: 'Detección automática de tipo de comprobante FACTURA_A para proveedor NATURGY',
-      },
-      {
-        type: 'improvement',
-        description: 'Mensajes de validación más claros indicando qué datos faltan y qué valores temporales se están usando',
-      },
+        description: 'Corregido problema de restricciones NOT NULL en base de datos para facturas incompletas.',
+      }
     ],
   },
   {
@@ -71,154 +87,16 @@ const changelog: ChangelogEntry[] = [
     changes: [
       {
         type: 'improvement',
-        description: 'Rediseño estético completo: glassmorphism, tema verde y mejor espaciado en toda la aplicación',
+        description: 'Rediseño estético completo: glassmorphism y mejor espaciado en toda la aplicación.',
       },
       {
         type: 'feature',
-        description: 'Nueva página de gestión de códigos de impuestos con CRUD completo',
+        description: 'Nueva página de gestión de códigos de impuestos con CRUD completo.',
       },
       {
         type: 'feature',
-        description: 'Auto-cálculo inteligente de impuestos al seleccionar código con alícuota conocida',
-      },
-      {
-        type: 'improvement',
-        description: 'OCR mejorado: distingue entre IVA 21%, 10.5%, 27% y otros impuestos automáticamente',
-      },
-      {
-        type: 'improvement',
-        description: 'Layout optimizado: comprobantes arriba y editor abajo para mejor experiencia de usuario',
-      },
-      {
-        type: 'improvement',
-        description: 'Exportación Excel mejorada: columnas optimizadas y headers con estilo azul y texto blanco',
-      },
-      {
-        type: 'fix',
-        description: 'Corregido problema de visualización de campos en el editor de comprobantes',
-      },
-    ],
-  },
-  {
-    version: '1.5.0',
-    date: '15 de Noviembre, 2024 (noche)',
-    changes: [
-      {
-        type: 'improvement',
-        description: 'Nuevo diseño futurista para la página de login con los colores de Grow Labs (verde y blanco)',
-      },
-      {
-        type: 'improvement',
-        description: 'Efecto glassmorphism y animaciones modernas en la interfaz de autenticación',
-      },
-      {
-        type: 'improvement',
-        description: 'Integración del logo y fondo personalizado de Grow Labs',
-      },
-      {
-        type: 'improvement',
-        description: 'Efectos de luz y animaciones con temática verde para una experiencia visual mejorada',
-      },
-    ],
-  },
-  {
-    version: '1.4.0',
-    date: '15 de Noviembre, 2024 (noche)',
-    changes: [
-      {
-        type: 'feature',
-        description: 'Exportación en formato XLSX real - archivos Excel nativos compatibles con la plantilla de Tango',
-      },
-      {
-        type: 'improvement',
-        description: 'Archivo Excel con 3 hojas: Encabezados, IVA y Otros Impuestos, y Conceptos',
-      },
-      {
-        type: 'improvement',
-        description: 'Anchos de columna optimizados para mejor visualización en Excel',
-      },
-      {
-        type: 'improvement',
-        description: 'Formato de archivo compatible directamente con la importación de Tango Gestión',
-      },
-    ],
-  },
-  {
-    version: '1.3.0',
-    date: '15 de Noviembre, 2024 (noche)',
-    changes: [
-      {
-        type: 'feature',
-        description: 'Auto-completado inteligente del importe al asignar conceptos (usa automáticamente el saldo disponible)',
-      },
-      {
-        type: 'feature',
-        description: 'Visualización en tiempo real del total de la factura, monto asignado y disponible',
-      },
-      {
-        type: 'improvement',
-        description: 'Validación automática que impide exceder el total de la factura al asignar conceptos',
-      },
-      {
-        type: 'improvement',
-        description: 'Campo de importe editable para dividir el total entre múltiples conceptos',
-      },
-    ],
-  },
-  {
-    version: '1.2.0',
-    date: '15 de Noviembre, 2024 (tarde)',
-    changes: [
-      {
-        type: 'feature',
-        description: 'Selector de estado en el editor de comprobantes - ahora puedes cambiar el estado directamente',
-      },
-      {
-        type: 'feature',
-        description: 'Interfaz para asignar conceptos existentes a comprobantes',
-      },
-      {
-        type: 'improvement',
-        description: 'Reorganizada la pestaña de Conceptos con secciones claras',
-      },
-      {
-        type: 'fix',
-        description: 'Corregido problema que impedía cambiar el estado de facturas para exportar',
-      },
-      {
-        type: 'fix',
-        description: 'Solucionado problema de asignación de conceptos a comprobantes',
-      },
-    ],
-  },
-  {
-    version: '1.1.0',
-    date: '15 de Noviembre, 2024',
-    changes: [
-      {
-        type: 'feature',
-        description: 'Agregado botón de cerrar sesión en el header del dashboard',
-      },
-      {
-        type: 'feature',
-        description: 'Nuevo historial de actividades para ver tu actividad en el sistema',
-      },
-      {
-        type: 'feature',
-        description: 'Página de notas de actualización (esta página)',
-      },
-      {
-        type: 'fix',
-        description: 'Corregido problema de registro - ahora se crea el perfil automáticamente',
-      },
-      {
-        type: 'fix',
-        description: 'Corregidas funciones de autenticación (signIn, signUp, signOut)',
-      },
-      {
-        type: 'improvement',
-        description: 'Mejorado el manejo de errores en el inicio de sesión',
-      },
+        description: 'Auto-cálculo inteligente de impuestos al seleccionar código con alícuota conocida.',
+      }
     ],
   },
   {
@@ -227,28 +105,12 @@ const changelog: ChangelogEntry[] = [
     changes: [
       {
         type: 'feature',
-        description: 'Sistema de carga de comprobantes con OCR automático',
+        description: 'Lanzamiento inicial: Sistema de carga con OCR automático e integración con OpenAI.',
       },
       {
         type: 'feature',
-        description: 'Integración con OpenAI para extracción precisa de datos',
-      },
-      {
-        type: 'feature',
-        description: 'Gestión de proveedores y comprobantes',
-      },
-      {
-        type: 'feature',
-        description: 'Exportación a formato Tango Gestión',
-      },
-      {
-        type: 'feature',
-        description: 'Sistema de autenticación y roles de usuario',
-      },
-      {
-        type: 'feature',
-        description: 'Dashboard con estadísticas y navegación',
-      },
+        description: 'Gestión de proveedores y exportación a formato Tango Gestión.',
+      }
     ],
   },
 ];
@@ -257,20 +119,20 @@ export function ChangelogPage() {
   const getIcon = (type: string) => {
     switch (type) {
       case 'feature':
-        return <Plus className="h-4 w-4 text-green-600" />;
+        return <Plus className="h-4 w-4 text-[#00FF88]" />;
       case 'fix':
-        return <Bug className="h-4 w-4 text-red-600" />;
+        return <Bug className="h-4 w-4 text-red-500" />;
       case 'improvement':
-        return <Zap className="h-4 w-4 text-blue-600" />;
+        return <Zap className="h-4 w-4 text-blue-400" />;
       default:
-        return <CheckCircle className="h-4 w-4 text-gray-600" />;
+        return <CheckCircle className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'feature':
-        return 'Nueva funcionalidad';
+        return 'Nueva Funcionalidad';
       case 'fix':
         return 'Corrección';
       case 'improvement':
@@ -283,94 +145,117 @@ export function ChangelogPage() {
   const getTypeBadgeClass = (type: string) => {
     switch (type) {
       case 'feature':
-        return 'bg-green-100 text-green-800';
+        return 'bg-[#00FF88]/10 text-[#00FF88] border border-[#00FF88]/20';
       case 'fix':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-500/10 text-red-400 border border-red-500/20';
       case 'improvement':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0">
-          <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-            <Sparkles className="h-6 w-6 text-white" />
-          </div>
+    <div className="min-h-screen bg-black text-white space-y-8 p-4 md:p-8">
+      {/* Header Estilo GrowLabs */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#00FF88]/10 to-transparent p-8 border border-white/10">
+        <div className="absolute top-0 right-0 p-8 opacity-20">
+          <Sparkles className="h-24 w-24 text-[#00FF88]" />
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Notas de Actualización</h2>
-          <p className="text-gray-600 mt-1">
-            Historial de mejoras, correcciones y nuevas funcionalidades del sistema
+        <div className="relative z-10">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="p-3 bg-[#00FF88] rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)]">
+              <Sparkles className="h-6 w-6 text-black" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight text-white uppercase italic">
+              Actualizaciones
+            </h1>
+          </div>
+          <p className="text-[#9CA3AF] text-lg max-w-2xl leading-relaxed">
+            Explora las últimas mejoras y evoluciones del sistema. Transformando la gestión contable con tecnología de vanguardia.
           </p>
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-12 max-w-5xl mx-auto">
         {changelog.map((entry, index) => (
-          <div key={index} className="bg-white rounded-lg shadow overflow-hidden">
-            {/* Header de la versión */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Versión {entry.version}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">{entry.date}</p>
-                </div>
-                {index === 0 && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Más reciente
-                  </span>
-                )}
-              </div>
-            </div>
+          <div key={index} className="relative group">
+            {/* Línea de tiempo vertical */}
+            {index !== changelog.length - 1 && (
+              <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gradient-to-b from-[#00FF88]/50 to-transparent" />
+            )}
 
-            {/* Lista de cambios */}
-            <div className="p-6">
-              <ul className="space-y-4">
-                {entry.changes.map((change, changeIndex) => (
-                  <li key={changeIndex} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getIcon(change.type)}
+            <div className="flex items-start space-x-6">
+              {/* Círculo de la versión */}
+              <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-black border-2 border-[#00FF88] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,136,0.2)] group-hover:shadow-[0_0_25px_rgba(0,255,136,0.4)] transition-all duration-300">
+                <span className="text-[10px] font-bold text-[#00FF88]">V{entry.version.split('.')[0]}</span>
+              </div>
+
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-black text-white group-hover:text-[#00FF88] transition-colors">
+                      Versión {entry.version}
+                    </h3>
+                    <div className="flex items-center text-[#9CA3AF] text-sm mt-1">
+                      <Calendar className="h-4 w-4 mr-2 text-[#00FF88]" />
+                      {entry.date}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTypeBadgeClass(
-                            change.type
-                          )}`}
-                        >
-                          {getTypeLabel(change.type)}
-                        </span>
+                  </div>
+                  {index === 0 && (
+                    <span className="mt-2 md:mt-0 px-4 py-1 rounded-full text-xs font-black bg-[#00FF88] text-black uppercase tracking-wider animate-pulse">
+                      Última Entrega
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid gap-4">
+                  {entry.changes.map((change, changeIndex) => (
+                    <div
+                      key={changeIndex}
+                      className="group/item bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 hover:border-[#00FF88]/40 hover:bg-white/[0.08] transition-all duration-300"
+                    >
+                      <div className="flex items-start space-x-4">
+                        <div className="mt-1 p-2 bg-black/40 rounded-lg border border-white/5">
+                          {getIcon(change.type)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter ${getTypeBadgeClass(change.type)}`}>
+                              {getTypeLabel(change.type)}
+                            </span>
+                            {change.time && (
+                              <span className="flex items-center text-[10px] text-[#9CA3AF] bg-black/40 px-2 py-0.5 rounded-lg border border-white/5">
+                                <Clock className="h-3 w-3 mr-1 opacity-60" />
+                                {change.time}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[#D1D5DB] text-sm leading-relaxed font-medium">
+                            {change.description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-700 mt-1">{change.description}</p>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Información adicional */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-medium text-blue-900">¿Tienes alguna sugerencia?</h4>
-            <p className="text-sm text-blue-700 mt-1">
-              Si tienes ideas para nuevas funcionalidades o has encontrado algún problema, 
-              por favor contáctanos para seguir mejorando el sistema.
-            </p>
-          </div>
-        </div>
+      {/* Footer / CTA Estilo GrowLabs */}
+      <div className="mt-16 text-center">
+        <div className="inline-block p-[1px] rounded-full bg-gradient-to-r from-transparent via-[#00FF88] to-transparent mb-6 w-full max-w-md" />
+        <h4 className="text-xl font-bold text-white mb-2">¿Tienes alguna sugerencia de mejora?</h4>
+        <p className="text-[#9CA3AF] mb-8 max-w-lg mx-auto">
+          Nuestra tecnología evoluciona contigo. Si tienes ideas para perfeccionar el sistema, estamos listos para escucharte.
+        </p>
+        <button className="px-8 py-3 bg-[#00FF88] hover:bg-[#00FF88]/90 text-black font-black rounded-full shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:scale-105 transition-all duration-300 uppercase tracking-widest text-sm">
+          Contactar Soporte
+        </button>
       </div>
     </div>
   );
 }
-
