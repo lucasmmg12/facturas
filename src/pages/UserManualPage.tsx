@@ -125,15 +125,19 @@ export function UserManualPage() {
                     </div>
                 </div>
                 <div className="flex-1 w-full relative">
-                    <div className="aspect-video rounded-2xl bg-black border border-white/10 p-6 flex items-center justify-center relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-grow-neon/5 blur-[50px] animate-pulse" />
-                        <div className="text-center space-y-4 relative z-10">
-                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-grow-neon">Sugerencia Pro</p>
-                            <p className="text-white text-lg font-medium max-w-xs mx-auto">
-                                "Revisa periódicamente la sección de Actualizaciones para descubrir nuevas funciones y mejoras del motor OCR."
-                            </p>
-                        </div>
+                    <div className="aspect-video rounded-2xl bg-black border border-white/10 overflow-hidden shadow-2xl shadow-grow-neon/10 group">
+                        <iframe
+                            className="w-full h-full"
+                            src="https://www.youtube.com/embed/GcUQSQI2vZ8?si=Gxlupw2yTG6YuQ0q"
+                            title="Tutorial Grow Labs"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        ></iframe>
                     </div>
+                    <p className="text-center mt-4 text-xs font-bold uppercase tracking-widest text-grow-neon">
+                        ▶ Ver Video Tutorial: Flujo Completo
+                    </p>
                 </div>
             </section>
 
