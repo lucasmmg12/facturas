@@ -7,6 +7,7 @@ import { SuppliersPage } from './SuppliersPage';
 import { TaxCodesPage } from './TaxCodesPage';
 import { MasterDataPage } from './MasterDataPage';
 import { UsersManagementPage } from './UsersManagementPage';
+import { AnalyticsPage } from './AnalyticsPage';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
@@ -35,16 +36,17 @@ interface ReviewPanelProps {
 
 export function DashboardPage() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog' | 'manual'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'analytics' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog' | 'manual'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const tabs = useMemo(
     () => {
-      const baseTabs: Array<{ id: 'upload' | 'review' | 'export' | 'users' | 'maestros' | 'suppliers' | 'tax_codes' | 'activity' | 'changelog' | 'manual'; label: string }> = [
+      const baseTabs: Array<{ id: 'upload' | 'review' | 'export' | 'analytics' | 'users' | 'maestros' | 'suppliers' | 'tax_codes' | 'activity' | 'changelog' | 'manual'; label: string }> = [
         { id: 'upload', label: 'Carga automática' },
         { id: 'review', label: 'Revisión y edición' },
         { id: 'export', label: 'Exportar a Tango' },
+        { id: 'analytics', label: 'Analítica Hub' },
         { id: 'maestros', label: 'Maestros' },
         { id: 'suppliers', label: 'Proveedores' },
         { id: 'tax_codes', label: 'Códigos Impuestos' },
@@ -138,6 +140,8 @@ export function DashboardPage() {
             {activeTab === 'activity' && <ActivityLogPage />}
 
             {activeTab === 'manual' && <UserManualPage />}
+
+            {activeTab === 'analytics' && <AnalyticsPage />}
 
             {activeTab === 'changelog' && <ChangelogPage />}
           </div>
