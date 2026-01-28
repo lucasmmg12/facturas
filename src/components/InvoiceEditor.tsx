@@ -370,10 +370,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     return invoiceConcepts.reduce((sum, ic) => sum + ic.amount, 0);
   };
 
-  // Calcular disponible
+  // Calcular disponible para conceptos (Suma de Netos = Total - IVA - Otros Impuestos)
   const getAvailableAmount = () => {
+    if (!invoice) return 0;
     const totalAssigned = getTotalAssignedConcepts();
-    return invoice?.total_amount ? invoice.total_amount - totalAssigned : 0;
+    // Según requerimiento: el total de conceptos es Total - IVA
+    const conceptsTarget = invoice.total_amount - (invoice.iva_amount || 0);
+    return Math.max(0, conceptsTarget - totalAssigned);
   };
 
   const handleConceptAmountChange = (value: string) => {
@@ -387,10 +390,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
     const totalAssigned = getTotalAssignedConcepts();
     const newTotal = totalAssigned + amount;
+    const conceptsTarget = invoice.total_amount - (invoice.iva_amount || 0);
 
-    if (newTotal > invoice.total_amount) {
-      const available = invoice.total_amount - totalAssigned;
-      setConceptError(`Excede el total de la factura. Disponible: $${available.toFixed(2)}`);
+    if (newTotal > (conceptsTarget + 0.01)) { // Margen de redondeo
+      const available = conceptsTarget - totalAssigned;
+      setConceptError(`Excede el límite (Total - IVA). Disponible: $${available.toFixed(2)}`);
     }
   };
 
@@ -449,13 +453,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       return;
     }
 
-    // Validar que no supere el total
+    // Validar que no supere el total neto (Total - IVA)
     const totalAssigned = getTotalAssignedConcepts();
     const newTotal = totalAssigned + amount;
+    const conceptsTarget = invoice.total_amount - (invoice.iva_amount || 0);
 
-    if (newTotal > invoice.total_amount) {
-      const available = invoice.total_amount - totalAssigned;
-      alert(`El monto excede el total de la factura. Disponible: $${available.toFixed(2)}`);
+    if (newTotal > (conceptsTarget + 0.01)) {
+      const available = conceptsTarget - totalAssigned;
+      alert(`El monto excede el límite permitido (Total - IVA). Disponible: $${available.toFixed(2)}`);
       return;
     }
 
