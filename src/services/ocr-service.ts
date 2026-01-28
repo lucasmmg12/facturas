@@ -127,12 +127,9 @@ async function getTesseractWorker(): Promise<Worker> {
 
   if (!ocrWorkerPromise) {
     ocrWorkerPromise = (async () => {
-      const worker = await createWorker({
+      const worker = await createWorker('spa', 1, {
         logger: () => undefined,
       });
-      await worker.load();
-      await worker.loadLanguage('spa');
-      await worker.initialize('spa');
       ocrWorkerInstance = worker;
       return worker;
     })();
@@ -201,7 +198,8 @@ async function recognizePageWithOCR(page: PDFPageProxy): Promise<string> {
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
-  await page.render({ canvasContext: context, viewport }).promise;
+  // @ts-ignore - canvas is required in some versions of pdfjs-dist
+  await page.render({ canvasContext: context, viewport, canvas }).promise;
 
   const blob = await canvasToBlob(canvas);
   return recognizeImageBlob(blob);
@@ -385,9 +383,9 @@ function extractInvoiceNumber(text: string): string | null {
 
 function extractDate(text: string): string | null {
   const patterns = [
-    /Fecha de Emisión[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /Fecha[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /(\d{2})[\/\-](\d{2})[\/\-](\d{4})/,
+    /Fecha de Emisión[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
+    /Fecha[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
+    /(\d{2})[/](\d{2})[/](\d{4})/,
   ];
 
   for (const pattern of patterns) {
@@ -516,10 +514,10 @@ function extractCAE(text: string): string | null {
 
 function extractCAEExpiration(text: string): string | null {
   const patterns = [
-    /Vencimiento[:\s]+CAE[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /Vencimiento[:\s]+CAI[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /Vto\.?\s+CAE[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
-    /Vto\.?\s+CAI[:\s]+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i,
+    /Vencimiento[:\s]+CAE[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
+    /Vencimiento[:\s]+CAI[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
+    /Vto\.?\s+CAE[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
+    /Vto\.?\s+CAI[:\s]+(\d{2})[/](\d{2})[/](\d{4})/i,
   ];
 
   for (const pattern of patterns) {

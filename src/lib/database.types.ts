@@ -190,6 +190,7 @@ export interface Database {
           observations: string | null;
           status: InvoiceStatus;
           ocr_confidence: number | null;
+          ocr_raw_result: any | null;
           validation_errors: any | null;
           notes: string | null;
           exported: boolean;
@@ -239,6 +240,7 @@ export interface Database {
           observations?: string | null;
           status?: InvoiceStatus;
           ocr_confidence?: number | null;
+          ocr_raw_result?: any | null;
           validation_errors?: any | null;
           notes?: string | null;
           exported?: boolean;
@@ -288,6 +290,7 @@ export interface Database {
           observations?: string | null;
           status?: InvoiceStatus;
           ocr_confidence?: number | null;
+          ocr_raw_result?: any | null;
           validation_errors?: any | null;
           notes?: string | null;
           exported?: boolean;

@@ -8,6 +8,7 @@ import { getInvoiceWithDetails, updateInvoice } from '../services/invoice-servic
 import { autofillInvoiceFields } from '../services/invoice-autofill-service';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { recordCorrection } from '../services/ocr-learning-service';
 import { StatusBadge } from './StatusBadge';
 import { SupplierSearchSelect } from './SupplierSearchSelect';
 import { SearchableSelect } from './SearchableSelect';
@@ -249,6 +250,20 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       }
 
       await updateInvoice(invoice.id, updateData);
+
+      // --- APRENDIZAJE ADAPTATIVO (OCR LEARNING) ---
+      // Si tenemos el resultado original del OCR, comparamos y guardamos la corrección
+      const originalOcr = (invoice as any).ocr_raw_result;
+      if (originalOcr && profile) {
+        // Solo guardamos si el usuario cambió algo relevante respecto al OCR original
+        // Por simplicidad en este MVP, registramos la corrección si se guarda manualmente
+        await recordCorrection(
+          invoice.supplier_cuit,
+          originalOcr,
+          updateData,
+          profile.id
+        );
+      }
 
       onSave();
     } catch (error) {

@@ -106,7 +106,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           setCurrentAction({ label: 'IA en Proceso', detail: `Leyendo ${file.name}...` });
 
           console.log(`[Upload] Iniciando OCR con OpenAI for: ${file.name}`);
-          ocrResult = await extractDataWithOpenAI(file);
+
+          // Detectar posible CUIT en el nombre del archivo para cargar aprendizajes previos
+          const filenameCuit = file.name.match(/\d{11}/)?.[0];
+          if (filenameCuit) console.log(`[Upload] CUIT detectado en nombre de archivo: ${filenameCuit}`);
+
+          ocrResult = await extractDataWithOpenAI(file, filenameCuit);
           ocrMethod = 'OpenAI';
 
           if (ocrResult) {
@@ -257,11 +262,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           total_amount: ocrResult.totalAmount || 0,
           status: (ocrResult.confidence >= 0.7 && cleanOcrCuit && ocrResult.invoiceType) ? 'PROCESSED' : 'PENDING_REVIEW',
           ocr_confidence: ocrResult.confidence,
+          ocr_raw_result: ocrResult, // Guardamos el resultado original del OCR para aprendizaje
           created_by: profile.id,
           is_electronic: true,
           cai_cae: ocrResult.caiCae || null,
           cai_cae_expiration: ocrResult.caiCaeExpiration || null,
-        });
+        } as any);
 
         // Impuestos
         if (ocrResult.taxes?.length > 0) {

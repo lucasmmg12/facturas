@@ -51,37 +51,49 @@ Deno.serve(async (req) => {
       throw new Error('El cuerpo de la solicitud no es un JSON válido.');
     }
 
-    const { base64, mimeType } = requestData;
+    const { base64, mimeType, supplierCuit } = requestData;
     if (!base64 || !mimeType) {
       throw new Error('Faltan datos de la imagen (base64 o mimeType).');
     }
 
     const base64Array = Array.isArray(base64) ? base64 : [base64];
-    console.log(`[OCR] Procesando ${base64Array.length} página(s). Tipo: ${mimeType}`);
+    console.log(`[OCR] Procesando ${base64Array.length} página(s). Tipo: ${mimeType}. Hint CUIT: ${supplierCuit || 'Ninguno'}`);
 
-    // 4. Definición de Prompt y Contexto
-    const taxCodesList = [
-      { code: '1', description: 'IVA 21%', rate: 21 },
-      { code: '2', description: 'IVA 10.5%', rate: 10.5 },
-      { code: 'IVA_27', description: 'IVA 27%', rate: 27 },
-      { code: 'PERC_IIBB', description: 'PERCEPCIÓN IIBB', rate: null },
-      { code: 'PERC_IVA', description: 'PERCEPCIÓN IVA', rate: null },
-    ];
+    // 4. Búsqueda de Aprendizajes (Adaptive Learning)
+    let learningHints = '';
+    if (supplierCuit) {
+      const cleanCuit = String(supplierCuit).replace(/\D/g, '');
+      const { data: learningData } = await supabaseClient
+        .from('ocr_learning_data')
+        .select('corrected_data')
+        .eq('supplier_cuit', cleanCuit)
+        .order('created_at', { ascending: false })
+        .limit(2);
 
+      if (learningData && learningData.length > 0) {
+        learningHints = learningData.map((d: any) =>
+          `- MEMORIA: En este proveedor, los datos correctos suelen ser: ${JSON.stringify(d.corrected_data)}`
+        ).join('\n');
+      }
+    }
+
+    // 5. Definición de Prompt y Contexto
     const prompt = `
 Eres un experto contable argentino. Analiza la imagen de la factura y extrae datos en JSON estricto.
 
-IDENTIFICACIÓN:
-- TIPO: Busca letra A, B, C, M en recuadro.
-  - "C" = invoiceType "FACTURA_C", code "011". No hay IVA. netTaxed=0. Todo a netUntaxed.
-  - "A" = invoiceType "FACTURA_A", code "001". Busca IVA discriminado.
-- PROVEEDOR: Texto junto a "Razón Social" o texto principal arriba izq. NO USES "Domicilio Comercial".
-- RECEPTOR: CUIT que NO sea del emisor. Si emisor es 30-60992686-0, busca el otro.
+${learningHints ? `CONTEXTO HISTÓRICO (IMPORTANTE):\nHas fallado anteriormente con este proveedor. Usa estos ejemplos de correcciones reales de usuarios para no repetir el error:\n${learningHints}\n` : ''}
 
-VALORES (IMPORTANTE):
-- Interpreta montos según formato argentino ($ 1.234,56 = 1234.56).
-- Devuelve SIEMPRE NÚMEROS (floats).
-- FECHA: Formato YYYY-MM-DD.
+IDENTIFICACIÓN:
+- TIPO: Busca letra A, B, C, M en recuadro o texto "FACTURA A", etc. Recuérdate: 
+  - "C" = invoiceType "FACTURA_C", code "011". No hay IVA discriminado.
+  - "A" = invoiceType "FACTURA_A", code "001". Busca IVA discriminado (21%, 10.5%, etc).
+- PROVEEDOR: Razón Social y CUIT del emisor.
+- RECEPTOR: CUIT que NO sea del emisor (Sanatorio Argentino 30-60992686-0).
+
+VALORES (CRÍTICO):
+- Los montos en facturas argentinas usan PUNTO para MILES y COMA para DECIMALES (ej: 1.234,56).
+- Devuelve SIEMPRE NÚMEROS (floats) en el JSON, usando punto como separador decimal estándar de programación.
+- FECHA: YYYY-MM-DD.
 
 JSON OUTPUT:
 {
@@ -100,10 +112,8 @@ JSON OUTPUT:
   "ivaAmount": 0.0,
   "otherTaxesAmount": 0.0,
   "totalAmount": 0.0,
-  "currency": "ARS",
-  "taxes": [ { "description": "string", "taxBase": 0.0, "taxAmount": 0.0, "rate": 0.0 } ]
+  "taxes": [ { "description": "IVA 21%", "taxBase": 0.0, "taxAmount": 0.0, "rate": 21 } ]
 }
-Impuestos posibles: ${JSON.stringify(taxCodesList)}
 `.trim();
 
     // 5. Preparación de payload para OpenAI

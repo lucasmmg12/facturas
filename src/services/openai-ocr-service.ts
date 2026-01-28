@@ -27,7 +27,7 @@ type ParsedTaxes = Array<{
   rate: number | null;
 }>;
 
-export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
+export async function extractDataWithOpenAI(file: File, cuitHint?: string): Promise<OCRResult> {
   console.log('[OpenAI OCR] Iniciando extracción vía Supabase Edge Function', {
     fileName: file.name,
     fileSize: file.size,
@@ -85,6 +85,7 @@ export async function extractDataWithOpenAI(file: File): Promise<OCRResult> {
     body: {
       base64: isMultiplePages ? base64 : [base64], // Siempre enviar como array
       mimeType,
+      supplierCuit: cuitHint, // Pasar el CUIT si ya se conoce para cargar aprendizajes
     },
   });
 
@@ -454,9 +455,8 @@ async function convertPdfToPngBase64(file: File): Promise<string[]> {
 
 async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
   // Reducir escala para evitar imágenes demasiado grandes (OpenAI tiene límites)
-  // Scale 1.2 es suficiente para OCR y reduce significativamente el tamaño
-  // También limitamos las dimensiones máximas a 2048px como recomienda OpenAI
-  let viewport = page.getViewport({ scale: 1.2 });
+  // Scale 1.5 es un buen balance entre legibilidad para OCR y tamaño
+  let viewport = page.getViewport({ scale: 1.5 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
@@ -464,26 +464,41 @@ async function renderPageToBase64(page: PDFPageProxy): Promise<string> {
     throw new Error('No se pudo inicializar el canvas para renderizar el PDF');
   }
 
-  // Limitar dimensiones máximas a 2048px (recomendación de OpenAI)
+  // Limitar dimensiones máximas a 2048px (recomendación de OpenAI para 'high' detail)
   const MAX_DIMENSION = 2048;
   if (viewport.width > MAX_DIMENSION || viewport.height > MAX_DIMENSION) {
     const ratio = Math.min(MAX_DIMENSION / viewport.width, MAX_DIMENSION / viewport.height);
-    viewport = page.getViewport({ scale: 1.2 * ratio });
+    viewport = page.getViewport({ scale: 1.5 * ratio });
   }
 
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
-  await page.render({ canvasContext: context, viewport }).promise;
+  // Renderizar con fondo blanco (importante para transparencia en OCR)
+  context.fillStyle = 'white';
+  context.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Comprimir la imagen usando JPEG con calidad 0.75 para reducir aún más el tamaño
-  // Calidad 0.75 sigue siendo suficiente para OCR pero reduce significativamente el tamaño
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  // @ts-ignore
+  await page.render({ canvasContext: context, viewport, canvas }).promise;
+
+  // Usar WebP si está disponible para máxima compresión, fallback a JPEG
+  let dataUrl: string;
+  try {
+    dataUrl = canvas.toDataURL('image/webp', 0.8);
+    if (dataUrl.startsWith('data:image/webp')) {
+      console.log('[OpenAI OCR] Usando compresión WebP');
+    } else {
+      dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    }
+  } catch (e) {
+    dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  }
+
   const base64 = dataUrl.split(',')[1] ?? '';
 
   // Log del tamaño para debugging
   const sizeKB = (base64.length * 3 / 4 / 1024).toFixed(2);
-  console.log(`[OpenAI OCR] Imagen renderizada: ${viewport.width}x${viewport.height}px, tamaño: ${sizeKB}KB`);
+  console.log(`[OpenAI OCR] Página renderizada: ${viewport.width}x${viewport.height}px, tamaño: ${sizeKB}KB`);
 
   return base64;
 }
@@ -594,31 +609,38 @@ function normalizeNumber(value: any): number {
   }
 
   let str = String(value).trim();
+  if (!str) return 0;
 
-  // Detectar formato inglés (ej: "1234.56") -> Punto como decimal, sin comas (o comas como miles irrelevantes si hay un punto luego)
-  // Si tiene un solo punto y está cerca del final (1 o 2 dígitos después), es decimal.
-  if (/^\d+\.\d{1,2}$/.test(str)) {
-    return parseFloat(str);
-  }
+  // Eliminar símbolos de moneda y espacios
+  str = str.replace(/[$\s]/g, '');
 
-  // Si tiene formato "1.234,56" (Argentino) -> Eliminar puntos, cambiar coma por punto
-  // Si tiene comas, asumimos formato latino/europeo
-  if (str.includes(',')) {
+  // Detectar formato "1.234,56" (Latino/Argentino) vs "1,234.56" (Inglés)
+  const lastComma = str.lastIndexOf(',');
+  const lastDot = str.lastIndexOf('.');
+
+  if (lastComma > lastDot) {
+    // Es formato latino: el separador decimal es la coma
+    // Eliminar puntos de miles y cambiar coma por punto
     str = str.replace(/\./g, '').replace(',', '.');
-  } else {
-    // Si solo tiene puntos (ej: "1.234" o "123.45"), es ambiguo. 
-    // Si el punto divide grupos de 3, es miles. Si divide solo los ultimos 2, es decimal.
+  } else if (lastDot > lastComma) {
+    // Es formato inglés: el separador decimal es el punto
+    // Pero cuidado, podría ser "1.234" (mil doscientos) sin coma
     const parts = str.split('.');
-    if (parts.length > 1) {
-      const lastPart = parts[parts.length - 1];
-      if (lastPart.length === 2) {
-        // Asumimos decimal (ej: 123.45)
-        // No hacemos replace global de punto
-      } else {
-        // Asumimos miles (ej: 1.234)
+    if (parts.length > 2) {
+      // "1.234.567" -> Definitivamente miles
+      str = str.replace(/\./g, '');
+    } else if (parts.length === 2) {
+      const decimals = parts[1];
+      if (decimals.length === 3) {
+        // "1.234" -> Probablemente miles (Argentina no suele usar 3 decimales en total)
         str = str.replace(/\./g, '');
+      } else {
+        // "1.23" o "1234.5" -> Decimal
       }
     }
+  } else {
+    // No hay ni comas ni puntos, o están en la misma posición (imposible)
+    // No hacer nada, parseFloat funcionará
   }
 
   const parsed = parseFloat(str);
