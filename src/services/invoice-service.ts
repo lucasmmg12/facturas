@@ -17,12 +17,17 @@ export async function createInvoice(data: InvoiceInsert): Promise<Invoice> {
 
   const validationErrors = validationResult.valid ? null : { errors: validationResult.errors };
 
+  // Normalizar puntos de venta (5 dígitos) y número (8 dígitos) para consistencia
+  const normalizedData = {
+    ...data,
+    point_of_sale: data.point_of_sale?.toString().padStart(5, '0'),
+    invoice_number: data.invoice_number?.toString().padStart(8, '0'),
+    validation_errors: validationErrors,
+  };
+
   const { data: invoice, error } = await (supabase
     .from('invoices') as any)
-    .insert({
-      ...data,
-      validation_errors: validationErrors,
-    })
+    .insert(normalizedData)
     .select()
     .single();
 
@@ -124,13 +129,17 @@ export async function checkDuplicateInvoice(
   pointOfSale: string,
   invoiceNumber: string
 ): Promise<Invoice | null> {
+  // Normalizar para evitar duplicados por ceros a la izquierda (Tango: 5+8)
+  const normPOS = pointOfSale.toString().padStart(5, '0');
+  const normNum = invoiceNumber.toString().padStart(8, '0');
+
   const { data, error } = await (supabase
     .from('invoices') as any)
     .select('*')
     .eq('supplier_cuit', supplierCuit)
     .eq('invoice_type', invoiceType)
-    .eq('point_of_sale', pointOfSale)
-    .eq('invoice_number', invoiceNumber)
+    .eq('point_of_sale', normPOS)
+    .eq('invoice_number', normNum)
     .maybeSingle();
 
   if (error) throw error;
