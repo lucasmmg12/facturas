@@ -14,6 +14,52 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '2.1.0',
+    date: '28 de Enero, 2026',
+    changes: [
+      {
+        type: 'feature',
+        description: 'Intelligence Hub: Dashboard analítico avanzado con KPIs financieros, visualización de tendencias y desglose por proveedor.',
+        time: '2026-01-28 15:30'
+      },
+      {
+        type: 'feature',
+        description: 'Intelligence Narrative: Sistema de IA para detección de anomalías, radar de inflación y sugerencias tácticas automáticas.',
+        time: '2026-01-28 16:15'
+      },
+      {
+        type: 'feature',
+        description: 'OCR Adaptive Intelligence: Implementación de sistema con feedback loop para aprendizaje continuo del motor de reconocimiento.',
+        time: '2026-01-28 19:40'
+      },
+      {
+        type: 'feature',
+        description: 'Exportación de Reportes: Nueva capacidad de exportación a PDF de alta fidelidad para el hub de inteligencia.',
+        time: '2026-01-28 17:45'
+      },
+      {
+        type: 'improvement',
+        description: 'Control Temporal: Implementación de selectores dinámicos (diario, semanal, mensual, anual) para análisis de datos.',
+        time: '2026-01-28 15:50'
+      },
+      {
+        type: 'fix',
+        description: 'Optimización de Mapeo: Normalización de lógica de CUIT para asegurar la prioridad de códigos de proveedor Tango.',
+        time: '2026-01-28 11:20'
+      },
+      {
+        type: 'fix',
+        description: 'Ajuste de Conceptos: Refinamiento de lógica para excluir IVA de los montos sugeridos y validados.',
+        time: '2026-01-28 13:15'
+      },
+      {
+        type: 'fix',
+        description: 'Consistencia de Datos: Eliminación de duplicados en Puntos de Venta causados por padding inconsistente.',
+        time: '2026-01-28 10:45'
+      }
+    ],
+  },
+  {
     version: '2.0.0',
     date: 'Enero 2026',
     changes: [
