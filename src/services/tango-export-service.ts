@@ -83,7 +83,8 @@ export async function generateTangoExport(userId: string): Promise<{
   ]);
 
   const suppliers = (suppliersResult.data || []) as Database['public']['Tables']['suppliers']['Row'][];
-  const supplierMap = new Map(suppliers.map((s) => [s.cuit, s]));
+  // Normalizar CUITs en el mapa (quitar guiones y espacios) para asegurar el match
+  const supplierMap = new Map(suppliers.map((s) => [s.cuit.replace(/[-\s]/g, ''), s]));
 
   const taxCodes = (taxCodesResult.data || []) as Database['public']['Tables']['tax_codes']['Row'][];
   const taxCodeMap = new Map(taxCodes.map((t) => [t.id, t]));
@@ -99,7 +100,10 @@ export async function generateTangoExport(userId: string): Promise<{
     // 2.1 Proveedor: Buscar CUIT -> Comparar con tabla Proveedores -> Exportar CODIGO
     const cleanCuit = invoice.supplier_cuit.replace(/[-\s]/g, '');
     const supplier = supplierMap.get(cleanCuit);
-    const supplierCode = supplier?.tango_supplier_code || invoice.supplier_cuit;
+    // Priorizar el código de Tango si existe, de lo contrario usar el CUIT
+    const supplierCode = (supplier?.tango_supplier_code && supplier.tango_supplier_code.trim() !== '')
+      ? supplier.tango_supplier_code
+      : invoice.supplier_cuit;
 
     // 2.6 Código comprobante AFIP
     const afipCode = mapInvoiceTypeToAfipCode(invoice.invoice_type);
