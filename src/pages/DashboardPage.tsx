@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UploadPage } from './UploadPage';
-import { ActivityLogPage } from './ActivityLogPage';
-import { ChangelogPage } from './ChangelogPage';
-import { UserManualPage } from './UserManualPage';
-import { SuppliersPage } from './SuppliersPage';
-import { TaxCodesPage } from './TaxCodesPage';
-import { MasterDataPage } from './MasterDataPage';
-import { UsersManagementPage } from './UsersManagementPage';
-import { AnalyticsPage } from './AnalyticsPage';
-import { DashboardLayout } from '../components/DashboardLayout';
-import { SimonPanel } from '../components/SimonPanel';
-import { StatusBadge } from '../components/StatusBadge';
-import { InvoiceEditor } from '../components/InvoiceEditor';
-import { ConfirmModal } from '../components/ConfirmModal';
-import { ToastContainer } from '../components/Toast';
-import { useToast } from '../hooks/useToast';
-import { getInvoices, getInvoicesReadyForExport, deleteInvoice } from '../services/invoice-service';
-import { useAuth } from '../contexts/AuthContext';
-import { generateTangoExport, downloadExport } from '../services/tango-export-service';
+import { X, useCallback, useEffect, useMemo, useState } from 'react';
+import { X, UploadPage } from './UploadPage';
+import { X, ActivityLogPage } from './ActivityLogPage';
+import { X, ChangelogPage } from './ChangelogPage';
+import { X, UserManualPage } from './UserManualPage';
+import { X, SuppliersPage } from './SuppliersPage';
+import { X, TaxCodesPage } from './TaxCodesPage';
+import { X, MasterDataPage } from './MasterDataPage';
+import { X, UsersManagementPage } from './UsersManagementPage';
+import { X, AnalyticsPage } from './AnalyticsPage';
+import { X, DashboardLayout } from '../components/DashboardLayout';
+import { X, SimonPanel } from '../components/SimonPanel';
+import { X, StatusBadge } from '../components/StatusBadge';
+import { X, InvoiceEditor } from '../components/InvoiceEditor';
+import { X, ConfirmModal } from '../components/ConfirmModal';
+import { X, ToastContainer } from '../components/Toast';
+import { X, useToast } from '../hooks/useToast';
+import { X, getInvoices, getInvoicesReadyForExport, deleteInvoice } from '../services/invoice-service';
+import { X, useAuth } from '../contexts/AuthContext';
+import { X, generateTangoExport, downloadExport } from '../services/tango-export-service';
 import type { Database } from '../lib/database.types';
-import {
+import { X,
   Instagram,
   MessageCircle,
   Globe,
@@ -81,7 +81,17 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
-      {sidebarView === 'simon' ? (<div style={{height: '100%'}}><SimonPanel /></div>) : (<div className="space-y-8 animate-in fade-in duration-700">
+      
+      {sidebarView === 'simon' && (
+        <div className="fixed inset-y-0 right-0 z-[100] w-[100vw] sm:w-[500px] md:w-[600px] lg:w-[800px] bg-white shadow-2xl border-l border-neutral-200 animate-in slide-in-from-right duration-300">
+          <button onClick={() => setSidebarView('invoices')} className="absolute top-4 right-4 z-[110] p-2 bg-neutral-100 rounded-full shadow-sm text-neutral-500 hover:text-red-500 transition-colors">
+            <X size={20} />
+          </button>
+          <div style={{height: '100%'}}><SimonPanel /></div>
+        </div>
+      )}
+      <div className="space-y-8 animate-in fade-in duration-700">
+
         <section className="bg-white shadow-sm border border-neutral-200 rounded-xl">
           <div
             className="flex flex-wrap items-center gap-3 px-6 py-5 bg-white border-b border-neutral-200"
@@ -621,6 +631,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
     </div>
   );
 }
+
 
 
 
