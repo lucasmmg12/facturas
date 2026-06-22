@@ -39,9 +39,9 @@ export async function sendRAGMessage(question: string, conversationId: string | 
     ];
 
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(import.meta.env.VITE_SUPABASE_URL + '/functions/v1/simon-chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_API_KEY },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + import.meta.env.VITE_SUPABASE_ANON_KEY },
             body: JSON.stringify({ model: 'gpt-4o-mini', messages: messagesForOpenAI })
         });
         
@@ -89,3 +89,4 @@ export async function fetchSuggestions() {
         top_queries: [{text: '¿Cómo funciona la carga automática de facturas?'}, {text: '¿Cómo exporto un lote a Tango?'}]
     };
 }
+
