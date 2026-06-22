@@ -67,9 +67,9 @@ export function DashboardLayout({ title, children, onViewChange }: DashboardLayo
                 ))}
               </h1>
               
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--neutral-400)', fontWeight: 500 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--neutral-600)', fontWeight: 500 }}>
                 <ChevronRight size={14} />
-                <span style={{ color: 'var(--primary-500)', fontWeight: 600 }}>{title}</span>
+                <span style={{ color: 'var(--primary-700)', fontWeight: 600 }}>{title}</span>
               </span>
             </div>
             <span className="topbar__subtitle">Sistema de gestión integral</span>
@@ -108,7 +108,7 @@ export function DashboardLayout({ title, children, onViewChange }: DashboardLayo
                   width: '28px', height: '28px', borderRadius: '50%',
                   background: 'none', border: '1px solid var(--neutral-200)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: 'var(--neutral-400)',
+                  cursor: 'pointer', color: 'var(--neutral-600)',
                   transition: 'all 0.2s',
                 }}
                 onMouseOver={e => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FCA5A5'; }}
@@ -128,3 +128,4 @@ export function DashboardLayout({ title, children, onViewChange }: DashboardLayo
     </div>
   );
 }
+

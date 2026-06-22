@@ -303,7 +303,7 @@
 }
 
 .topbar__title {
-    text-shadow: 0 1px 3px rgba(255,255,255,0.8), 0 2px 8px rgba(255,255,255,0.9);
+    
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--neutral-900);
@@ -335,9 +335,9 @@
 }
 
 .topbar__subtitle {
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
     font-size: 0.8rem;
-    color: var(--neutral-400);
+    color: var(--neutral-600);
+    font-weight: 500;
     margin-left: var(--space-3);
 }
 
@@ -1936,7 +1936,7 @@
     }
 
     .topbar__subtitle {
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+    
         display: none;
     }
 }
@@ -4123,3 +4123,4 @@ select:focus-visible {
     font-weight: 600;
     user-select: none;
 }
+
