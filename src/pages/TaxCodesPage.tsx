@@ -286,7 +286,7 @@ export function TaxCodesPage() {
                   type="checkbox"
                   checked={formData.active}
                   onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm font-medium text-green-300">Activo</span>
               </label>
@@ -437,4 +437,5 @@ export function TaxCodesPage() {
     </div>
   );
 }
+
 

@@ -7,21 +7,59 @@ export default {
   theme: {
     extend: {
       colors: {
-        grow: {
-          neon: '#00FF88',
-          dark: '#000000',
-          surface: 'rgba(255, 255, 255, 0.05)',
-          border: 'rgba(255, 255, 255, 0.1)',
-          muted: '#9CA3AF',
+        primary: {
+          50: 'var(--primary-50)',
+          100: 'var(--primary-100)',
+          200: 'var(--primary-200)',
+          400: 'var(--primary-400)',
+          500: 'var(--primary-500)',
+          600: 'var(--primary-600)',
+          700: 'var(--primary-700)',
+          800: 'var(--primary-800)',
+          900: 'var(--primary-900)',
         },
+        neutral: {
+          0: 'var(--neutral-0)',
+          50: 'var(--neutral-50)',
+          100: 'var(--neutral-100)',
+          200: 'var(--neutral-200)',
+          300: 'var(--neutral-300)',
+          400: 'var(--neutral-400)',
+          500: 'var(--neutral-500)',
+          600: 'var(--neutral-600)',
+          700: 'var(--neutral-700)',
+          800: 'var(--neutral-800)',
+          900: 'var(--neutral-900)',
+        },
+        success: {
+          50: 'var(--success-50)',
+          500: 'var(--success-500)',
+          600: 'var(--success-600)',
+        },
+        warning: {
+          50: 'var(--warning-50)',
+          500: 'var(--warning-500)',
+        },
+        danger: {
+          50: 'var(--danger-50)',
+          500: 'var(--danger-500)',
+          600: 'var(--danger-600)',
+        }
       },
-      backgroundImage: {
-        'grow-gradient': 'radial-gradient(circle at center, #065F46 0%, #000000 100%)',
-        'grow-neon-gradient': 'linear-gradient(135deg, #00FF88 0%, #00BD65 100%)',
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       boxShadow: {
-        'neon': '0 0 20px rgba(0, 255, 136, 0.3)',
-        'neon-hover': '0 0 30px rgba(0, 255, 136, 0.5)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
       }
     },
   },

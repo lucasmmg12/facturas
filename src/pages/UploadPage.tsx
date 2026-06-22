@@ -331,12 +331,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     <div className="relative space-y-8 animate-in fade-in duration-700">
       {/* Overlay de Bloqueo durante Carga en Lote */}
       {uploading && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="max-w-md w-full p-8 glass-card border-grow-neon/30 text-center space-y-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/50 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="max-w-md w-full p-8 bg-white shadow-sm border border-neutral-200 rounded-xl border-primary-300 text-center space-y-6">
             <div className="relative w-24 h-24 mx-auto mb-8">
-              <div className="absolute inset-0 rounded-full border-4 border-grow-neon/10" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary-200" />
               <div
-                className="absolute inset-0 rounded-full border-4 border-grow-neon border-t-transparent animate-spin shadow-neon"
+                className="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin shadow-sm"
                 style={{ animationDuration: '2s' }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -346,49 +346,49 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
             <div className="space-y-2">
               <h4 className="text-lg font-black text-white tracking-widest uppercase">Procesamiento en Curso</h4>
-              <p className="text-grow-muted text-xs font-bold uppercase tracking-widest">
+              <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">
                 No cierres la ventana hasta finalizar la secuencia
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="flex justify-between text-[10px] font-black text-grow-neon uppercase tracking-[0.2em] mb-1">
+              <div className="flex justify-between text-[10px] font-black text-primary-500 uppercase tracking-[0.2em] mb-1">
                 <span>Progreso Global</span>
                 <span>{processedCount} / {totalToProcess} archivos</span>
               </div>
-              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+              <div className="h-2 w-full bg-neutral-50 rounded-full overflow-hidden border border-neutral-200">
                 <div
-                  className="h-full bg-grow-neon shadow-neon transition-all duration-500 ease-out"
+                  className="h-full bg-primary-500 shadow-sm transition-all duration-500 ease-out"
                   style={{ width: `${(processedCount / totalToProcess) * 100}%` }}
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-center gap-3 text-grow-neon animate-pulse">
+            <div className="pt-4 flex items-center justify-center gap-3 text-primary-500 animate-pulse">
               <Loader className="w-4 h-4 animate-spin" />
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">{currentAction?.label || 'Optimizando Data'}</span>
             </div>
 
             {currentAction && (currentAction.supplier || currentAction.detail) && (
-              <div className="mt-4 p-4 bg-black/40 border border-grow-neon/20 rounded-2xl animate-in zoom-in-95 duration-300">
+              <div className="mt-4 p-4 bg-white border border-primary-200 rounded-2xl animate-in zoom-in-95 duration-300">
                 <div className="flex flex-col gap-2 text-left">
                   {currentAction.supplier && (
-                    <div className="flex justify-between items-center bg-grow-neon/5 p-2 rounded-lg border border-grow-neon/10">
-                      <span className="text-[9px] font-black text-grow-muted uppercase">Emisor Detectado</span>
+                    <div className="flex justify-between items-center bg-primary-50 p-2 rounded-lg border border-primary-200">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase">Emisor Detectado</span>
                       <span className="text-[10px] font-black text-white truncate max-w-[150px]">{currentAction.supplier}</span>
                     </div>
                   )}
                   {currentAction.amount !== undefined && (
-                    <div className="flex justify-between items-center bg-grow-neon/5 p-2 rounded-lg border border-grow-neon/10">
-                      <span className="text-[9px] font-black text-grow-muted uppercase">Importe Total</span>
-                      <span className="text-[10px] font-black text-grow-neon">
+                    <div className="flex justify-between items-center bg-primary-50 p-2 rounded-lg border border-primary-200">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase">Importe Total</span>
+                      <span className="text-[10px] font-black text-primary-500">
                         {currentAction.amount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                       </span>
                     </div>
                   )}
                   {currentAction.detail && !currentAction.supplier && (
                     <div className="text-center italic opacity-70">
-                      <span className="text-[10px] font-bold text-white/50">{currentAction.detail}</span>
+                      <span className="text-[10px] font-bold text-neutral-500">{currentAction.detail}</span>
                     </div>
                   )}
                 </div>
@@ -401,39 +401,39 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Panel de Control de Carga */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-8 bg-white/[0.02]">
+          <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 bg-white/[0.02]">
             <h3 className="text-xl font-black text-white tracking-widest uppercase mb-6 flex items-center gap-3">
-              <span className="w-1.5 h-6 bg-grow-neon rounded-full shadow-neon" />
+              <span className="w-1.5 h-6 bg-primary-500 rounded-full shadow-sm" />
               Terminal de Carga
             </h3>
             <FileUploader onFilesSelected={handleFilesSelected} disabled={uploading} />
 
-            <div className="mt-8 flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-2xl">
+            <div className="mt-8 flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-grow-neon animate-pulse shadow-neon" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted">Estado del Sistema</span>
+                <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse shadow-sm" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">Estado del Sistema</span>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-grow-neon">Operativo</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-500">Operativo</span>
             </div>
           </div>
 
           {/* Lista de Resultados */}
           {results.length > 0 && (
             <div className="space-y-4 animate-in slide-in-from-bottom-5 duration-500">
-              <h3 className="text-sm font-black text-grow-muted tracking-[0.3em] uppercase ml-2">Monitor de Procesamiento</h3>
+              <h3 className="text-sm font-black text-neutral-500 tracking-[0.3em] uppercase ml-2">Monitor de Procesamiento</h3>
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {results.map((result, index) => (
                   <div
                     key={index}
-                    className="glass-card p-6 group transition-all hover:bg-white/[0.05] border-white/5 hover:border-grow-neon/20"
+                    className="bg-white shadow-sm border border-neutral-200 rounded-xl p-6 group transition-all hover:bg-white/[0.05] border-neutral-200 hover:border-primary-200"
                   >
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4 min-w-0">
-                          <div className={`p-3 rounded-2xl border transition-all ${result.status === 'success' ? 'bg-grow-neon/10 border-grow-neon/20 text-grow-neon shadow-neon' :
+                          <div className={`p-3 rounded-2xl border transition-all ${result.status === 'success' ? 'bg-primary-50 border-primary-200 text-primary-500 shadow-sm' :
                             result.status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
                               result.status === 'duplicate' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
-                                'bg-white/5 border-white/10 text-white/40 animate-pulse'
+                                'bg-neutral-50 border-neutral-200 text-white/40 animate-pulse'
                             }`}>
                             {result.status === 'processing' ? <Loader className="w-5 h-5 animate-spin" /> :
                               result.status === 'success' ? <CheckCircle className="w-5 h-5" /> :
@@ -442,10 +442,10 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-black text-white truncate max-w-[250px]">{result.filename}</p>
-                            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${result.status === 'success' ? 'text-grow-neon' :
+                            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${result.status === 'success' ? 'text-primary-500' :
                               result.status === 'error' ? 'text-red-400' :
                                 result.status === 'duplicate' ? 'text-yellow-400' :
-                                  'text-grow-muted'
+                                  'text-neutral-500'
                               }`}>
                               {result.message}
                             </p>
@@ -453,9 +453,9 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                         </div>
 
                         {result.tokens && (
-                          <div className="hidden sm:flex flex-col items-end px-3 py-1.5 bg-black/40 border border-white/5 rounded-xl">
-                            <span className="text-[8px] font-black text-grow-neon uppercase tracking-widest">AI Audit</span>
-                            <span className="text-[10px] font-bold text-white/50">{result.tokens.total_tokens.toLocaleString()} tok</span>
+                          <div className="hidden sm:flex flex-col items-end px-3 py-1.5 bg-white border border-neutral-200 rounded-xl">
+                            <span className="text-[8px] font-black text-primary-500 uppercase tracking-widest">AI Audit</span>
+                            <span className="text-[10px] font-bold text-neutral-500">{result.tokens.total_tokens.toLocaleString()} tok</span>
                           </div>
                         )}
                       </div>
@@ -496,12 +496,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
 
         {/* Panel Lateral: Saldo e Info */}
         <div className="space-y-6">
-          <div className="glass-card p-6 border-grow-neon/10 bg-grow-neon/[0.02] relative group overflow-hidden">
-            <div className="absolute -right-12 -top-12 w-32 h-32 bg-grow-neon/5 blur-[80px] rounded-full group-hover:bg-grow-neon/10 transition-all duration-700" />
-            <h3 className="text-xs font-black text-grow-muted tracking-[0.3em] uppercase mb-6 flex justify-between items-center">
+          <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-6 border-primary-200 bg-primary-500/[0.02] relative group overflow-hidden">
+            <div className="absolute -right-12 -top-12 w-32 h-32 bg-primary-50 blur-[80px] rounded-full group-hover:bg-primary-50 transition-all duration-700" />
+            <h3 className="text-xs font-black text-neutral-500 tracking-[0.3em] uppercase mb-6 flex justify-between items-center">
               Auditoría de Insumos
               {balanceInfo.initialBalance !== null && (
-                <span className="text-[8px] bg-white/5 px-2 py-0.5 rounded-full border border-white/10 group-hover:border-grow-neon/30 transition-colors">AI TOKEN READY</span>
+                <span className="text-[8px] bg-neutral-50 px-2 py-0.5 rounded-full border border-neutral-200 group-hover:border-primary-300 transition-colors">AI TOKEN READY</span>
               )}
             </h3>
 
@@ -510,35 +510,35 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                 <>
                   <div>
                     <div className="flex justify-between items-end mb-2">
-                      <span className="text-[10px] font-black text-grow-muted uppercase">Presupuesto IA</span>
+                      <span className="text-[10px] font-black text-neutral-500 uppercase">Presupuesto IA</span>
                       <span className="text-xl font-black text-white tracking-tighter">
                         {balanceInfo.remaining !== null ? balanceInfo.remaining.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : '---'}
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-1.5 w-full bg-neutral-50 rounded-full overflow-hidden border border-neutral-200">
                       <div
-                        className="h-full bg-grow-neon shadow-neon transition-all duration-1000"
+                        className="h-full bg-primary-500 shadow-sm transition-all duration-1000"
                         style={{ width: `${Math.max(5, (balanceInfo.remaining! / balanceInfo.initialBalance!) * 100)}%` }}
                       />
                     </div>
-                    <p className="text-[9px] font-bold text-grow-muted mt-3 uppercase tracking-widest flex justify-between">
+                    <p className="text-[9px] font-bold text-neutral-500 mt-3 uppercase tracking-widest flex justify-between">
                       <span>Capacidad Operativa</span>
-                      <span className="text-grow-neon font-black">{Math.round((balanceInfo.remaining! / balanceInfo.initialBalance!) * 100)}%</span>
+                      <span className="text-primary-500 font-black">{Math.round((balanceInfo.remaining! / balanceInfo.initialBalance!) * 100)}%</span>
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                      <span className="text-[9px] font-black text-grow-muted uppercase block">Consumido</span>
+                    <div className="p-4 bg-white border border-neutral-200 rounded-2xl">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase block">Consumido</span>
                       <span className="text-xs font-black text-white block mt-1">
                         {balanceInfo.totalUsed.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                       </span>
                     </div>
-                    <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                      <span className="text-[9px] font-black text-grow-muted uppercase block">Estado Red</span>
+                    <div className="p-4 bg-white border border-neutral-200 rounded-2xl">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase block">Estado Red</span>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-grow-neon shadow-neon animate-pulse" />
-                        <span className="text-xs font-black text-grow-neon">READY</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary-500 shadow-sm animate-pulse" />
+                        <span className="text-xs font-black text-primary-500">READY</span>
                       </div>
                     </div>
                   </div>
@@ -555,7 +555,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                       }
                     }
                   }}
-                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-grow-muted hover:text-white"
+                  className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-neutral-500 hover:text-white"
                 >
                   Configurar Presupuesto AI
                 </button>
@@ -563,9 +563,9 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
             </div>
           </div>
 
-          <div className="glass-card p-6 bg-white/[0.01]">
+          <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-6 bg-white/[0.01]">
             <h4 className="text-[10px] font-black text-white tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
-              <AlertCircle className="w-3.5 h-3.5 text-grow-neon" />
+              <AlertCircle className="w-3.5 h-3.5 text-primary-500" />
               Protocolo Operativo
             </h4>
             <div className="space-y-4">
@@ -574,9 +574,9 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                 { label: 'Configuración AI', desc: 'API Key configurada en .env y Supabase' },
                 { label: 'Soporte Técnico', desc: 'lucas@growsanjuan.com' }
               ].map((item, i) => (
-                <div key={i} className="relative pl-4 border-l border-grow-neon/20">
+                <div key={i} className="relative pl-4 border-l border-primary-200">
                   <p className="text-[10px] font-black text-white/80 uppercase tracking-wider">{item.label}</p>
-                  <p className="text-[9px] font-medium text-grow-muted mt-0.5">{item.desc}</p>
+                  <p className="text-[9px] font-medium text-neutral-500 mt-0.5">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -586,3 +586,4 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     </div>
   );
 }
+

@@ -68,7 +68,7 @@ export function LoginPage() {
       }}
     >
       {/* Overlay oscuro para mejorar contraste */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-neutral-50/60 backdrop-blur-sm"></div>
       
       {/* Efectos de luz verde */}
       <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
@@ -92,7 +92,7 @@ export function LoginPage() {
               Grow Labs
             </span>
           </h1>
-          <p className="text-gray-300 text-lg flex items-center justify-center gap-2">
+          <p className="text-neutral-300 text-lg flex items-center justify-center gap-2">
             <Sparkles className="h-4 w-4 text-green-400" />
             Sistema de Gestión Inteligente
           </p>
@@ -198,7 +198,7 @@ export function LoginPage() {
 
             {/* Footer text */}
             <div className="mt-6 text-center">
-              <p className="text-gray-400 text-sm">
+              <p className="text-neutral-400 text-sm">
                 Powered by{' '}
                 <span className="text-green-400 font-semibold">Grow Labs</span>
               </p>
@@ -239,3 +239,5 @@ export function LoginPage() {
     </div>
   );
 }
+
+

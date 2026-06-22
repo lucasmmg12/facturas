@@ -603,8 +603,8 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         <div
           className="animate-spin rounded-full h-8 w-8 border-b-2"
           style={{
-            borderTopColor: 'rgba(34, 197, 94, 0.8)',
-            borderRightColor: 'rgba(34, 197, 94, 0.8)',
+            borderTopColor: 'var(--neutral-200)',
+            borderRightColor: 'var(--neutral-200)',
             borderBottomColor: 'transparent',
             borderLeftColor: 'transparent',
           }}
@@ -614,7 +614,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
   }
 
   if (!invoice) {
-    return <div className="p-8 text-center text-green-200">Comprobante no encontrado</div>;
+    return <div className="p-8 text-center text-neutral-500">Comprobante no encontrado</div>;
   }
 
   const tabs = [
@@ -631,13 +631,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
       <div
         className="px-8 py-6"
         style={{
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderBottom: '1px solid rgba(34, 197, 94, 0.3)',
+          background: 'var(--neutral-0)',
+          borderBottom: '1px solid var(--neutral-200)',
         }}
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-6">
-            <h2 className="text-2xl font-bold text-white">Editar Comprobante</h2>
+            <h2 className="text-2xl font-bold text-neutral-800">Editar Comprobante</h2>
             <StatusBadge status={invoice.status} />
           </div>
           <div className="flex items-center space-x-3">
@@ -646,22 +646,22 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               disabled={deleting}
               className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
               style={{
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8))',
-                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+                background: 'var(--primary-500)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <Trash2 className="h-4 w-4 text-white" />
-              <span className="text-white">{deleting ? 'Eliminando...' : 'Eliminar'}</span>
+              <Trash2 className="h-4 w-4 text-neutral-800" />
+              <span className="text-neutral-800">{deleting ? 'Eliminando...' : 'Eliminar'}</span>
             </button>
             <button
               onClick={onClose}
               className="px-5 py-2.5 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
               style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                background: 'var(--neutral-0)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <X className="h-4 w-4 text-white" />
+              <X className="h-4 w-4 text-neutral-800" />
               <span className="text-white">Cerrar</span>
             </button>
           </div>
@@ -670,14 +670,14 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         {/* Sección de Estado */}
         <div className="flex flex-col items-center space-y-3">
           <div className="flex items-center space-x-3">
-            <label className="text-sm font-medium text-green-300">Estado:</label>
+            <label className="text-sm font-medium text-neutral-500">Estado:</label>
             <select
               value={invoice.status}
               onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
-              className="px-4 py-2 rounded-lg text-sm text-white transition-all"
+              className="px-4 py-2 rounded-lg text-sm text-neutral-800 transition-all"
               style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                background: 'var(--neutral-0)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
               <option value="UPLOADED" style={{ background: '#1a1a1a' }}>Subido</option>
@@ -694,11 +694,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               disabled={saving}
               className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                background: 'var(--primary-500)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <Save className="h-4 w-4 text-white" />
+              <Save className="h-4 w-4 text-neutral-800" />
               <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
             </button>
             <button
@@ -706,11 +706,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               disabled={saving || invoice.status === 'READY_FOR_EXPORT' || invoice.status === 'EXPORTED'}
               className="px-6 py-2.5 rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-300 hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8))',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                background: 'var(--primary-500)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <CheckCircle2 className="h-4 w-4 text-white" />
+              <CheckCircle2 className="h-4 w-4 text-neutral-800" />
               <span className="text-white font-semibold">
                 {saving ? 'Guardando...' : 'Listo para Exportar'}
               </span>
@@ -719,7 +719,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
         </div>
       </div>
 
-      <div style={{ borderBottom: '1px solid rgba(34, 197, 94, 0.2)' }}>
+      <div style={{ borderBottom: '1px solid var(--neutral-200)' }}>
         <div className="px-8">
           <nav className="flex space-x-1">
             {tabs.map((tab) => (
@@ -727,13 +727,13 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-6 border-b-2 font-medium text-sm transition-all duration-300 ${activeTab === tab.id
-                  ? 'text-white'
-                  : 'text-green-300 hover:text-white'
+                  ? 'text-neutral-800'
+                  : 'text-neutral-500 hover:text-neutral-800'
                   }`}
                 style={
                   activeTab === tab.id
                     ? {
-                      borderBottomColor: 'rgba(34, 197, 94, 0.8)',
+                      borderBottomColor: 'var(--neutral-200)',
                     }
                     : {
                       borderBottomColor: 'transparent',
@@ -753,15 +753,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Información del Proveedor (Emisor)</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Información del Proveedor (Emisor)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Proveedor <span className="text-red-400">*</span>
                   </label>
                   <SupplierSearchSelect
@@ -788,33 +788,33 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     CUIT Emisor <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.supplier_cuit}
                     onChange={(e) => setInvoice({ ...invoice, supplier_cuit: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-neutral-200 focus:ring-primary-500 outline-none"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Razón Social Emisor <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.supplier_name}
                     onChange={(e) => setInvoice({ ...invoice, supplier_name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-neutral-200 focus:ring-primary-500 outline-none"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
@@ -824,40 +824,40 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(59, 130, 246, 0.3)', // Color distinto para el receptor
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Información del Receptor</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Información del Receptor</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-blue-300 mb-2">
+                  <label className="block text-sm font-medium text-primary-300 mb-2">
                     CUIT Receptor
                   </label>
                   <input
                     type="text"
                     value={invoice.receiver_cuit || '30609926860'}
                     onChange={(e) => setInvoice({ ...invoice, receiver_cuit: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-blue-500/20 focus:ring-blue-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-primary-500/20 focus:ring-primary-500/50 outline-none"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(59, 130, 246, 0.3)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-blue-300 mb-2">
+                  <label className="block text-sm font-medium text-primary-300 mb-2">
                     Razón Social Receptor
                   </label>
                   <input
                     type="text"
                     value={invoice.receiver_name || 'SANATORIO ARGENTINO S.R.L.'}
                     onChange={(e) => setInvoice({ ...invoice, receiver_name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-blue-500/20 focus:ring-blue-500/50 outline-none"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-primary-500/20 focus:ring-primary-500/50 outline-none"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(59, 130, 246, 0.3)',
                     }}
                   />
@@ -868,15 +868,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Datos del Comprobante</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Datos del Comprobante</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Tipo de Comprobante <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -884,10 +884,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     onChange={(e) =>
                       setInvoice({ ...invoice, invoice_type: e.target.value as any })
                     }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   >
                     {INVOICE_TYPES_OPTIONS.map((option) => (
@@ -899,7 +899,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Nro. de Comprobante <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -910,10 +910,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       onChange={(e) =>
                         setInvoice({ ...invoice, point_of_sale: e.target.value })
                       }
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                      className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                       style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        background: 'var(--neutral-0)',
+                        border: '1px solid var(--neutral-200)',
                       }}
                     />
                     <input
@@ -923,17 +923,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       onChange={(e) =>
                         setInvoice({ ...invoice, invoice_number: e.target.value })
                       }
-                      className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                      className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                       style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        background: 'var(--neutral-0)',
+                        border: '1px solid var(--neutral-200)',
                       }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Fecha de Emisión <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -948,32 +948,32 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         accounting_date: newIssueDate || invoice.accounting_date
                       });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Fecha Contable <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={invoice.accounting_date || invoice.issue_date || ''}
                     onChange={(e) => setInvoice({ ...invoice, accounting_date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Moneda CTE <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -981,16 +981,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     value="S"
                     readOnly
                     disabled
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all cursor-not-allowed opacity-70"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all cursor-not-allowed opacity-70"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Cotización
                   </label>
                   <input
@@ -1000,16 +1000,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     onChange={(e) =>
                       setInvoice({ ...invoice, exchange_rate: parseFloat(e.target.value) || 1 })
                     }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Condición de Compra <span className="text-red-400">*</span>
                   </label>
                   <SearchableSelect
@@ -1041,15 +1041,15 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Importes Base</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Importes Base</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Subtotal Gravado <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1059,16 +1059,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({ ...invoice, net_taxed: parseFloat(value) || 0 });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Subtotal No Gravado
                   </label>
                   <input
@@ -1078,10 +1078,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({ ...invoice, net_untaxed: parseFloat(value) || 0 });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
@@ -1089,7 +1089,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     IVA
                   </label>
                   <input
@@ -1099,16 +1099,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({ ...invoice, iva_amount: parseFloat(value) || 0 });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Otros Impuestos
                   </label>
                   <input
@@ -1121,16 +1121,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         other_taxes_amount: parseFloat(value) || 0,
                       });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
-                <div className="md:col-span-2 pt-4" style={{ borderTop: '1px solid rgba(34, 197, 94, 0.2)' }}>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                <div className="md:col-span-2 pt-4" style={{ borderTop: '1px solid var(--neutral-200)' }}>
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Total <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1140,16 +1140,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       const value = e.target.value.replace(/\./g, '').replace(',', '.');
                       setInvoice({ ...invoice, total_amount: parseFloat(value) || 0 });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white font-bold text-xl transition-all ring-2 ring-green-500/30 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 font-bold text-xl transition-all ring-2 ring-green-500/30 focus:ring-green-500 outline-none"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(34, 197, 94, 0.5)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Crédito Fiscal No Computable
                   </label>
                   <input
@@ -1162,10 +1162,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         non_computable_tax_credit: parseFloat(value) || 0,
                       });
                     }}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
@@ -1180,16 +1180,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Asignar Impuesto</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Asignar Impuesto</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Código de Impuesto (Alícuota)
                   </label>
                   <SearchableSelect
@@ -1210,7 +1210,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Base Imponible
                   </label>
                   <input
@@ -1219,16 +1219,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     placeholder="0.00"
                     value={taxBase}
                     onChange={(e) => setTaxBase(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Importe del Impuesto
                   </label>
                   <div className="flex space-x-2">
@@ -1238,19 +1238,19 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       placeholder="0.00"
                       value={taxAmount}
                       onChange={(e) => setTaxAmount(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                      className="flex-1 px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-neutral-200 focus:ring-primary-500 outline-none"
                       style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        background: 'var(--neutral-0)',
+                        border: '1px solid var(--neutral-200)',
                       }}
                     />
                     <button
                       onClick={handleAddTax}
                       disabled={!selectedTaxCodeId || !taxAmount}
-                      className="px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all duration-300 hover:scale-105"
+                      className="px-4 py-2 text-neutral-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all duration-300 hover:scale-105"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                        boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                        background: 'var(--primary-500)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
                       <Plus className="h-4 w-4" />
@@ -1262,12 +1262,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <div
                 className="mt-4 p-4 rounded-lg"
                 style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  background: 'var(--neutral-200)',
+                  border: '1px solid var(--neutral-200)',
                 }}
               >
-                <p className="text-xs text-green-200">
-                  💡 <strong className="text-white">Auto-cálculo inteligente:</strong> Al seleccionar un impuesto con alícuota conocida (ej: IVA 21%),
+                <p className="text-xs text-neutral-500">
+                  💡 <strong className="text-neutral-800">Auto-cálculo inteligente:</strong> Al seleccionar un impuesto con alícuota conocida (ej: IVA 21%),
                   la base imponible y el monto se calculan automáticamente desde el subtotal gravado. Puedes modificar los valores si es necesario.
                 </p>
               </div>
@@ -1277,12 +1277,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Impuestos Asignados</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Impuestos Asignados</h3>
 
               <div className="space-y-2">
                 {invoiceTaxes.map((tax) => (
@@ -1290,22 +1290,22 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     key={tax.id}
                     className="flex items-center justify-between p-4 rounded-lg transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   >
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-neutral-800">
                         {tax.tax_codes?.tango_code} - {tax.tax_codes?.description}
                       </div>
                       {tax.tax_base > 0 && (
-                        <div className="text-xs text-green-200">
+                        <div className="text-xs text-neutral-500">
                           Base imponible: ${tax.tax_base.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </div>
                       )}
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-neutral-800">
                         ${tax.tax_amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </span>
                       <button
@@ -1319,17 +1319,17 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 ))}
 
                 {invoiceTaxes.length === 0 && (
-                  <p className="text-sm text-green-200 text-center py-8">
+                  <p className="text-sm text-neutral-500 text-center py-8">
                     No hay impuestos asignados
                   </p>
                 )}
               </div>
 
               {invoiceTaxes.length > 0 && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--neutral-200)' }}>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-green-300">Total Impuestos:</span>
-                    <span className="text-lg font-bold text-white">
+                    <span className="text-sm font-medium text-neutral-500">Total Impuestos:</span>
+                    <span className="text-lg font-bold text-neutral-800">
                       ${invoiceTaxes.reduce((sum, tax) => sum + tax.tax_amount, 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -1344,12 +1344,12 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Factura Electrónica</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Factura Electrónica</h3>
               <div className="space-y-4">
                 <div>
                   <label className="flex items-center space-x-2">
@@ -1359,33 +1359,33 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                       onChange={(e) =>
                         setInvoice({ ...invoice, is_electronic: e.target.checked })
                       }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-green-300">
+                    <span className="text-sm font-medium text-neutral-500">
                       Es Factura Electrónica
                     </span>
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     CAI / CAE
                   </label>
                   <input
                     type="text"
                     value={invoice.cai_cae || ''}
                     onChange={(e) => setInvoice({ ...invoice, cai_cae: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                     placeholder="Código de Autorización Electrónica (se extrae automáticamente)"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Fecha de Vencimiento del CAI / CAE
                   </label>
                   <input
@@ -1394,10 +1394,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     onChange={(e) =>
                       setInvoice({ ...invoice, cai_cae_expiration: e.target.value })
                     }
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                 </div>
@@ -1411,53 +1411,53 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-2 text-lg">Códigos de Clasificación</h3>
-              <p className="text-sm text-green-300 mb-6">
+              <h3 className="font-semibold text-neutral-800 mb-2 text-lg">Códigos de Clasificación</h3>
+              <p className="text-sm text-neutral-500 mb-6">
                 Estos códigos corresponden a las columnas finales del Excel de Tango Gestión
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Código de Gasto */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Código de Gasto
-                    <span className="ml-2 text-xs text-gray-400">(Columna U)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna U)</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.expense_code || ''}
                     onChange={(e) => setInvoice({ ...invoice, expense_code: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                     placeholder="S/C, 0, 2 o vacío"
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Valores válidos: S/C, 0, 2. Se asigna desde conceptos.
                   </p>
                 </div>
 
                 {/* Código de Sector */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Código de Sector
-                    <span className="ml-2 text-xs text-gray-400">(Columna V)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna V)</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.sector_code || '2'}
                     onChange={(e) => setInvoice({ ...invoice, sector_code: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                     placeholder="2"
                   />
@@ -1468,110 +1468,110 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
                 {/* Código de Clasificador - READ ONLY */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Código de Clasificador
-                    <span className="ml-2 text-xs text-gray-400">(Columna W)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna W)</span>
                     <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.classifier_code || ''}
                     readOnly
-                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.5)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Vacío (no editable)
                   </p>
                 </div>
 
                 {/* Tipo de Operación AFIP - READ ONLY */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Tipo de Operación AFIP
-                    <span className="ml-2 text-xs text-gray-400">(Columna X)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna X)</span>
                     <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.afip_operation_type_code || ''}
                     readOnly
-                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.5)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Vacío (no editable)
                   </p>
                 </div>
 
                 {/* Código Comprobante AFIP - READ ONLY */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Código de Comprobante AFIP
-                    <span className="ml-2 text-xs text-gray-400">(Columna Y)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna Y)</span>
                     <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.afip_voucher_code || '001'}
                     readOnly
-                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.5)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     001=Factura, 011=N/C, 012=N/D (según tipo)
                   </p>
                 </div>
 
                 {/* Sucursal Destino - READ ONLY */}
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Nro. de Sucursal Destino
-                    <span className="ml-2 text-xs text-gray-400">(Columna Z)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna Z)</span>
                     <span className="ml-2 text-xs text-yellow-400">● Automático</span>
                   </label>
                   <input
                     type="text"
                     value={invoice.destination_branch_number || '0'}
                     readOnly
-                    className="w-full px-4 py-3 rounded-lg text-gray-400 transition-all cursor-not-allowed"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-400 transition-all cursor-not-allowed"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.5)',
+                      background: 'var(--neutral-0)',
                       border: '1px solid rgba(100, 100, 100, 0.3)',
                     }}
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Siempre 0 (no se utiliza)
                   </p>
                 </div>
 
                 {/* Observaciones */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Observaciones
-                    <span className="ml-2 text-xs text-gray-400">(Columna AA)</span>
+                    <span className="ml-2 text-xs text-neutral-400">(Columna AA)</span>
                   </label>
                   <textarea
                     value={invoice.observations || ''}
                     onChange={(e) => setInvoice({ ...invoice, observations: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                    className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                     placeholder="Observaciones adicionales (campo libre)..."
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Campo totalmente libre, puede ir vacío
                   </p>
                 </div>
@@ -1582,7 +1582,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 background: 'rgba(59, 130, 246, 0.1)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
               }}>
-                <p className="text-sm text-blue-300">
+                <p className="text-sm text-primary-300">
                   <strong>ℹ️ Información:</strong> Los campos marcados con <span className="text-yellow-400">● Automático</span> se completan automáticamente según el tipo de comprobante y no deben modificarse manualmente.
                 </p>
               </div>
@@ -1596,28 +1596,28 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-white text-lg">Asignar Concepto</h3>
+                <h3 className="font-semibold text-neutral-800 text-lg">Asignar Concepto</h3>
                 {invoice && (
                   <div className="text-sm">
-                    <span className="text-green-300">Total Factura: </span>
-                    <span className="font-bold text-white">
+                    <span className="text-neutral-500">Total Factura: </span>
+                    <span className="font-bold text-neutral-800">
                       ${invoice.total_amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                     {invoiceConcepts.length > 0 && (
                       <>
                         <span className="mx-2 text-green-400">|</span>
-                        <span className="text-green-300">Asignado: </span>
+                        <span className="text-neutral-500">Asignado: </span>
                         <span className="font-medium text-green-400">
                           ${getTotalAssignedConcepts().toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </span>
                         <span className="mx-2 text-green-400">|</span>
-                        <span className="text-green-300">Disponible: </span>
+                        <span className="text-neutral-500">Disponible: </span>
                         <span className={`font-medium ${getAvailableAmount() > 0 ? 'text-green-400' : 'text-red-400'}`}>
                           ${getAvailableAmount().toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </span>
@@ -1629,7 +1629,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Concepto
                   </label>
                   <SearchableSelect
@@ -1651,7 +1651,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-green-300 mb-2">
+                  <label className="block text-sm font-medium text-neutral-500 mb-2">
                     Importe
                   </label>
                   <div className="flex space-x-2">
@@ -1662,10 +1662,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         placeholder="0.00"
                         value={conceptAmount}
                         onChange={(e) => handleConceptAmountChange(e.target.value)}
-                        className={`w-full px-4 py-3 rounded-lg text-white transition-all outline-none ${conceptError ? 'ring-2 ring-red-500/50' : 'ring-1 ring-green-500/20 focus:ring-green-500/50'}`}
+                        className={`w-full px-4 py-3 rounded-lg text-neutral-800 transition-all outline-none ${conceptError ? 'ring-2 ring-red-500/50' : 'ring-1 ring-neutral-200 focus:ring-primary-500'}`}
                         style={{
-                          background: 'rgba(0, 0, 0, 0.3)',
-                          border: `1px solid ${conceptError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.3)'}`,
+                          background: 'var(--neutral-0)',
+                          border: `1px solid ${conceptError ? 'rgba(239, 68, 68, 0.5)' : 'var(--neutral-200)'}`,
                         }}
                       />
                       {conceptError && (
@@ -1675,10 +1675,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     <button
                       onClick={handleAddConcept}
                       disabled={!selectedConceptId || !conceptAmount || !!conceptError}
-                      className="px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all duration-300 hover:scale-105"
+                      className="px-4 py-2 text-neutral-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all duration-300 hover:scale-105"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                        boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                        background: 'var(--primary-500)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
                       <Plus className="h-4 w-4" />
@@ -1690,11 +1690,11 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               <div
                 className="mt-4 p-4 rounded-lg"
                 style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  background: 'var(--neutral-200)',
+                  border: '1px solid var(--neutral-200)',
                 }}
               >
-                <p className="text-xs text-green-200">
+                <p className="text-xs text-neutral-500">
                   💡 El importe se completa automáticamente con el saldo disponible. Puedes editarlo según tus necesidades.
                 </p>
               </div>
@@ -1704,16 +1704,16 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-white text-lg">Conceptos Asignados</h3>
+                <h3 className="font-semibold text-neutral-800 text-lg">Conceptos Asignados</h3>
                 <button
                   onClick={() => setShowNewConceptForm(!showNewConceptForm)}
-                  className="text-sm text-green-400 hover:text-green-300 flex items-center space-x-1 transition-colors"
+                  className="text-sm text-green-400 hover:text-neutral-500 flex items-center space-x-1 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Crear Nuevo Concepto</span>
@@ -1724,20 +1724,20 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 <div
                   className="mb-4 p-4 rounded-lg space-y-3"
                   style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    background: 'var(--neutral-0)',
+                    border: '1px solid var(--neutral-200)',
                   }}
                 >
-                  <h4 className="text-sm font-medium text-white">Crear Nuevo Concepto Tango</h4>
+                  <h4 className="text-sm font-medium text-neutral-800">Crear Nuevo Concepto Tango</h4>
                   <input
                     type="text"
                     placeholder="Código Tango (ej: 010101)"
                     value={newConceptCode}
                     onChange={(e) => setNewConceptCode(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                    className="w-full px-3 py-2 rounded-lg text-sm text-neutral-800"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                   <input
@@ -1745,19 +1745,19 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     placeholder="Descripción del concepto"
                     value={newConceptDesc}
                     onChange={(e) => setNewConceptDesc(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-sm text-white"
+                    className="w-full px-3 py-2 rounded-lg text-sm text-neutral-800"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   />
                   <div className="flex space-x-2">
                     <button
                       onClick={handleCreateConcept}
-                      className="flex-1 px-3 py-2 text-white rounded-lg text-sm transition-all duration-300 hover:scale-105"
+                      className="flex-1 px-3 py-2 text-neutral-800 rounded-lg text-sm transition-all duration-300 hover:scale-105"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(16, 185, 129, 0.8))',
-                        boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                        background: 'var(--primary-500)',
+                        boxShadow: 'var(--shadow-sm)',
                       }}
                     >
                       Crear y Agregar a la Lista
@@ -1768,10 +1768,10 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                         setNewConceptCode('');
                         setNewConceptDesc('');
                       }}
-                      className="px-3 py-2 rounded-lg text-sm text-white transition-all"
+                      className="px-3 py-2 rounded-lg text-sm text-neutral-800 transition-all"
                       style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        background: 'var(--neutral-0)',
+                        border: '1px solid var(--neutral-200)',
                       }}
                     >
                       Cancelar
@@ -1786,18 +1786,18 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                     key={ic.id}
                     className="flex items-center justify-between p-4 rounded-lg transition-all"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      background: 'var(--neutral-0)',
+                      border: '1px solid var(--neutral-200)',
                     }}
                   >
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-neutral-800">
                         {ic.tango_concepts.tango_concept_code}
                       </div>
-                      <div className="text-xs text-green-200">{ic.tango_concepts.description}</div>
+                      <div className="text-xs text-neutral-500">{ic.tango_concepts.description}</div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-neutral-800">
                         ${ic.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </span>
                       <button
@@ -1811,7 +1811,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
                 ))}
 
                 {invoiceConcepts.length === 0 && (
-                  <p className="text-sm text-green-200 text-center py-8">
+                  <p className="text-sm text-neutral-500 text-center py-8">
                     No hay conceptos asignados
                   </p>
                 )}
@@ -1821,20 +1821,20 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
             <div
               className="rounded-xl p-8 shadow-2xl"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--neutral-0)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                border: '1px solid var(--neutral-200)',
               }}
             >
-              <h3 className="font-semibold text-white mb-6 text-lg">Notas Internas</h3>
+              <h3 className="font-semibold text-neutral-800 mb-6 text-lg">Notas Internas</h3>
               <textarea
                 value={invoice.notes || ''}
                 onChange={(e) => setInvoice({ ...invoice, notes: e.target.value })}
                 rows={4}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all ring-1 ring-green-500/20 focus:ring-green-500/50 outline-none"
+                className="w-full px-4 py-3 rounded-lg text-neutral-800 transition-all ring-1 ring-neutral-200 focus:ring-primary-500 outline-none"
                 style={{
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  background: 'var(--neutral-0)',
+                  border: '1px solid var(--neutral-200)',
                 }}
                 placeholder="Notas adicionales de uso interno..."
               />
@@ -1857,3 +1857,5 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     </div>
   );
 }
+
+

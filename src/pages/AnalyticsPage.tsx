@@ -28,20 +28,20 @@ interface KPICardProps {
 
 function KPICard({ title, value, subtitle, icon: Icon, trend }: KPICardProps) {
     return (
-        <div className="glass-card p-6 relative overflow-hidden group hover:border-grow-neon/50 transition-all duration-500">
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-grow-neon/5 blur-3xl rounded-full group-hover:bg-grow-neon/10 transition-all" />
+        <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-6 relative overflow-hidden group hover:border-primary-500/50 transition-all duration-500">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary-50 blur-3xl rounded-full group-hover:bg-primary-50 transition-all" />
             <div className="flex items-start justify-between">
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-grow-muted mb-2">{title}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-2">{title}</p>
                     <h3 className="text-3xl font-black text-white tracking-tighter mb-1">{value}</h3>
-                    <p className="text-xs text-grow-muted font-bold tracking-wide uppercase">{subtitle}</p>
+                    <p className="text-xs text-neutral-500 font-bold tracking-wide uppercase">{subtitle}</p>
                 </div>
-                <div className="bg-grow-neon/10 p-3 rounded-2xl border border-grow-neon/20">
-                    <Icon className="w-6 h-6 text-grow-neon" />
+                <div className="bg-primary-50 p-3 rounded-2xl border border-primary-200">
+                    <Icon className="w-6 h-6 text-primary-500" />
                 </div>
             </div>
             {trend && (
-                <div className={`mt-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-red-400' : 'text-grow-neon'}`}>
+                <div className={`mt-4 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${trend.isUp ? 'text-red-400' : 'text-primary-500'}`}>
                     {trend.isUp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     {trend.value}% vs Mes ant.
                 </div>
@@ -59,13 +59,13 @@ interface NarrativeItemProps {
 
 function NarrativeItem({ icon: Icon, color, title, description }: NarrativeItemProps) {
     return (
-        <div className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+        <div className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-neutral-200 hover:bg-white/[0.04] transition-all">
             <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${color}20`, border: `1px solid ${color}40` }}>
                 <Icon className="w-5 h-5" style={{ color }} />
             </div>
             <div>
                 <h4 className="text-sm font-black text-white uppercase tracking-tight mb-1">{title}</h4>
-                <p className="text-xs text-grow-muted leading-relaxed">{description}</p>
+                <p className="text-xs text-neutral-500 leading-relaxed">{description}</p>
             </div>
         </div>
     );
@@ -132,8 +132,8 @@ export function AnalyticsPage() {
     if (loading && !stats) {
         return (
             <div className="flex flex-col items-center justify-center p-20 text-center">
-                <div className="w-12 h-12 border-4 border-grow-neon/20 border-t-grow-neon rounded-full animate-spin mb-6" />
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-grow-muted">Sincronizando Inteligencia...</p>
+                <div className="w-12 h-12 border-4 border-primary-200 border-t-grow-neon rounded-full animate-spin mb-6" />
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-neutral-500">Sincronizando Inteligencia...</p>
             </div>
         );
     }
@@ -144,18 +144,18 @@ export function AnalyticsPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Intelligence Hub</h2>
-                    <p className="text-xs text-grow-muted font-bold uppercase tracking-widest mt-2">
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-2">
                         Análisis predictivo y auditoría de flujo financiero
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex bg-black/40 p-1.5 rounded-full border border-grow-border">
+                    <div className="flex bg-white p-1.5 rounded-full border border-grow-border">
                         {(['diario', 'semanal', 'mensual', 'anual'] as Period[]).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPeriod(p)}
-                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-grow-neon text-black shadow-neon' : 'text-grow-muted hover:text-white'
+                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-primary-500 text-black shadow-sm' : 'text-neutral-500 hover:text-white'
                                     }`}
                             >
                                 {p}
@@ -165,7 +165,7 @@ export function AnalyticsPage() {
 
                     <button
                         onClick={downloadPDF}
-                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
+                        className="flex items-center gap-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
                     >
                         <Download className="w-4 h-4" />
                         Exportar PDF
@@ -206,19 +206,19 @@ export function AnalyticsPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Main Chart: Spend Trend */}
-                    <div className="glass-card p-8 flex flex-col h-[400px]">
+                    <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 flex flex-col h-[400px]">
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-grow-neon" />
+                                    <Calendar className="w-4 h-4 text-primary-500" />
                                     Evolución Temporal de Gastos
                                 </h4>
-                                <p className="text-[10px] text-grow-muted font-bold uppercase tracking-widest mt-1">
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">
                                     Tendencia de inversión neta por periodo
                                 </p>
                             </div>
-                            <div className="bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/5">
-                                <p className="text-[9px] font-black text-grow-neon uppercase">Visualización Dinámica</p>
+                            <div className="bg-white/[0.03] px-3 py-1.5 rounded-lg border border-neutral-200">
+                                <p className="text-[9px] font-black text-primary-500 uppercase">Visualización Dinámica</p>
                             </div>
                         </div>
 
@@ -266,14 +266,14 @@ export function AnalyticsPage() {
                     </div>
 
                     {/* Secondary Chart: Supplier Split */}
-                    <div className="glass-card p-8 flex flex-col h-[400px]">
+                    <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 flex flex-col h-[400px]">
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                                     <Target className="w-4 h-4 text-cyan-400" />
                                     Distribución por Proveedores
                                 </h4>
-                                <p className="text-[10px] text-grow-muted font-bold uppercase tracking-widest mt-1">
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">
                                     Top 5 proveedores con mayor impacto
                                 </p>
                             </div>
@@ -314,14 +314,14 @@ export function AnalyticsPage() {
                 </div>
 
                 {/* Narrative Section (Opción C) */}
-                <div className="glass-card p-8">
+                <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="bg-grow-neon text-black p-2 rounded-lg">
+                        <div className="bg-primary-500 text-black p-2 rounded-lg">
                             <Info className="w-5 h-5 font-black" />
                         </div>
                         <div>
                             <h4 className="text-lg font-black text-white tracking-tight uppercase">Intelligence Narrative</h4>
-                            <p className="text-[10px] text-grow-muted font-bold uppercase tracking-widest mt-1">
+                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">
                                 Análisis automático de anomalías y sugerencias tácticas
                             </p>
                         </div>
@@ -362,3 +362,4 @@ export function AnalyticsPage() {
         </div>
     );
 }
+

@@ -40,16 +40,16 @@ export function ConfirmModal({
   const buttonColors = {
     red: 'bg-red-600 hover:bg-red-700',
     green: 'bg-green-600 hover:bg-green-700',
-    blue: 'bg-blue-600 hover:bg-blue-700',
+    blue: 'bg-primary-600 hover:bg-primary-700',
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-50 bg-opacity-70 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-gray-900 rounded-lg shadow-2xl border border-green-600 border-opacity-30 max-w-md w-full mx-4 transform transition-all"
+        className="bg-neutral-900 rounded-lg shadow-2xl border border-green-600 border-opacity-30 max-w-md w-full mx-4 transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -58,7 +58,7 @@ export function ConfirmModal({
           {!isLoading && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-neutral-400 hover:text-white transition-colors"
               type="button"
             >
               <X size={24} />
@@ -68,7 +68,7 @@ export function ConfirmModal({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-gray-300 text-base leading-relaxed">{message}</p>
+          <p className="text-neutral-300 text-base leading-relaxed">{message}</p>
         </div>
 
         {/* Footer */}
@@ -76,7 +76,7 @@ export function ConfirmModal({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-6 py-2.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-lg bg-neutral-700 text-white hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             type="button"
           >
             {cancelText}
@@ -94,4 +94,6 @@ export function ConfirmModal({
     </div>
   );
 }
+
+
 

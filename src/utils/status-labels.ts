@@ -13,11 +13,11 @@ export const STATUS_LABELS: Record<InvoiceStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  UPLOADED: 'bg-white/5 text-grow-muted border border-white/10',
+  UPLOADED: 'bg-neutral-50 text-neutral-500 border border-neutral-200',
   PROCESSED: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
   PENDING_REVIEW: 'bg-red-500/10 text-red-500 border border-red-500/20',
-  READY_FOR_EXPORT: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  EXPORTED: 'bg-grow-neon/10 text-grow-neon border border-grow-neon/20',
+  READY_FOR_EXPORT: 'bg-primary-500/10 text-primary-400 border border-primary-500/20',
+  EXPORTED: 'bg-primary-50 text-primary-500 border border-primary-200',
   ERROR: 'bg-white text-black border border-white shadow-[0_0_10px_rgba(255,255,255,0.5)]',
 };
 
@@ -26,6 +26,8 @@ export function getStatusLabel(status: InvoiceStatus): string {
 }
 
 export function getStatusColor(status: InvoiceStatus): string {
-  return STATUS_COLORS[status] || 'bg-gray-100 text-gray-800';
+  return STATUS_COLORS[status] || 'bg-neutral-100 text-neutral-800';
 }
+
+
 

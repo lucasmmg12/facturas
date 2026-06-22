@@ -94,7 +94,7 @@ export function UsersManagementPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h2>
+        <h2 className="text-2xl font-bold text-neutral-900">Gestión de Usuarios</h2>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -109,7 +109,7 @@ export function UsersManagementPage() {
           <h3 className="text-lg font-semibold mb-4">Crear Nuevo Usuario</h3>
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Nombre Completo
               </label>
               <input
@@ -117,11 +117,11 @@ export function UsersManagementPage() {
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Email
               </label>
               <input
@@ -129,11 +129,11 @@ export function UsersManagementPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Contraseña
               </label>
               <input
@@ -142,17 +142,17 @@ export function UsersManagementPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Rol
               </label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
                 <option value="CARGA">Carga</option>
                 <option value="REVISION">Revisión</option>
@@ -172,18 +172,18 @@ export function UsersManagementPage() {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-neutral-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-neutral-200">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user.id} className="hover:bg-neutral-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingUserId === user.id ? (
                       <input
@@ -194,13 +194,13 @@ export function UsersManagementPage() {
                             handleUpdateUser(user.id, { full_name: e.target.value });
                           }
                         }}
-                        className="px-2 py-1 border border-gray-300 rounded"
+                        className="px-2 py-1 border border-neutral-300 rounded"
                       />
                     ) : (
-                      <span className="text-sm font-medium text-gray-900">{user.full_name}</span>
+                      <span className="text-sm font-medium text-neutral-900">{user.full_name}</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">{user.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingUserId === user.id ? (
                       <select
@@ -210,14 +210,14 @@ export function UsersManagementPage() {
                             handleUpdateUser(user.id, { role: e.target.value as UserRole });
                           }
                         }}
-                        className="px-2 py-1 border border-gray-300 rounded"
+                        className="px-2 py-1 border border-neutral-300 rounded"
                       >
                         <option value="CARGA">Carga</option>
                         <option value="REVISION">Revisión</option>
                         <option value="EXPORTACION">Exportación</option>
                       </select>
                     ) : (
-                      <span className="text-sm text-gray-900">{getRoleLabel(user.role)}</span>
+                      <span className="text-sm text-neutral-900">{getRoleLabel(user.role)}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -238,7 +238,7 @@ export function UsersManagementPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingUserId(null)}
-                          className="text-gray-600 hover:text-gray-900"
+                          className="text-neutral-600 hover:text-neutral-900"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -247,7 +247,7 @@ export function UsersManagementPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingUserId(user.id)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-primary-600 hover:text-primary-900"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -269,4 +269,5 @@ export function UsersManagementPage() {
     </div>
   );
 }
+
 

@@ -76,12 +76,12 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
   return (
     <div className="space-y-4">
       {/* Selector de Modo */}
-      <div className="flex p-1 bg-black/40 border border-white/5 rounded-2xl w-fit mx-auto lg:mx-0">
+      <div className="flex p-1 bg-white border border-neutral-200 rounded-2xl w-fit mx-auto lg:mx-0">
         <button
           onClick={() => setUploadMode('files')}
           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${uploadMode === 'files'
-              ? 'bg-grow-neon text-black shadow-neon'
-              : 'text-grow-muted hover:text-white'
+              ? 'bg-primary-500 text-black shadow-sm'
+              : 'text-neutral-500 hover:text-white'
             }`}
         >
           ARCHIVOS
@@ -89,8 +89,8 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
         <button
           onClick={() => setUploadMode('folder')}
           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${uploadMode === 'folder'
-              ? 'bg-grow-neon text-black shadow-neon'
-              : 'text-grow-muted hover:text-white'
+              ? 'bg-primary-500 text-black shadow-sm'
+              : 'text-neutral-500 hover:text-white'
             }`}
         >
           CARPETA
@@ -107,15 +107,15 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
           relative border-2 border-dashed rounded-3xl p-12 text-center cursor-pointer
           transition-all duration-500 group overflow-hidden
           ${isDragging
-            ? 'border-grow-neon bg-grow-neon/5 shadow-[0_0_50px_rgba(34,197,94,0.1)]'
-            : 'border-white/10 hover:border-grow-neon/30 bg-white/[0.01]'
+            ? 'border-primary-500 bg-primary-50 shadow-[0_0_50px_rgba(34,197,94,0.1)]'
+            : 'border-neutral-200 hover:border-primary-300 bg-white/[0.01]'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
         `}
       >
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-grow-neon/5 blur-[60px] -mr-16 -mt-16 group-hover:bg-grow-neon/10 transition-colors" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-grow-neon/5 blur-[60px] -ml-16 -mb-16 group-hover:bg-grow-neon/10 transition-colors" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 blur-[60px] -mr-16 -mt-16 group-hover:bg-primary-50 transition-colors" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary-50 blur-[60px] -ml-16 -mb-16 group-hover:bg-primary-50 transition-colors" />
 
         {/* Hidden Inputs */}
         <input
@@ -137,16 +137,16 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
 
         <div className="relative flex flex-col items-center space-y-6">
           <div className="relative">
-            <div className="absolute inset-0 bg-grow-neon/20 blur-2xl rounded-full scale-150 animate-pulse" />
-            <div className="relative p-6 rounded-2xl bg-black/40 border border-white/10 shadow-2xl group-hover:border-grow-neon/30 transition-all">
+            <div className="absolute inset-0 bg-primary-100 blur-2xl rounded-full scale-150 animate-pulse" />
+            <div className="relative p-6 rounded-2xl bg-white border border-neutral-200 shadow-2xl group-hover:border-primary-300 transition-all">
               {uploadMode === 'files' ? (
                 <div className="flex -space-x-3">
-                  <FileText className="h-10 w-10 text-grow-neon" />
+                  <FileText className="h-10 w-10 text-primary-500" />
                   <Upload className="h-10 w-10 text-white translate-y-1" />
                 </div>
               ) : (
                 <div className="flex -space-x-2">
-                  <FolderOpen className="h-10 w-10 text-grow-neon" />
+                  <FolderOpen className="h-10 w-10 text-primary-500" />
                   <Upload className="h-10 w-10 text-white translate-y-1" />
                 </div>
               )}
@@ -157,7 +157,7 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
             <h4 className="text-lg font-black text-white tracking-widest uppercase italic">
               {isDragging ? 'SOLTAR AHORA' : uploadMode === 'files' ? 'CARGAR ARCHIVOS' : 'CARGAR CARPETA'}
             </h4>
-            <p className="text-[10px] font-bold text-grow-muted uppercase tracking-[0.3em]">
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em]">
               {uploadMode === 'files'
                 ? 'Arrastra PDFs o imágenes para iniciar secuencia'
                 : 'Selecciona una carpeta para escaneo masivo'
@@ -166,13 +166,13 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
           </div>
 
           {!disabled && (
-            <div className="pt-4 flex items-center gap-4 text-grow-muted">
-              <div className="h-[1px] w-8 bg-white/5" />
+            <div className="pt-4 flex items-center gap-4 text-neutral-500">
+              <div className="h-[1px] w-8 bg-neutral-50" />
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="w-3 h-3" />
                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">Máximo 20MB por archivo</span>
               </div>
-              <div className="h-[1px] w-8 bg-white/5" />
+              <div className="h-[1px] w-8 bg-neutral-50" />
             </div>
           )}
         </div>
@@ -180,3 +180,4 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
     </div>
   );
 }
+

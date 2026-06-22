@@ -15,8 +15,9 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${colorClasses}`}
     >
-      <span className={`w-1 h-1 rounded-full ${status === 'ERROR' ? 'bg-black' : 'bg-current'}`} />
+      <span className={`w-1 h-1 rounded-full ${status === 'ERROR' ? 'bg-neutral-50' : 'bg-current'}`} />
       {getStatusLabel(status)}
     </span>
   );
 }
+

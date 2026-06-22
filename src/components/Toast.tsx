@@ -36,14 +36,14 @@ export function ToastComponent({ toast, onClose }: ToastProps) {
     success: <CheckCircle className="text-green-400" size={20} />,
     error: <XCircle className="text-red-400" size={20} />,
     warning: <AlertCircle className="text-yellow-400" size={20} />,
-    info: <Info className="text-blue-400" size={20} />,
+    info: <Info className="text-primary-400" size={20} />,
   };
 
   const colors = {
     success: 'border-green-500 bg-green-500 bg-opacity-10',
     error: 'border-red-500 bg-red-500 bg-opacity-10',
     warning: 'border-yellow-500 bg-yellow-500 bg-opacity-10',
-    info: 'border-blue-500 bg-blue-500 bg-opacity-10',
+    info: 'border-primary-500 bg-primary-500 bg-opacity-10',
   };
 
   return (
@@ -63,7 +63,7 @@ export function ToastComponent({ toast, onClose }: ToastProps) {
           setIsVisible(false);
           setTimeout(() => onClose(toast.id), 300);
         }}
-        className="text-gray-400 hover:text-white transition-colors"
+        className="text-neutral-400 hover:text-white transition-colors"
         type="button"
       >
         <X size={18} />
@@ -88,4 +88,5 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
     </div>
   );
 }
+
 

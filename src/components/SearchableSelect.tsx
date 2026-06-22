@@ -201,7 +201,7 @@ export function SearchableSelect<T>({
                         (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
                     ) && (
                             <div className="px-4 py-2 text-xs text-center bg-green-600 bg-opacity-20 border-b border-green-600 border-opacity-30">
-                                <span className="text-green-400">✓ Código encontrado</span> - Presiona <kbd className="px-1.5 py-0.5 bg-black bg-opacity-50 rounded text-white font-mono text-xs">Enter</kbd> o <kbd className="px-1.5 py-0.5 bg-black bg-opacity-50 rounded text-white font-mono text-xs">Tab</kbd> para seleccionar
+                                <span className="text-green-400">✓ Código encontrado</span> - Presiona <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-white font-mono text-xs">Enter</kbd> o <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-white font-mono text-xs">Tab</kbd> para seleccionar
                             </div>
                         )}
 
@@ -248,3 +248,4 @@ export function SearchableSelect<T>({
         </div>
     );
 }
+

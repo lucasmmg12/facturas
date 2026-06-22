@@ -169,9 +169,9 @@ export function ChangelogPage() {
       case 'fix':
         return <Bug className="h-4 w-4 text-red-500" />;
       case 'improvement':
-        return <Zap className="h-4 w-4 text-blue-400" />;
+        return <Zap className="h-4 w-4 text-primary-400" />;
       default:
-        return <CheckCircle className="h-4 w-4 text-gray-400" />;
+        return <CheckCircle className="h-4 w-4 text-neutral-400" />;
     }
   };
 
@@ -195,16 +195,16 @@ export function ChangelogPage() {
       case 'fix':
         return 'bg-red-500/10 text-red-400 border border-red-500/20';
       case 'improvement':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+        return 'bg-primary-500/10 text-primary-400 border border-primary-500/20';
       default:
-        return 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
+        return 'bg-neutral-500/10 text-neutral-400 border border-neutral-500/20';
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white space-y-8 p-4 md:p-8">
+    <div className="min-h-screen bg-neutral-50 text-white space-y-8 p-4 md:p-8">
       {/* Header Estilo GrowLabs */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#00FF88]/10 to-transparent p-8 border border-white/10">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#00FF88]/10 to-transparent p-8 border border-neutral-200">
         <div className="absolute top-0 right-0 p-8 opacity-20">
           <Sparkles className="h-24 w-24 text-[#00FF88]" />
         </div>
@@ -233,7 +233,7 @@ export function ChangelogPage() {
 
             <div className="flex items-start space-x-6">
               {/* Círculo de la versión */}
-              <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-black border-2 border-[#00FF88] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,136,0.2)] group-hover:shadow-[0_0_25px_rgba(0,255,136,0.4)] transition-all duration-300">
+              <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-neutral-50 border-2 border-[#00FF88] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,136,0.2)] group-hover:shadow-[0_0_25px_rgba(0,255,136,0.4)] transition-all duration-300">
                 <span className="text-[10px] font-bold text-[#00FF88]">V{entry.version.split('.')[0]}</span>
               </div>
 
@@ -259,10 +259,10 @@ export function ChangelogPage() {
                   {entry.changes.map((change, changeIndex) => (
                     <div
                       key={changeIndex}
-                      className="group/item bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 hover:border-[#00FF88]/40 hover:bg-white/[0.08] transition-all duration-300"
+                      className="group/item bg-neutral-50 backdrop-blur-md border border-neutral-200 rounded-2xl p-4 hover:border-[#00FF88]/40 hover:bg-white/[0.08] transition-all duration-300"
                     >
                       <div className="flex items-start space-x-4">
-                        <div className="mt-1 p-2 bg-black/40 rounded-lg border border-white/5">
+                        <div className="mt-1 p-2 bg-white rounded-lg border border-neutral-200">
                           {getIcon(change.type)}
                         </div>
                         <div className="flex-1">
@@ -271,7 +271,7 @@ export function ChangelogPage() {
                               {getTypeLabel(change.type)}
                             </span>
                             {change.time && (
-                              <span className="flex items-center text-[10px] text-[#9CA3AF] bg-black/40 px-2 py-0.5 rounded-lg border border-white/5">
+                              <span className="flex items-center text-[10px] text-[#9CA3AF] bg-white px-2 py-0.5 rounded-lg border border-neutral-200">
                                 <Clock className="h-3 w-3 mr-1 opacity-60" />
                                 {change.time}
                               </span>
@@ -305,3 +305,5 @@ export function ChangelogPage() {
     </div>
   );
 }
+
+
