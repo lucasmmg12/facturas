@@ -54,11 +54,11 @@ export function ConfirmModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-green-600 border-opacity-20">
-          <h3 className="text-xl font-semibold text-white">{title}</h3>
+          <h3 className="text-xl font-semibold text-neutral-700">{title}</h3>
           {!isLoading && (
             <button
               onClick={onClose}
-              className="text-neutral-400 hover:text-white transition-colors"
+              className="text-neutral-400 hover:text-neutral-900 transition-colors"
               type="button"
             >
               <X size={24} />
@@ -76,7 +76,7 @@ export function ConfirmModal({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-6 py-2.5 rounded-lg bg-neutral-700 text-white hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-lg bg-neutral-700 text-neutral-700 hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             type="button"
           >
             {cancelText}
@@ -84,7 +84,7 @@ export function ConfirmModal({
           <button
             onClick={handleConfirm}
             disabled={isLoading}
-            className={`px-6 py-2.5 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${buttonColors[confirmButtonColor]}`}
+            className={`px-6 py-2.5 rounded-lg text-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${buttonColors[confirmButtonColor]}`}
             type="button"
           >
             {isLoading ? 'Procesando...' : confirmText}
@@ -94,6 +94,7 @@ export function ConfirmModal({
     </div>
   );
 }
+
 
 
 

@@ -41,7 +41,7 @@ export function MasterDataPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1 className="text-3xl font-bold text-neutral-700 mb-2">
                     <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
                         Maestros
                     </span>
@@ -104,7 +104,7 @@ function ImportCard({ title, description, type, loading, result, onUpload }: Imp
                 <div className="p-3 rounded-lg bg-green-500/20 text-green-400">
                     <FileSpreadsheet className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-semibold text-white">{title}</h3>
+                <h3 className="text-xl font-semibold text-neutral-700">{title}</h3>
             </div>
 
             <p className="text-sm text-green-200 mb-6 flex-grow">
@@ -126,7 +126,7 @@ function ImportCard({ title, description, type, loading, result, onUpload }: Imp
                         disabled={loading}
                     />
                     <div
-                        className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border-2 border-dashed border-green-500/30 text-green-300 transition-all group-hover:border-green-500/60 group-hover:text-white group-hover:bg-green-500/10"
+                        className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border-2 border-dashed border-green-500/30 text-green-300 transition-all group-hover:border-green-500/60 group-hover:text-neutral-900 group-hover:bg-green-500/10"
                     >
                         {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -172,3 +172,4 @@ function ImportCard({ title, description, type, loading, result, onUpload }: Imp
         </div>
     );
 }
+

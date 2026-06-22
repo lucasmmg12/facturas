@@ -202,7 +202,7 @@ export function ChangelogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-white space-y-8 p-4 md:p-8">
+    <div className="min-h-screen bg-neutral-50 text-neutral-700 space-y-8 p-4 md:p-8">
       {/* Header Estilo GrowLabs */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#00FF88]/10 to-transparent p-8 border border-neutral-200">
         <div className="absolute top-0 right-0 p-8 opacity-20">
@@ -213,7 +213,7 @@ export function ChangelogPage() {
             <div className="p-3 bg-[#00FF88] rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)]">
               <Sparkles className="h-6 w-6 text-black" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight text-white uppercase italic">
+            <h1 className="text-4xl font-black tracking-tight text-neutral-700 uppercase italic">
               Actualizaciones
             </h1>
           </div>
@@ -240,7 +240,7 @@ export function ChangelogPage() {
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-2xl font-black text-white group-hover:text-[#00FF88] transition-colors">
+                    <h3 className="text-2xl font-black text-neutral-700 group-hover:text-[#00FF88] transition-colors">
                       Versión {entry.version}
                     </h3>
                     <div className="flex items-center text-[#9CA3AF] text-sm mt-1">
@@ -294,7 +294,7 @@ export function ChangelogPage() {
       {/* Footer / CTA Estilo GrowLabs */}
       <div className="mt-16 text-center">
         <div className="inline-block p-[1px] rounded-full bg-gradient-to-r from-transparent via-[#00FF88] to-transparent mb-6 w-full max-w-md" />
-        <h4 className="text-xl font-bold text-white mb-2">¿Tienes alguna sugerencia de mejora?</h4>
+        <h4 className="text-xl font-bold text-neutral-700 mb-2">¿Tienes alguna sugerencia de mejora?</h4>
         <p className="text-[#9CA3AF] mb-8 max-w-lg mx-auto">
           Nuestra tecnología evoluciona contigo. Si tienes ideas para perfeccionar el sistema, estamos listos para escucharte.
         </p>
@@ -305,5 +305,6 @@ export function ChangelogPage() {
     </div>
   );
 }
+
 
 

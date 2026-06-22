@@ -57,13 +57,13 @@ export function ToastComponent({ toast, onClose }: ToastProps) {
       }}
     >
       {icons[toast.type]}
-      <p className="flex-1 text-white text-sm">{toast.message}</p>
+      <p className="flex-1 text-neutral-700 text-sm">{toast.message}</p>
       <button
         onClick={() => {
           setIsVisible(false);
           setTimeout(() => onClose(toast.id), 300);
         }}
-        className="text-neutral-400 hover:text-white transition-colors"
+        className="text-neutral-400 hover:text-neutral-900 transition-colors"
         type="button"
       >
         <X size={18} />
@@ -88,5 +88,6 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
     </div>
   );
 }
+
 
 

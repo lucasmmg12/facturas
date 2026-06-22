@@ -192,7 +192,7 @@ export function SuppliersPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-neutral-700 mb-2">
             <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
               Proveedores
             </span>
@@ -224,7 +224,7 @@ export function SuppliersPage() {
             border: '1px solid rgba(34, 197, 94, 0.3)',
           }}
         >
-          <h3 className="text-xl font-semibold text-white mb-6">
+          <h3 className="text-xl font-semibold text-neutral-700 mb-6">
             {editingId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
           </h3>
 
@@ -237,7 +237,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.cuit}
                 onChange={(e) => setFormData({ ...formData, cuit: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -254,7 +254,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.razon_social}
                 onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -272,7 +272,7 @@ export function SuppliersPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, tango_supplier_code: e.target.value })
                 }
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -287,7 +287,7 @@ export function SuppliersPage() {
               <select
                 value={formData.iva_condition}
                 onChange={(e) => setFormData({ ...formData, iva_condition: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -306,7 +306,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -320,7 +320,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -334,7 +334,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.province}
                 onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -350,7 +350,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.postal_code}
                 onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -364,7 +364,7 @@ export function SuppliersPage() {
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -382,8 +382,8 @@ export function SuppliersPage() {
                 border: '1px solid rgba(34, 197, 94, 0.3)',
               }}
             >
-              <X className="h-4 w-4 text-white" />
-              <span className="text-white">Cancelar</span>
+              <X className="h-4 w-4 text-neutral-700" />
+              <span className="text-neutral-700">Cancelar</span>
             </button>
             <button
               onClick={handleSave}
@@ -394,7 +394,7 @@ export function SuppliersPage() {
               }}
             >
               <Save className="h-4 w-4" />
-              <span className="text-white font-semibold">Guardar</span>
+              <span className="text-neutral-700 font-semibold">Guardar</span>
             </button>
           </div>
         </div>
@@ -450,16 +450,16 @@ export function SuppliersPage() {
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-700">
                     {formatCUIT(supplier.cuit)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {supplier.razon_social}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {supplier.tango_supplier_code || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {supplier.iva_condition || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -480,3 +480,4 @@ export function SuppliersPage() {
     </div>
   );
 }
+

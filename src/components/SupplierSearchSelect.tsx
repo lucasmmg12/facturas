@@ -122,7 +122,7 @@ export function SupplierSearchSelect({
                             onKeyDown={handleKeyDown}
                             disabled={disabled}
                             placeholder="Buscar proveedor por nombre o CUIT..."
-                            className="w-full pl-10 pr-10 py-3 rounded-lg text-white transition-all"
+                            className="w-full pl-10 pr-10 py-3 rounded-lg text-neutral-700 transition-all"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.3)',
                                 border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -131,7 +131,7 @@ export function SupplierSearchSelect({
                         {selectedSupplier && (
                             <button
                                 onClick={handleClear}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-400 hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-400 hover:text-neutral-900 transition-colors"
                                 type="button"
                             >
                                 <X size={18} />
@@ -176,7 +176,7 @@ export function SupplierSearchSelect({
                                         }`}
                                     type="button"
                                 >
-                                    <div className="font-medium text-white">{supplier.razon_social}</div>
+                                    <div className="font-medium text-neutral-700">{supplier.razon_social}</div>
                                     <div className="text-sm text-green-300 mt-1">
                                         CUIT: {supplier.cuit}
                                         {supplier.tango_supplier_code && (
@@ -197,3 +197,4 @@ export function SupplierSearchSelect({
         </div>
     );
 }
+

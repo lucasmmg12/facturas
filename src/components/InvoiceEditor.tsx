@@ -662,7 +662,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               }}
             >
               <X className="h-4 w-4 text-neutral-800" />
-              <span className="text-white">Cerrar</span>
+              <span className="text-neutral-700">Cerrar</span>
             </button>
           </div>
         </div>
@@ -699,7 +699,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               }}
             >
               <Save className="h-4 w-4 text-neutral-800" />
-              <span className="text-white font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
+              <span className="text-neutral-700 font-semibold">{saving ? 'Guardando...' : 'Guardar'}</span>
             </button>
             <button
               onClick={handleMarkAsReadyForExport}
@@ -711,7 +711,7 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
               }}
             >
               <CheckCircle2 className="h-4 w-4 text-neutral-800" />
-              <span className="text-white font-semibold">
+              <span className="text-neutral-700 font-semibold">
                 {saving ? 'Guardando...' : 'Listo para Exportar'}
               </span>
             </button>
@@ -1857,5 +1857,6 @@ export function InvoiceEditor({ invoiceId, onClose, onSave }: InvoiceEditorProps
     </div>
   );
 }
+
 
 

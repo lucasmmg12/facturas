@@ -33,7 +33,7 @@ function KPICard({ title, value, subtitle, icon: Icon, trend }: KPICardProps) {
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-2">{title}</p>
-                    <h3 className="text-3xl font-black text-white tracking-tighter mb-1">{value}</h3>
+                    <h3 className="text-3xl font-black text-neutral-700 tracking-tighter mb-1">{value}</h3>
                     <p className="text-xs text-neutral-500 font-bold tracking-wide uppercase">{subtitle}</p>
                 </div>
                 <div className="bg-primary-50 p-3 rounded-2xl border border-primary-200">
@@ -64,7 +64,7 @@ function NarrativeItem({ icon: Icon, color, title, description }: NarrativeItemP
                 <Icon className="w-5 h-5" style={{ color }} />
             </div>
             <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight mb-1">{title}</h4>
+                <h4 className="text-sm font-black text-neutral-700 uppercase tracking-tight mb-1">{title}</h4>
                 <p className="text-xs text-neutral-500 leading-relaxed">{description}</p>
             </div>
         </div>
@@ -143,7 +143,7 @@ export function AnalyticsPage() {
             {/* Header & Controls */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Intelligence Hub</h2>
+                    <h2 className="text-3xl font-black text-neutral-700 tracking-tighter uppercase">Intelligence Hub</h2>
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-2">
                         Análisis predictivo y auditoría de flujo financiero
                     </p>
@@ -155,7 +155,7 @@ export function AnalyticsPage() {
                             <button
                                 key={p}
                                 onClick={() => setPeriod(p)}
-                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-primary-500 text-black shadow-sm' : 'text-neutral-500 hover:text-white'
+                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-primary-500 text-black shadow-sm' : 'text-neutral-500 hover:text-neutral-900'
                                     }`}
                             >
                                 {p}
@@ -165,7 +165,7 @@ export function AnalyticsPage() {
 
                     <button
                         onClick={downloadPDF}
-                        className="flex items-center gap-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
+                        className="flex items-center gap-2 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
                     >
                         <Download className="w-4 h-4" />
                         Exportar PDF
@@ -209,7 +209,7 @@ export function AnalyticsPage() {
                     <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 flex flex-col h-[400px]">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <h4 className="text-sm font-black text-neutral-700 uppercase tracking-wider flex items-center gap-2">
                                     <Calendar className="w-4 h-4 text-primary-500" />
                                     Evolución Temporal de Gastos
                                 </h4>
@@ -269,7 +269,7 @@ export function AnalyticsPage() {
                     <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 flex flex-col h-[400px]">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                                <h4 className="text-sm font-black text-neutral-700 uppercase tracking-wider flex items-center gap-2">
                                     <Target className="w-4 h-4 text-cyan-400" />
                                     Distribución por Proveedores
                                 </h4>
@@ -320,7 +320,7 @@ export function AnalyticsPage() {
                             <Info className="w-5 h-5 font-black" />
                         </div>
                         <div>
-                            <h4 className="text-lg font-black text-white tracking-tight uppercase">Intelligence Narrative</h4>
+                            <h4 className="text-lg font-black text-neutral-700 tracking-tight uppercase">Intelligence Narrative</h4>
                             <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-1">
                                 Análisis automático de anomalías y sugerencias tácticas
                             </p>
@@ -362,4 +362,5 @@ export function AnalyticsPage() {
         </div>
     );
 }
+
 

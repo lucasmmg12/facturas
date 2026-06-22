@@ -180,3 +180,4 @@ export function Sidebar({ collapsed, onToggle, activeView, onViewChange }: Sideb
   );
 }
 
+

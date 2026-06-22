@@ -143,7 +143,7 @@ export function TaxCodesPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-neutral-700 mb-2">
             <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
               Códigos de Impuestos
             </span>
@@ -175,7 +175,7 @@ export function TaxCodesPage() {
             border: '1px solid rgba(34, 197, 94, 0.3)',
           }}
         >
-          <h3 className="text-xl font-semibold text-white mb-6">
+          <h3 className="text-xl font-semibold text-neutral-700 mb-6">
             {editingId ? 'Editar Código de Impuesto' : 'Nuevo Código de Impuesto'}
           </h3>
 
@@ -188,7 +188,7 @@ export function TaxCodesPage() {
                 type="text"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -208,7 +208,7 @@ export function TaxCodesPage() {
                 type="text"
                 value={formData.tango_code}
                 onChange={(e) => setFormData({ ...formData, tango_code: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -228,7 +228,7 @@ export function TaxCodesPage() {
                 type="text"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -244,7 +244,7 @@ export function TaxCodesPage() {
               <select
                 value={formData.tax_type}
                 onChange={(e) => setFormData({ ...formData, tax_type: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -268,7 +268,7 @@ export function TaxCodesPage() {
                 step="0.01"
                 value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg text-white transition-all"
+                className="w-full px-4 py-3 rounded-lg text-neutral-700 transition-all"
                 style={{
                   background: 'rgba(0, 0, 0, 0.3)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -305,8 +305,8 @@ export function TaxCodesPage() {
                 border: '1px solid rgba(34, 197, 94, 0.3)',
               }}
             >
-              <X className="h-4 w-4 text-white" />
-              <span className="text-white">Cancelar</span>
+              <X className="h-4 w-4 text-neutral-700" />
+              <span className="text-neutral-700">Cancelar</span>
             </button>
             <button
               onClick={handleSave}
@@ -317,7 +317,7 @@ export function TaxCodesPage() {
               }}
             >
               <Save className="h-4 w-4" />
-              <span className="text-white font-semibold">Guardar</span>
+              <span className="text-neutral-700 font-semibold">Guardar</span>
             </button>
           </div>
         </div>
@@ -379,19 +379,19 @@ export function TaxCodesPage() {
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-700">
                     {taxCode.code}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {taxCode.tango_code}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {taxCode.description}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {taxCode.tax_type}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
                     {taxCode.rate ? `${taxCode.rate}%` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -437,5 +437,6 @@ export function TaxCodesPage() {
     </div>
   );
 }
+
 
 

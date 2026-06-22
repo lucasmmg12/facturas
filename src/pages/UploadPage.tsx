@@ -340,12 +340,12 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                 style={{ animationDuration: '2s' }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-black text-white">{Math.round((processedCount / totalToProcess) * 100)}%</span>
+                <span className="text-xl font-black text-neutral-800">{Math.round((processedCount / totalToProcess) * 100)}%</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-lg font-black text-white tracking-widest uppercase">Procesamiento en Curso</h4>
+              <h4 className="text-lg font-black text-neutral-800 tracking-widest uppercase">Procesamiento en Curso</h4>
               <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest">
                 No cierres la ventana hasta finalizar la secuencia
               </p>
@@ -375,7 +375,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                   {currentAction.supplier && (
                     <div className="flex justify-between items-center bg-primary-50 p-2 rounded-lg border border-primary-200">
                       <span className="text-[9px] font-black text-neutral-500 uppercase">Emisor Detectado</span>
-                      <span className="text-[10px] font-black text-white truncate max-w-[150px]">{currentAction.supplier}</span>
+                      <span className="text-[10px] font-black text-neutral-800 truncate max-w-[150px]">{currentAction.supplier}</span>
                     </div>
                   )}
                   {currentAction.amount !== undefined && (
@@ -402,7 +402,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
         {/* Panel de Control de Carga */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-8 bg-white/[0.02]">
-            <h3 className="text-xl font-black text-white tracking-widest uppercase mb-6 flex items-center gap-3">
+            <h3 className="text-xl font-black text-neutral-800 tracking-widest uppercase mb-6 flex items-center gap-3">
               <span className="w-1.5 h-6 bg-primary-500 rounded-full shadow-sm" />
               Terminal de Carga
             </h3>
@@ -433,7 +433,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                           <div className={`p-3 rounded-2xl border transition-all ${result.status === 'success' ? 'bg-primary-50 border-primary-200 text-primary-500 shadow-sm' :
                             result.status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
                               result.status === 'duplicate' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
-                                'bg-neutral-50 border-neutral-200 text-white/40 animate-pulse'
+                                'bg-neutral-50 border-neutral-200 text-neutral-500 animate-pulse'
                             }`}>
                             {result.status === 'processing' ? <Loader className="w-5 h-5 animate-spin" /> :
                               result.status === 'success' ? <CheckCircle className="w-5 h-5" /> :
@@ -441,7 +441,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                                   <AlertCircle className="w-5 h-5" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-black text-white truncate max-w-[250px]">{result.filename}</p>
+                            <p className="text-sm font-black text-neutral-800 truncate max-w-[250px]">{result.filename}</p>
                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${result.status === 'success' ? 'text-primary-500' :
                               result.status === 'error' ? 'text-red-400' :
                                 result.status === 'duplicate' ? 'text-yellow-400' :
@@ -511,7 +511,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                   <div>
                     <div className="flex justify-between items-end mb-2">
                       <span className="text-[10px] font-black text-neutral-500 uppercase">Presupuesto IA</span>
-                      <span className="text-xl font-black text-white tracking-tighter">
+                      <span className="text-xl font-black text-neutral-800 tracking-tighter">
                         {balanceInfo.remaining !== null ? balanceInfo.remaining.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : '---'}
                       </span>
                     </div>
@@ -530,7 +530,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-4 bg-white border border-neutral-200 rounded-2xl">
                       <span className="text-[9px] font-black text-neutral-500 uppercase block">Consumido</span>
-                      <span className="text-xs font-black text-white block mt-1">
+                      <span className="text-xs font-black text-neutral-800 block mt-1">
                         {balanceInfo.totalUsed.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                       </span>
                     </div>
@@ -555,7 +555,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                       }
                     }
                   }}
-                  className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-neutral-500 hover:text-white"
+                  className="w-full py-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-neutral-500 hover:text-neutral-900"
                 >
                   Configurar Presupuesto AI
                 </button>
@@ -564,7 +564,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
           </div>
 
           <div className="bg-white shadow-sm border border-neutral-200 rounded-xl p-6 bg-white/[0.01]">
-            <h4 className="text-[10px] font-black text-white tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
+            <h4 className="text-[10px] font-black text-neutral-800 tracking-[0.2em] uppercase mb-4 flex items-center gap-2">
               <AlertCircle className="w-3.5 h-3.5 text-primary-500" />
               Protocolo Operativo
             </h4>
@@ -575,7 +575,7 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
                 { label: 'Soporte Técnico', desc: 'lucas@growsanjuan.com' }
               ].map((item, i) => (
                 <div key={i} className="relative pl-4 border-l border-primary-200">
-                  <p className="text-[10px] font-black text-white/80 uppercase tracking-wider">{item.label}</p>
+                  <p className="text-[10px] font-black text-neutral-700 uppercase tracking-wider">{item.label}</p>
                   <p className="text-[9px] font-medium text-neutral-500 mt-0.5">{item.desc}</p>
                 </div>
               ))}
@@ -586,4 +586,6 @@ export function UploadPage({ onInvoiceCreated }: UploadPageProps) {
     </div>
   );
 }
+
+
 

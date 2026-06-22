@@ -170,7 +170,7 @@ export function SearchableSelect<T>({
                     onKeyDown={handleKeyDown}
                     disabled={disabled}
                     placeholder={placeholder}
-                    className="w-full pl-10 pr-10 py-3 rounded-lg text-white transition-all"
+                    className="w-full pl-10 pr-10 py-3 rounded-lg text-neutral-700 transition-all"
                     style={{
                         background: 'rgba(0, 0, 0, 0.3)',
                         border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -179,7 +179,7 @@ export function SearchableSelect<T>({
                 {selectedItem && !isOpen && (
                     <button
                         onClick={handleClear}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-400 hover:text-white transition-colors"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-400 hover:text-neutral-900 transition-colors"
                         type="button"
                     >
                         <X size={18} />
@@ -201,7 +201,7 @@ export function SearchableSelect<T>({
                         (item) => getItemCode(item).toLowerCase() === searchTerm.toLowerCase().trim()
                     ) && (
                             <div className="px-4 py-2 text-xs text-center bg-green-600 bg-opacity-20 border-b border-green-600 border-opacity-30">
-                                <span className="text-green-400">✓ Código encontrado</span> - Presiona <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-white font-mono text-xs">Enter</kbd> o <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-white font-mono text-xs">Tab</kbd> para seleccionar
+                                <span className="text-green-400">✓ Código encontrado</span> - Presiona <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-neutral-700 font-mono text-xs">Enter</kbd> o <kbd className="px-1.5 py-0.5 bg-neutral-50 bg-opacity-50 rounded text-neutral-700 font-mono text-xs">Tab</kbd> para seleccionar
                             </div>
                         )}
 
@@ -226,7 +226,7 @@ export function SearchableSelect<T>({
                                             } ${isExactMatch ? 'border-l-4 border-green-400' : ''}`}
                                         type="button"
                                     >
-                                        <div className="font-medium text-white flex items-center gap-2">
+                                        <div className="font-medium text-neutral-700 flex items-center gap-2">
                                             <span className={`${isExactMatch ? 'text-green-300 font-bold' : 'text-green-400'}`}>
                                                 {code}
                                             </span>
@@ -248,4 +248,5 @@ export function SearchableSelect<T>({
         </div>
     );
 }
+
 

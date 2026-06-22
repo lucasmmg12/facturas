@@ -42,3 +42,4 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   return <>{children}</>;
 }
 
+

@@ -81,7 +81,7 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
           onClick={() => setUploadMode('files')}
           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${uploadMode === 'files'
               ? 'bg-primary-500 text-black shadow-sm'
-              : 'text-neutral-500 hover:text-white'
+              : 'text-neutral-500 hover:text-neutral-900'
             }`}
         >
           ARCHIVOS
@@ -90,7 +90,7 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
           onClick={() => setUploadMode('folder')}
           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${uploadMode === 'folder'
               ? 'bg-primary-500 text-black shadow-sm'
-              : 'text-neutral-500 hover:text-white'
+              : 'text-neutral-500 hover:text-neutral-900'
             }`}
         >
           CARPETA
@@ -142,19 +142,19 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
               {uploadMode === 'files' ? (
                 <div className="flex -space-x-3">
                   <FileText className="h-10 w-10 text-primary-500" />
-                  <Upload className="h-10 w-10 text-white translate-y-1" />
+                  <Upload className="h-10 w-10 text-neutral-700 translate-y-1" />
                 </div>
               ) : (
                 <div className="flex -space-x-2">
                   <FolderOpen className="h-10 w-10 text-primary-500" />
-                  <Upload className="h-10 w-10 text-white translate-y-1" />
+                  <Upload className="h-10 w-10 text-neutral-700 translate-y-1" />
                 </div>
               )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-lg font-black text-white tracking-widest uppercase italic">
+            <h4 className="text-lg font-black text-neutral-700 tracking-widest uppercase italic">
               {isDragging ? 'SOLTAR AHORA' : uploadMode === 'files' ? 'CARGAR ARCHIVOS' : 'CARGAR CARPETA'}
             </h4>
             <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em]">
@@ -180,4 +180,6 @@ export function FileUploader({ onFilesSelected, disabled }: FileUploaderProps) {
     </div>
   );
 }
+
+
 
