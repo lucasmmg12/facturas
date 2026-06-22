@@ -220,7 +220,7 @@ export function DashboardPage() {
             </div>
           </div>
         </footer>
-      </div>
+      </div>)}
     </DashboardLayout>
   );
 }
