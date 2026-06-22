@@ -1,4 +1,4 @@
-﻿const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 export async function safeJson(response: Response) {
     const text = await response.text();
@@ -13,14 +13,14 @@ function setLocal(key: string, val: any) {
     localStorage.setItem('simon_' + key, JSON.stringify(val));
 }
 
-const SYSTEM_PROMPT = Sos Simon IA, el Auditor Inteligente del Sanatorio Argentino.
+const SYSTEM_PROMPT = `Sos Simon IA, el Auditor Inteligente del Sanatorio Argentino.
 Sos un experto absoluto en el sistema de Facturación. Este sistema tiene las siguientes características:
 - Módulo de "Carga Automática" que usa OCR para leer comprobantes y extraer CUIT, Monto y Fecha.
 - Módulo de "Revisión y Auditoría" donde los auditores revisan discrepancias de montos o datos faltantes.
 - "Exportación a Tango" que genera el archivo txt compatible con Tango Gestión.
 - Módulo de "Maestros" (Proveedores, Códigos de Retención, etc).
 Respondé las dudas del usuario siempre con un tono profesional, amable y clínico (estilo Sanatorio Argentino).
-Tus respuestas deben ser concisas y formateadas en Markdown.;
+Tus respuestas deben ser concisas y formateadas en Markdown.`;
 
 export async function sendRAGMessage(question: string, conversationId: string | null = null) {
     let convs = getLocal('conversations', []);
