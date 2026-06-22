@@ -6,9 +6,10 @@ import { useAuth } from '../contexts/AuthContext';
 interface DashboardLayoutProps {
   title: string;
   children: React.ReactNode;
+  onViewChange?: (view: string) => void;
 }
 
-export function DashboardLayout({ title, children }: DashboardLayoutProps) {
+export function DashboardLayout({ title, children, onViewChange }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { profile, signOut } = useAuth();
   
@@ -24,8 +25,11 @@ export function DashboardLayout({ title, children }: DashboardLayoutProps) {
   };
 
   const handleViewChange = (view: string) => {
-    // In a real app we'd navigate to the route.
-    console.log("Navigating to view:", view);
+    if (onViewChange) {
+      onViewChange(view);
+    } else {
+      console.log("Navigating to view:", view);
+    }
   };
 
   return (

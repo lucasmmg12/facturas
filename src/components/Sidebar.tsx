@@ -76,6 +76,7 @@ export function Sidebar({ collapsed, onToggle, activeView, onViewChange }: Sideb
         {/* ─── Simon IA Animated Avatar ─── */}
         <button
           title={collapsed ? 'Simon IA' : undefined}
+          onClick={() => onViewChange('simon')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: 0, position: 'relative',
@@ -178,3 +179,4 @@ export function Sidebar({ collapsed, onToggle, activeView, onViewChange }: Sideb
     </aside>
   );
 }
+

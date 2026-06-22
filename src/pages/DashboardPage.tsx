@@ -9,6 +9,7 @@ import { MasterDataPage } from './MasterDataPage';
 import { UsersManagementPage } from './UsersManagementPage';
 import { AnalyticsPage } from './AnalyticsPage';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { SimonPanel } from '../components/SimonPanel';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvoiceEditor } from '../components/InvoiceEditor';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -36,6 +37,7 @@ interface ReviewPanelProps {
 
 export function DashboardPage() {
   const { profile } = useAuth();
+  const [sidebarView, setSidebarView] = useState('invoices');
   const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'export' | 'analytics' | 'users' | 'maestros' | 'activity' | 'suppliers' | 'tax_codes' | 'changelog' | 'manual'>('upload');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -79,7 +81,7 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout title="Grow Labs · Gestión de comprobantes">
-      <div className="space-y-8 animate-in fade-in duration-700">
+      {sidebarView === 'simon' ? (<div style={{height: '100%'}}><SimonPanel /></div>) : (<div className="space-y-8 animate-in fade-in duration-700">
         <section className="bg-white shadow-sm border border-neutral-200 rounded-xl">
           <div
             className="flex flex-wrap items-center gap-3 px-6 py-5 bg-white border-b border-neutral-200"
@@ -619,6 +621,7 @@ function ExportPanel({ refreshKey, profileId, onExportCompleted }: ExportPanelPr
     </div>
   );
 }
+
 
 
 
